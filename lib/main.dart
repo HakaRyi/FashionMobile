@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fashion_mobile/screens/home_screen.dart';
+import 'screens/main_screen.dart';
 import 'package:fashion_mobile/constants/app_colors.dart';
 
 void main() {
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(backgroundColor: AppColors.background),
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(),
     );
   }
 }

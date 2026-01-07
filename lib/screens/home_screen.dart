@@ -7,6 +7,8 @@ import '../widgets/post_item.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,7 +19,6 @@ class HomeScreen extends StatelessWidget {
         separatorBuilder: (context, index) => const Divider(color: AppColors.divider, height: 1),
         itemBuilder: (context, index) => const PostItem(),
       ),
-      bottomNavigationBar: const MainBottomNav(),
     );
   }
 }

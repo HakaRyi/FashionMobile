@@ -2,11 +2,20 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
 class MainBottomNav extends StatelessWidget {
-  const MainBottomNav({super.key});
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const MainBottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
+      onTap: onTap,
+      currentIndex: currentIndex,
       backgroundColor: AppColors.background,
       selectedItemColor: AppColors.textPrimary,
       unselectedItemColor: AppColors.textSecondary,
