@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../screens/create_post_screens.dart';
 
 class CreatePostHeader extends StatelessWidget {
   const CreatePostHeader({super.key});
@@ -37,19 +38,32 @@ class CreatePostHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const CreatePostScreen()),
+                          );
+                        },
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        // Sử dụng Ink thay vì Container để vẽ màu nền mà không che mất hiệu ứng gợn sóng
+                        child: Ink(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: const Text(
+                            "Hôm nay bạn mặc gì?",
+                            style: TextStyle(color: Colors.white54, fontSize: 14),
+                          ),
+                        ),
                       ),
-                      child: const Text(
-                        "Hôm nay bạn mặc gì?",
-                        style: TextStyle(color: Colors.white54, fontSize: 14),
-                      ),
-                    ),
+                    )
                   ],
                 ),
               ),
