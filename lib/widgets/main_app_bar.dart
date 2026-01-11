@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/screens/notification_screen.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
@@ -34,7 +35,12 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NotificationScreen())
+            );
+          },
           icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
         ),
         IconButton(

@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/widgets/post_item.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 
@@ -216,47 +217,40 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            SizedBox(height: 20,)
                           ],
                         ),
-                      ),// Khoảng cách trước khi vào lưới ảnh
+                      ),
                     ],
                   ),
                 ),
               ),
 
               // 4. Grid Ảnh (Nền cùng màu với Body để liền mạch)
-              SliverToBoxAdapter(
-                child: Container(
-                  color: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 20,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 2,
-                      mainAxisSpacing: 2,
-                      childAspectRatio: 1.0,
-                    ),
-                    itemBuilder: (context, index) {
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                    (context, index) {
                       return Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          image: DecorationImage(
-                            image: NetworkImage('https://picsum.photos/400/400?random=$index'),
-                            fit: BoxFit.cover,
+                        color: AppColors.background,
+                        child: Column(
+                            children: [
+                              const SizedBox(height: 4),
+                              PostItem(),
+                              if (index < 9)
+                                const Divider(
+                                  color: AppColors.divider,
+                                  height: 1,
+                                  indent: 16,
+                                  endIndent: 16,
+                                ),
+                            ],
                           ),
-                        ),
                       );
                     },
-                  ),
+                  childCount: 10,
                 ),
               ),
-
-              // Padding đáy
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
-            ],
+            ]
           ),
         ],
       ),

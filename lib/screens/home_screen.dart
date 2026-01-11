@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Column(
                     children: [
                       SizedBox(height: 4,),
-                      const PostItem(),
+                      PostItem(),
                       if (index < 9)
                         const Divider(
                           color: AppColors.divider,
