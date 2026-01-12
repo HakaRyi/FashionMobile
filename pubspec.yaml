@@ -62,6 +62,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/splash.png
+    - assets/images/vietnamjersey.png
 #    - assets/icons/
   fonts:
     - family: MyCustomFont  # Tên bạn tự đặt để gọi trong code

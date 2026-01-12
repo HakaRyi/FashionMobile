@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import './navbar_screens/search_screen.dart';
 import './navbar_screens/profile_screen.dart';
+import './navbar_screens/wardrobe_screen.dart';
+
 
 import '../widgets/main_bottom_nav.dart';
 
@@ -21,7 +23,7 @@ class _MainScreenState extends State<MainScreen> {
     const HomeScreen(),
     const SearchScreen(),
     const Center(child: Text("Post Page", style: TextStyle(color: Colors.white))),
-    const Center(child: Text("Activity Page", style: TextStyle(color: Colors.white))),
+    const WardrobeScreen(),
     const ProfileScreen(),
   ];
 

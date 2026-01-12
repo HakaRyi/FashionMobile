@@ -26,7 +26,7 @@ class MainBottomNav extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: ""),
         BottomNavigationBarItem(icon: Icon(Icons.search), label: ""),
         BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: ""),
-        BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: ""),
+        BottomNavigationBarItem(icon: Icon(Icons.checkroom), label: ""),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: ""),
       ],
     );
