@@ -8,6 +8,7 @@ import '../../screens/try_on_screen.dart';
 import '../../screens/fashion_news_screen.dart';
 import '../../widgets/action_button.dart';
 import '../../screens/clothing_detail_screen.dart';
+import '../../utils/upload_utils.dart';
 
 class WardrobeScreen extends StatelessWidget {
   const WardrobeScreen({super.key});
@@ -44,7 +45,7 @@ class WardrobeScreen extends StatelessWidget {
                         icon: Icons.add_a_photo,
                         label: "Thêm đồ",
                         color: AppColors.accent,
-                        onTap: () => _showUploadMenu(context),
+                        onTap: () => UploadUtils.showUploadMenu(context),
                       ),
                       const SizedBox(width: 10),
                       ActionButton(
@@ -92,7 +93,7 @@ class WardrobeScreen extends StatelessWidget {
               // KIỂM TRA NẾU LÀ VỊ TRÍ CUỐI CÙNG
               if (index == itemsCount) {
                 return AddClothingCard(
-                  onTap: () => _showUploadMenu(context),
+
                 );
               }
 
@@ -123,39 +124,4 @@ class WardrobeScreen extends StatelessWidget {
 
 
 
-  void _showUploadMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text("Chụp ảnh mới", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => const UploadScreen(isCamera: true)));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text("Chọn từ thư viện", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => const UploadScreen(isCamera: false)));
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }

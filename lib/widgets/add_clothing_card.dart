@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../utils/upload_utils.dart';
 
 class AddClothingCard extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const AddClothingCard({super.key, required this.onTap});
+  const AddClothingCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      // Gọi trực tiếp từ class UploadUtils
+      onTap: () => UploadUtils.showUploadMenu(context),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,

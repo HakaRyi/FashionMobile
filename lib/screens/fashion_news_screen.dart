@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-
+// chắc trang này làm kiểu về mấy tính năng thời trang khác đi ha, để tạm bài báo mốt thay cái khác :))
 class FashionNewsScreen extends StatelessWidget {
   const FashionNewsScreen({super.key});
 
@@ -13,7 +13,7 @@ class FashionNewsScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "XU HƯỚNG THỜI TRANG",
+          "Xu hướng thời trang",
           style: TextStyle(
               color: Colors.white,
               fontSize: 18,

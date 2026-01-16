@@ -14,7 +14,7 @@ class SuggestionScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "GỢI Ý PHỐI ĐỒ",
+          "Gợi ý phối đồ",
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
