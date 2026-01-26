@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/screens/events_screen/event_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import './navbar_screens/search_screen.dart';
@@ -22,7 +23,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     const HomeScreen(),
     const SearchScreen(),
-    const Center(child: Text("Post Page", style: TextStyle(color: Colors.white))),
+    const EventListScreen(),
     const WardrobeScreen(),
     const ProfileScreen(),
   ];

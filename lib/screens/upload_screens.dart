@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../constants/app_colors.dart';
 
 class UploadScreen extends StatefulWidget {
-  final bool isCamera; // True nếu là chụp ảnh, False nếu là chọn gallery
+  final bool isCamera;
   const UploadScreen({super.key, required this.isCamera});
 
   @override
@@ -12,7 +12,7 @@ class UploadScreen extends StatefulWidget {
 }
 
 class _UploadScreenState extends State<UploadScreen> {
-  File? _image; // Biến lưu trữ file ảnh sau khi chọn
+  File? _image;
   final ImagePicker _picker = ImagePicker();
 
   // Hàm xử lý lấy ảnh
