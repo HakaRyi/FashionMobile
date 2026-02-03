@@ -1,6 +1,10 @@
 import 'package:fashion_mobile/widgets/post_item.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../../screens/settings_screen.dart';
+import '../../screens/create_post_screens.dart';
+import '../public_wardrobe_screen.dart';
+import '../../utils/route_transitions.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -60,8 +64,8 @@ class ProfileScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.add, size: 25, color: Colors.white),
+                    onPressed: () {},
                   ),
                 ),
                 title: const Text(
@@ -77,7 +81,9 @@ class ProfileScreen extends StatelessWidget {
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.more_horiz, color: Colors.white),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(context, SlideRoute(page: const SettingsScreen()));
+                    },
                   ),
                 ],
               ),
@@ -191,13 +197,19 @@ class ProfileScreen extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: ElevatedButton(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const CreatePostScreen()),
+                                      );
+                                    },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.accent, // Màu hồng/tím
                                       foregroundColor: Colors.white,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       padding: const EdgeInsets.symmetric(vertical: 12),
+
                                     ),
                                     child: const Text("Tạo Bài Đăng", style: TextStyle(fontWeight: FontWeight.bold)),
                                   ),
@@ -205,7 +217,9 @@ class ProfileScreen extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      Navigator.push(context, SlideRoute(page: const PublicWardrobeScreen()));
+                                    },
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.white,
                                       side: BorderSide(color: Colors.white.withOpacity(0.3)),

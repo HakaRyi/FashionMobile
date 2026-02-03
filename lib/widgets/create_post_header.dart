@@ -30,7 +30,7 @@ class CreatePostHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      "Hakryi",
+                      "Nguyen Hai Dang",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

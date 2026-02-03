@@ -45,10 +45,7 @@ class EventListScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D), // Nền tối
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+
         title: const Text(
           "Sự kiện",
           style: TextStyle(

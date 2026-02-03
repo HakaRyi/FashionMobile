@@ -16,21 +16,12 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            'assets/images/logostarbuck1.png',
+            'assets/images/logowapo.png',
             height: 35,
             fit: BoxFit.contain,
           ),
           const SizedBox(width: 10),
-          const Text(
-            'STARBUCKS',
-            style: TextStyle(
-              color: AppColors.textPink,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              fontFamily: 'MyCustomFont',
-              letterSpacing: 1.2,
-            ),
-          ),
+
         ],
       ),
       actions: [
