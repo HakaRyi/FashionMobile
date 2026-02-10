@@ -1,7 +1,8 @@
 import 'package:fashion_mobile/screens/notification_screen.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-
+import '../utils/route_transitions.dart';
+import '../screens/chat_list_screen.dart';
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   const MainAppBar({super.key});
 
@@ -16,21 +17,22 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            'assets/images/logostarbuck1.png',
+            'assets/images/logowapo.png',
             height: 35,
             fit: BoxFit.contain,
           ),
           const SizedBox(width: 10),
           const Text(
-            'STARBUCKS',
+            "WAPO",
             style: TextStyle(
-              color: AppColors.textPink,
+              color: Colors.white,
               fontSize: 22,
-              fontWeight: FontWeight.w900,
-              fontFamily: 'MyCustomFont',
-              letterSpacing: 1.2,
+              fontWeight: FontWeight.w900, // Độ đậm cực cao để tạo phong cách Brand
+              letterSpacing: 1.2,          // Khoảng cách chữ rộng ra chút cho sang
+              fontFamily: 'Montserrat',    // Nếu bạn có font riêng, hoặc dùng mặc định
             ),
           ),
+
         ],
       ),
       actions: [
@@ -44,8 +46,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
         ),
         IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.menu, color: AppColors.textPrimary),
+          onPressed: () {
+            Navigator.push(context, SlideRoute(page: const ChatListScreen()));
+          },
+          icon: const Icon(Icons.chat_bubble, color: AppColors.textPrimary),
         )
       ],
     );

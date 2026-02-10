@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/main_screen.dart';
 import 'package:fashion_mobile/constants/app_colors.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(backgroundColor: AppColors.background),
       ),
-      home: const MainScreen(),
+      home: const LoginScreen(),
     );
   }
 }
