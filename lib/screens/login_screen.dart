@@ -3,6 +3,7 @@ import '../constants/app_colors.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/google_login_button.dart';
 import 'main_screen.dart'; // Giả sử đây là trang chứa Navbar của bạn
+import '../services/auth_service.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,21 +16,40 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  void _handleLogin() {
+  final AuthService _authService = AuthService(); // Khởi tạo Service
+  bool _isLoading = false;
+  Future<void> _handleLogin() async {
     String email = _emailController.text.trim();
     String pass = _passwordController.text.trim();
 
-    if (email == "abc@gmail.com" && pass == "123") {
+    if (email.isEmpty || pass.isEmpty) {
+      _showSnackBar("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await _authService.login(email, pass);
+
+    setState(() => _isLoading = false);
+
+    if (result['success']) {
+      // Lưu Token vào bộ nhớ nếu cần (ví dụ: SharedPreferences) rồi qua trang Home
+      print("Token: ${result['data']['accessToken']}");
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email hoặc mật khẩu không đúng!")),
-      );
+      // Hiển thị lỗi từ API trả về
+      _showSnackBar(result['message']);
     }
+  }
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
   }
 
   @override
