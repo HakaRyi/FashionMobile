@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/utils/post_manager.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'screens/main_screen.dart';
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(backgroundColor: AppColors.background),

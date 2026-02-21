@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 
 class AuthService {
@@ -15,8 +16,21 @@ class AuthService {
           "password": password,
         }),
       );
+
       final responseData = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+
+        // ---> CHỖ ĐƯỢC SỬA: Lấy và lưu cả 2 Token
+        final String? accessToken = responseData['accessToken'];
+        final String? refreshToken = responseData['refreshToken'];
+
+        if (accessToken != null && refreshToken != null) {
+          await prefs.setString('token', accessToken);
+          await prefs.setString('refreshToken', refreshToken);
+        }
+
         return {"success": true, "data": responseData};
       } else if (response.statusCode == 400 || response.statusCode == 401) {
         return {"success": false, "message": responseData['message'] ?? "Sai tài khoản"};
@@ -25,6 +39,44 @@ class AuthService {
       }
     } catch (e) {
       return {"success": false, "message": "Không thể kết nối đến máy chủ: $e"};
+    }
+  }
+
+  // ---> CHỖ ĐƯỢC SỬA: Bổ sung hàm tự động lấy Token mới
+  Future<bool> refreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? accessToken = prefs.getString('token');
+    final String? refreshToken = prefs.getString('refreshToken');
+
+    if (accessToken == null || refreshToken == null) return false;
+
+    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.refreshTokenEndpoint}");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "accessToken": accessToken,
+          "refreshToken": refreshToken,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        final String? newAccessToken = responseData['accessToken'];
+        final String? newRefreshToken = responseData['refreshToken'];
+
+        if (newAccessToken != null && newRefreshToken != null) {
+          await prefs.setString('token', newAccessToken);
+          await prefs.setString('refreshToken', newRefreshToken);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 }

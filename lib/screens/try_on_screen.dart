@@ -1,9 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
 import '../constants/app_colors.dart';
-import '../widgets/try_on_item.dart';
 import '../widgets/add_clothing_card.dart';
 import '../screens/model_management_screen.dart';
 import '../widgets/price_info_widget.dart';
+import '../utils/try_on_manager.dart';
+import './create_post_screens.dart';
+
 class TryOnScreen extends StatefulWidget {
   const TryOnScreen({super.key});
 
@@ -12,16 +17,32 @@ class TryOnScreen extends StatefulWidget {
 }
 
 class _TryOnScreenState extends State<TryOnScreen> {
-  int selectedClothIndex = -1;
+  File? selectedClothFile;
+  final int currentBalance = 0;
+  final int tryOnCost = 0;
 
-  //data demo
-  final int currentBalance = 0; //demo cho 0
-  final int tryOnCost = 10;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          selectedClothFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Kiểm tra điều kiện: Đã chọn đồ VÀ đủ tiền
-    bool canProceed = selectedClothIndex != -1 && currentBalance >= tryOnCost;
+    bool canProceed = selectedClothFile != null && currentBalance >= tryOnCost;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,160 +64,265 @@ class _TryOnScreenState extends State<TryOnScreen> {
           ),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- PHẦN 1: KHU VỰC MODEL (Giữ nguyên) ---
-          Expanded(
-            flex: 5,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.divider),
-                      image: const DecorationImage(
-                        image: AssetImage("assets/images/human1.jpg"),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 15,
-                    right: 15,
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ModelManagementScreen()),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: AppColors.textPink,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.edit_outlined, color: Colors.white, size: 22),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+      body: ListenableBuilder(
+        listenable: tryOnManager,
+        builder: (context, child) {
+          final isProcessing = tryOnManager.isProcessing;
+          final resultBytes = tryOnManager.resultImageBytes;
 
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
-            child: Text(
-              "Chọn món đồ để thử",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-            ),
-          ),
-
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 2,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return const SizedBox(
-                    width: 100,
-                    child: AddClothingCard(),
-                  );
-                }
-                return TryOnItem(
-                  imagePath: "assets/images/vietnamjersey.png",
-                  isSelected: selectedClothIndex == index,
-                  onTap: () => setState(() => selectedClothIndex = index),
-                );
-              },
-            ),
-          ),
-
-          const Spacer(),
-
-          // --- PHẦN 3: BOTTOM PANEL (ĐÃ CẢI TIẾN) ---
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 35),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Cột hiển thị Số dư & Chi phí
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        PriceInfoWidget(
-                          label: "Số dư:",
-                          value: currentBalance.toString(),
-                          color: Colors.grey,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.divider),
                         ),
-                        const SizedBox(height: 8),
-                        PriceInfoWidget(
-                          label: "Chi phí:",
-                          value: tryOnCost.toString(),
-                          color: AppColors.textPink,
-                          valueTextColor: Colors.white,
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    // Nút bấm thu nhỏ lại một chút
-                    Container(
-                      height: 55,
-                      width: MediaQuery.of(context).size.width * 0.45,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        gradient: canProceed
-                            ? const LinearGradient(colors: [Color(0xFFFC00A6), Color(0xFFB50076)])
-                            : null,
-                        color: !canProceed ? Colors.white.withOpacity(0.05) : null,
-                      ),
-                      child: ElevatedButton(
-                        onPressed: canProceed ? () => print("Đang xử lý...") : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        ),
-                        child: Text(
-                          "THỬ ĐỒ NGAY",
-                          style: TextStyle(
-                            color: canProceed ? Colors.white : Colors.white24,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              if (resultBytes != null)
+                                Image.memory(resultBytes, fit: BoxFit.cover)
+                              else
+                                Image.asset("assets/images/human1.jpg", fit: BoxFit.cover),
+                              if (isProcessing)
+                                Shimmer.fromColors(
+                                  baseColor: Colors.white.withOpacity(0.1),
+                                  highlightColor: Colors.white.withOpacity(0.5),
+                                  child: Container(color: Colors.white),
+                                ),
+                            ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      if (resultBytes == null && !isProcessing)
+                        Positioned(
+                          bottom: 15,
+                          right: 15,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ModelManagementScreen()),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: AppColors.textPink,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.edit_outlined, color: Colors.white, size: 22),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                // Cảnh báo nếu không đủ tiền
-                // if (selectedClothIndex != -1 && currentBalance < tryOnCost)
-                //   const Padding(
-                //     padding: EdgeInsets.only(top: 12),
-                //     child: Text(
-                //       "Số dư không đủ để thực hiện",
-                //       style: TextStyle(color: Colors.redAccent, fontSize: 15),
-                //     ),
-                //   ),
+              ),
+              if (resultBytes != null && !isProcessing)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _actionButton(Icons.delete_outline, "Xóa", Colors.redAccent, () {
+                        tryOnManager.resetResult();
+                        setState(() {
+                          selectedClothFile = null;
+                        });
+                      }),
+                      _actionButton(Icons.download, "Lưu", Colors.blueAccent, () {}),
+                      _actionButton(Icons.share, "Chia sẻ", Colors.green, () {
+                      if (resultBytes != null) {
+                            Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                            builder: (context) => CreatePostScreen(imageBytes: resultBytes),
+                            ),
+                          );
+                        }
+                      }),
+                    ],
+                  ),
+                ),
+              if (resultBytes == null) ...[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
+                  child: Text(
+                    "Chọn món đồ để thử",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 120,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white24, width: 1.5),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 32),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (selectedClothFile != null)
+                        Container(
+                          width: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.textPink, width: 2),
+                            image: DecorationImage(
+                              image: FileImage(selectedClothFile!),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: GestureDetector(
+                                  onTap: () => setState(() => selectedClothFile = null),
+                                  child: const Icon(Icons.cancel, color: Colors.white, size: 20),
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
               ],
+              if (resultBytes == null)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 35),
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              PriceInfoWidget(
+                                label: "Số dư:",
+                                value: currentBalance.toString(),
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 8),
+                              PriceInfoWidget(
+                                label: "Chi phí:",
+                                value: tryOnCost.toString(),
+                                color: AppColors.textPink,
+                                valueTextColor: Colors.white,
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Container(
+                            height: 55,
+                            width: MediaQuery.of(context).size.width * 0.45,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: canProceed && !isProcessing
+                                  ? const LinearGradient(colors: [Color(0xFFFC00A6), Color(0xFFB50076)])
+                                  : null,
+                              color: (!canProceed || isProcessing)
+                                  ? Colors.white.withOpacity(0.05)
+                                  : null,
+                            ),
+                            child: ElevatedButton(
+                              onPressed: canProceed && !isProcessing
+                                  ? () {
+                                tryOnManager.startTryOn(
+                                  context,
+                                  "assets/images/human1.jpg",
+                                  selectedClothFile!.path,
+                                );
+                              }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                              ),
+                              child: Text(
+                                isProcessing ? "ĐANG XỬ LÝ..." : "THỬ ĐỒ NGAY",
+                                style: TextStyle(
+                                  color: canProceed ? Colors.white : Colors.white24,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _actionButton(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
       ),
     );
   }
-
-
 }

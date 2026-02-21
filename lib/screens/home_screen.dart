@@ -3,6 +3,7 @@ import '../constants/app_colors.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/post_item.dart';
 import '../widgets/create_post_header.dart';
+import '../utils/post_manager.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,11 +45,56 @@ class _HomeScreenState extends State<HomeScreen> {
               flexibleSpace: MainAppBar(),
               toolbarHeight: 60,
             ),
-
-            const SliverToBoxAdapter(
-              child: CreatePostHeader(),
+            SliverToBoxAdapter(
+              child: ListenableBuilder(
+                listenable: postManager,
+                builder: (context, child) {
+                  return Column(
+                    children: [
+                      const CreatePostHeader(),
+                      if (postManager.isUploading || postManager.uploadProgress > 0)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.divider),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    "Đang xử lý bài viết...",
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    "${(postManager.uploadProgress * 100).toInt()}%",
+                                    style: const TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: postManager.uploadProgress,
+                                  backgroundColor: Colors.white10,
+                                  color: AppColors.textPink,
+                                  minHeight: 8,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
-
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -69,14 +115,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
                   return Column(
                     children: [
-                      SizedBox(height: 4,),
-                      PostItem(),
+                      const SizedBox(height: 4),
+                      const PostItem(),
                       if (index < 9)
                         const Divider(
                           color: AppColors.divider,
@@ -90,7 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 childCount: 10,
               ),
             ),
-
             const SliverToBoxAdapter(
               child: SizedBox(height: 80),
             ),
