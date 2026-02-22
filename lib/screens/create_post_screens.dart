@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart'; //
 import '../constants/app_colors.dart';
 import '../utils/post_manager.dart';
 
@@ -20,10 +21,24 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   bool _isPublic = true;
   Uint8List? _selectedImageBytes;
 
+  // Biến lưu thông tin người dùng
+  String _username = "Đang tải...";
+  String _avatarUrl = "";
+
   @override
   void initState() {
     super.initState();
     _selectedImageBytes = widget.imageBytes;
+    _loadUserInfo(); // Gọi hàm load thông tin khi khởi tạo
+  }
+
+  // Hàm lấy dữ liệu từ SharedPreferences tương tự các màn hình khác
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('username') ?? "Người dùng";
+      _avatarUrl = prefs.getString('avatar') ?? "";
+    });
   }
 
   @override
@@ -136,17 +151,22 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const CircleAvatar(
+          // Cập nhật CircleAvatar sử dụng _avatarUrl
+          CircleAvatar(
             radius: 24,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=5'),
+            backgroundColor: AppColors.surface,
+            backgroundImage: _avatarUrl.isNotEmpty
+                ? NetworkImage(_avatarUrl)
+                : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Nguyen Hai Dang",
-                style: TextStyle(
+              // Hiển thị _username thực tế
+              Text(
+                _username,
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -154,7 +174,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                "Hôm nay bạn mặc gì?",
+                "Bạn đang nghĩ gì?",
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -286,9 +306,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
-                  if (_selectedImageBytes != null) {
-                    postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                  // Chỉnh sửa điều kiện đăng: Có ảnh HOẶC có nội dung văn bản
+                  if (_selectedImageBytes != null || _contentController.text.trim().isNotEmpty) {
+                    // Nếu bạn chưa hoàn thiện API upload thực tế, logic này dùng để demo
+                    // postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
+                    Navigator.pop(context);
                   }
                 },
                 style: ElevatedButton.styleFrom(

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
-
+import 'package:jwt_decoder/jwt_decoder.dart';
 class AuthService {
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.loginEndpoint}");
@@ -23,12 +23,18 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
 
         // ---> CHỖ ĐƯỢC SỬA: Lấy và lưu cả 2 Token
-        final String? accessToken = responseData['accessToken'];
-        final String? refreshToken = responseData['refreshToken'];
-
+        final String accessToken = responseData['accessToken'];
+        final String refreshToken = responseData['refreshToken'];
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(accessToken);
+        String username = decodedToken['Username'] ?? "User";
+        String avatar = decodedToken['Avatar'] ?? "";
+        String email = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ?? "";
         if (accessToken != null && refreshToken != null) {
           await prefs.setString('token', accessToken);
           await prefs.setString('refreshToken', refreshToken);
+          await prefs.setString('username', username);
+          await prefs.setString('avatar', avatar);
+          await prefs.setString('email', email);
         }
 
         return {"success": true, "data": responseData};

@@ -1,27 +1,53 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-
+import 'package:intl/intl.dart';
 class PostItem extends StatelessWidget {
-  const PostItem({super.key});
+  final Map<String, dynamic> postData;
+
+  const PostItem({super.key, required this.postData});
 
   @override
   Widget build(BuildContext context) {
+    // Ánh xạ dữ liệu từ JSON (Dựa trên cấu trúc API bạn cung cấp)
+    final String userName = postData['userName'] ?? "User";
+    final String avatarUrl = postData['avatarUrl'] ?? 'https://i.pravatar.cc/150?img=8';
+    final String title = postData['title'] ?? "";
+    final String content = postData['content'] ?? "";
+    final List<dynamic> imageUrls = postData['imageUrls'] ?? [];
+
+    // Xử lý hiển thị thời gian
+    String timeAgo = "Mới đây";
+    if (postData['createdAt'] != null) {
+      DateTime dt = DateTime.parse(postData['createdAt']);
+      timeAgo = DateFormat('dd/MM/yyyy HH:mm').format(dt);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Header: Avatar và Tên
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const CircleAvatar(radius: 20, backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=8')),
+                CircleAvatar(
+                    radius: 20,
+                    backgroundImage: NetworkImage(avatarUrl)
+                ),
                 const SizedBox(width: 12),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Bella Hadid", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                    Text("2 hours ago", style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                    Text(
+                        userName,
+                        style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)
+                    ),
+                    Text(
+                        timeAgo,
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)
+                    ),
                   ],
                 ),
                 const Spacer(),
@@ -32,33 +58,55 @@ class PostItem extends StatelessWidget {
               ],
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              "Phối đồ phong cách tối giản cho mùa Thu 2026. #Fashion",
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
+
+          // 2. Nội dung văn bản (Title và Content)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title.isNotEmpty)
+                  Text(
+                    title,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Text(
+                  content,
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
+                ),
+              ],
             ),
           ),
-          AspectRatio(
-            aspectRatio: 4 / 5,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                image: const DecorationImage(
-                  image: NetworkImage('https://picsum.photos/800/1000'),
-                  fit: BoxFit.cover,
+
+          // 3. Hình ảnh bài viết
+          if (imageUrls.isNotEmpty)
+            AspectRatio(
+              aspectRatio: 4 / 5,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  image: DecorationImage(
+                    image: NetworkImage(imageUrls[0]), // Lấy tấm ảnh đầu tiên
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
-          ),
+
+          // 4. Các nút tương tác (Like, Comment)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                _interaction(Icons.favorite_rounded, "2.4K"),
+                _interaction(Icons.favorite_rounded, postData['likeCount']?.toString() ?? "0"),
                 const SizedBox(width: 24),
-                _interaction(Icons.mode_comment_rounded, "156"),
+                _interaction(Icons.mode_comment_rounded, "0"),
                 const Spacer(),
                 const Icon(Icons.bookmark_border_rounded, color: AppColors.textSecondary),
               ],
@@ -68,7 +116,6 @@ class PostItem extends StatelessWidget {
       ),
     );
   }
-
   Widget _interaction(IconData icon, String count) {
     return Row(
       children: [

@@ -1,9 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../screens/create_post_screens.dart';
 
-class CreatePostHeader extends StatelessWidget {
+class CreatePostHeader extends StatefulWidget {
   const CreatePostHeader({super.key});
+
+  @override
+  State<CreatePostHeader> createState() => _CreatePostHeaderState();
+}
+
+class _CreatePostHeaderState extends State<CreatePostHeader> {
+  String _username = "Đang tải...";
+  String _avatar = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  // Hàm lấy dữ liệu từ SharedPreferences đã được AuthService lưu
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // Lấy theo key bạn đã đặt trong AuthService: 'username' và 'avatar'
+      _username = prefs.getString('username') ?? "Người dùng";
+      _avatar = prefs.getString('avatar') ?? "";
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,12 +41,16 @@ class CreatePostHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-            Row(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const CircleAvatar(
+              // Hiển thị Avatar từ URL đã lưu
+              CircleAvatar(
                 radius: 28,
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=5'),
+                backgroundColor: AppColors.divider,
+                backgroundImage: _avatar.isNotEmpty
+                    ? NetworkImage(_avatar)
+                    : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -29,9 +58,10 @@ class CreatePostHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      "Nguyen Hai Dang",
-                      style: TextStyle(
+                    // Hiển thị Username từ Token đã giải mã
+                    Text(
+                      _username,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -48,7 +78,6 @@ class CreatePostHeader extends StatelessWidget {
                           );
                         },
                         borderRadius: BorderRadius.circular(15),
-                        // Sử dụng Ink thay vì Container để vẽ màu nền mà không che mất hiệu ứng gợn sóng
                         child: Ink(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

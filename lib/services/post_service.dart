@@ -3,8 +3,38 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import 'auth_service.dart';
-
+import 'dart:convert';
 class PostService {
+  Future<List<dynamic>> getAllPosts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    // Giả sử bạn đã định nghĩa getAllPostsEndpoint trong ApiConstants là "/Post"
+    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getAllPostEndpoint}");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data;
+        } else if (data is Map && data.containsKey('message')) {
+          return []; // Trả về mảng rỗng nếu Backend báo không có bài viết
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching all posts: $e");
+      return [];
+    }
+  }
   Future<bool> createPost(Uint8List imageBytes, String content, bool isPublic) async {
     return await _attemptCreatePost(imageBytes, content, isPublic, isRetry: false);
   }
@@ -49,6 +79,35 @@ class PostService {
       }
     } catch (e) {
       return false;
+    }
+  }
+  Future<List<dynamic>> fetchMyPosts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getMyPostEndpoint}");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data;
+        } else if (data is Map && data.containsKey('message')) {
+          return [];
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching posts: $e");
+      return [];
     }
   }
 }
