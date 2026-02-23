@@ -28,7 +28,7 @@ class TryOnItem extends StatelessWidget {
             color: isSelected ? AppColors.textPink : Colors.transparent,
             width: 2,
           ),
-          image: DecorationImage(8
+          image: DecorationImage(
             image: isNetworkImage
                 ? NetworkImage(imagePath) as ImageProvider
                 : AssetImage(imagePath),
