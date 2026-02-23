@@ -1,8 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart'; //
 import '../constants/app_colors.dart';
+import '../utils/post_manager.dart';
 
 class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+  final Uint8List? imageBytes;
+
+  const CreatePostScreen({super.key, this.imageBytes});
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -10,7 +16,30 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _contentController = TextEditingController();
-  bool _isPublic = true; // Trạng thái quyền riêng tư
+  final ImagePicker _picker = ImagePicker();
+
+  bool _isPublic = true;
+  Uint8List? _selectedImageBytes;
+
+  // Biến lưu thông tin người dùng
+  String _username = "Đang tải...";
+  String _avatarUrl = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedImageBytes = widget.imageBytes;
+    _loadUserInfo(); // Gọi hàm load thông tin khi khởi tạo
+  }
+
+  // Hàm lấy dữ liệu từ SharedPreferences tương tự các màn hình khác
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('username') ?? "Người dùng";
+      _avatarUrl = prefs.getString('avatar') ?? "";
+    });
+  }
 
   @override
   void dispose() {
@@ -18,11 +47,28 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _selectedImageBytes = bytes;
+        });
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      // 1. AppBar tối giản
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
@@ -43,21 +89,56 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 2. Thông tin người dùng
-            _buildUserInfo(),
-
-            // 3. Ô nhập nội dung (Chiếm phần lớn không gian)
             Expanded(
-              child: _buildInputArea(),
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildUserInfo(),
+                  _buildInputArea(),
+                  if (_selectedImageBytes != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              _selectedImageBytes!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedImageBytes = null;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
-
-            // 4. Khu vực đính kèm (Nằm ngay trên thanh hành động)
             _buildAttachmentArea(),
-
-            // Đường kẻ mờ ngăn cách
             const Divider(height: 1, color: Colors.white10),
-
-            // 5. Thanh hành động dưới cùng
             _buildBottomActionArea(),
           ],
         ),
@@ -70,17 +151,22 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const CircleAvatar(
+          // Cập nhật CircleAvatar sử dụng _avatarUrl
+          CircleAvatar(
             radius: 24,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=5'),
+            backgroundColor: AppColors.surface,
+            backgroundImage: _avatarUrl.isNotEmpty
+                ? NetworkImage(_avatarUrl)
+                : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Nguyen Hai Dang",
-                style: TextStyle(
+              // Hiển thị _username thực tế
+              Text(
+                _username,
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -88,9 +174,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                "Hôm nay bạn mặc gì?",
+                "Bạn đang nghĩ gì?",
                 style: TextStyle(
-                  color: AppColors.textSecondary.withOpacity(0.7),
+                  color: AppColors.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -106,21 +192,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
         controller: _contentController,
-        autofocus: true, // Tự động bật bàn phím khi vào trang
-        maxLines: null, // Cho phép xuống dòng thoải mái
+        autofocus: true,
+        maxLines: null,
         keyboardType: TextInputType.multiline,
         style: const TextStyle(
           color: AppColors.textPrimary,
           fontSize: 18,
           height: 1.5,
         ),
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           hintText: "Chia sẻ phong cách của bạn...",
           hintStyle: TextStyle(
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color: Colors.white38,
             fontSize: 18,
           ),
-          border: InputBorder.none, // Bỏ viền để trông sạch sẽ
+          border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
         ),
       ),
@@ -132,25 +218,25 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          _attachmentButton(Icons.photo_library_outlined, "Ảnh"),
+          _attachmentButton(Icons.photo_library_outlined, "Ảnh", _pickImage),
           const SizedBox(width: 16),
-          _attachmentButton(Icons.videocam_outlined, "Video"),
+          _attachmentButton(Icons.videocam_outlined, "Video", () {}),
           const SizedBox(width: 16),
-          _attachmentButton(Icons.location_on_outlined, "Vị trí"),
+          _attachmentButton(Icons.location_on_outlined, "Vị trí", () {}),
         ],
       ),
     );
   }
 
-  Widget _attachmentButton(IconData icon, String label) {
+  Widget _attachmentButton(IconData icon, String label, VoidCallback onTap) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.accent, size: 22), // Dùng màu Accent (Hồng/Tím)
+            Icon(icon, color: AppColors.textPink, size: 22),
             const SizedBox(width: 6),
             Text(
               label,
@@ -169,11 +255,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget _buildBottomActionArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: AppColors.background, // Đảm bảo nền che nội dung khi cuộn (nếu cần)
+      color: AppColors.background,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Nút chọn quyền riêng tư
           InkWell(
             onTap: () {
               setState(() {
@@ -209,8 +294,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
             ),
           ),
-
-          // Các nút hành động chính
           Row(
             children: [
               TextButton(
@@ -222,9 +305,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Chỉnh sửa điều kiện đăng: Có ảnh HOẶC có nội dung văn bản
+                  if (_selectedImageBytes != null || _contentController.text.trim().isNotEmpty) {
+                    // Nếu bạn chưa hoàn thiện API upload thực tế, logic này dùng để demo
+                    // postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
+                    Navigator.pop(context);
+                  }
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent, // Màu nổi bật (Hồng/Tím)
+                  backgroundColor: AppColors.textPink,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
