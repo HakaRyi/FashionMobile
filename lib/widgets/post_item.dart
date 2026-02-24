@@ -84,19 +84,40 @@ class PostItem extends StatelessWidget {
           ),
 
           // 3. Hình ảnh bài viết
+          // 3. Hình ảnh bài viết (Hỗ trợ nhiều ảnh)
           if (imageUrls.isNotEmpty)
-            AspectRatio(
-              aspectRatio: 4 / 5,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  image: DecorationImage(
-                    image: NetworkImage(imageUrls[0]), // Lấy tấm ảnh đầu tiên
-                    fit: BoxFit.cover,
+            Column(
+              children: [
+                SizedBox(
+                  height: 400, // Bạn có thể dùng AspectRatio như cũ nếu muốn
+                  child: PageView.builder(
+                    itemCount: imageUrls.length,
+                    controller: PageController(viewportFraction: 0.95), // Hiển thị mờ mép ảnh tiếp theo
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          image: DecorationImage(
+                            image: NetworkImage(imageUrls[index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ),
+
+                // Hiển thị số lượng ảnh nếu có > 1 ảnh
+                if (imageUrls.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      "Vuốt để xem thêm (${imageUrls.length} ảnh)",
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ),
+              ],
             ),
 
           // 4. Các nút tương tác (Like, Comment)
