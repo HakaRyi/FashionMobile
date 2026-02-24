@@ -28,13 +28,15 @@ class AuthService {
         Map<String, dynamic> decodedToken = JwtDecoder.decode(accessToken);
         String username = decodedToken['Username'] ?? "User";
         String avatar = decodedToken['Avatar'] ?? "";
-        String email = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ?? "";
+        String email = decodedToken['email'] ?? "";
+        String userId = decodedToken['AccountId'] ?? "";
         if (accessToken != null && refreshToken != null) {
           await prefs.setString('token', accessToken);
           await prefs.setString('refreshToken', refreshToken);
           await prefs.setString('username', username);
           await prefs.setString('avatar', avatar);
           await prefs.setString('email', email);
+          await prefs.setString('userId', userId);
         }
 
         return {"success": true, "data": responseData};

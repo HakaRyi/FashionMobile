@@ -11,4 +11,6 @@ class ApiConstants {
 
   static const String getMyPostEndpoint = "/Post/getMyPost";
   static const String getAllPostEndpoint = "/Post"; //cho admin nma dang test cho trang home 22/2
+
+  static const String getMyProfile = "/Account/{id}";
 }
