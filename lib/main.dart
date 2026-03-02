@@ -1,7 +1,6 @@
 import 'package:fashion_mobile/utils/post_manager.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'screens/main_screen.dart';
 import 'package:fashion_mobile/constants/app_colors.dart';
 import 'screens/login_screen.dart';
 
