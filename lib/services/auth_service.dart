@@ -22,7 +22,6 @@ class AuthService {
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
 
-        // ---> CHỖ ĐƯỢC SỬA: Lấy và lưu cả 2 Token
         final String accessToken = responseData['accessToken'];
         final String refreshToken = responseData['refreshToken'];
         Map<String, dynamic> decodedToken = JwtDecoder.decode(accessToken);

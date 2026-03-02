@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import '../constants/app_colors.dart';
+import 'dart:typed_data';
 import '../widgets/add_clothing_card.dart';
 import '../screens/model_management_screen.dart';
 import '../widgets/price_info_widget.dart';
 import '../utils/try_on_manager.dart';
 import './create_post_screens.dart';
+import 'package:gal/gal.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../widgets/save_outfit_dialog.dart';
 
 class TryOnScreen extends StatefulWidget {
   const TryOnScreen({super.key});
@@ -137,17 +141,43 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     children: [
                       _actionButton(Icons.delete_outline, "Xóa", Colors.redAccent, () {
                         tryOnManager.resetResult();
-                        setState(() {
-                          selectedClothFile = null;
-                        });
+                        setState(() => selectedClothFile = null);
                       }),
-                      _actionButton(Icons.download, "Lưu", Colors.blueAccent, () {}),
-                      _actionButton(Icons.share, "Chia sẻ", Colors.green, () {
-                      if (resultBytes != null) {
-                            Navigator.push(
+
+                      _actionButton(Icons.file_download_outlined, "Tải về", Colors.blueAccent, () async {
+                        await _saveImageToGallery(resultBytes);
+                      }),
+
+                      // NÚT LƯU VÀO DATABASE (Giao diện cute)
+                      _actionButton(Icons.save_alt_outlined, "Lưu", Colors.amber, () async {
+                        final result = await showGeneralDialog<bool>(
+                          context: context,
+                          barrierDismissible: true,
+                          barrierLabel: "Save",
+                          pageBuilder: (ctx, a1, a2) => Container(),
+                          transitionBuilder: (ctx, a1, a2, child) {
+                            return Transform.scale(
+                              scale: a1.value,
+                              child: SaveOutfitDialog(imageBytes: resultBytes),
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 300),
+                        );
+
+                        if (result == true && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("✨ Đã lưu vào tủ đồ thành công!"), backgroundColor: Colors.green),
+                          );
+                        }
+                      }),
+
+                      // NÚT CHIA SẺ (Logic cũ của bạn)
+                      _actionButton(Icons.share_outlined, "Chia sẻ", Colors.green, () {
+                        if (resultBytes != null) {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                            builder: (context) => CreatePostScreen(imageBytes: resultBytes),
+                              builder: (context) => CreatePostScreen(imageBytes: resultBytes),
                             ),
                           );
                         }
@@ -324,5 +354,56 @@ class _TryOnScreenState extends State<TryOnScreen> {
         ],
       ),
     );
+  }
+
+
+  Future<void> _saveImageToGallery(Uint8List bytes) async {
+    try {
+      if (!await Permission.storage.request().isGranted &&
+          !await Permission.photos.request().isGranted &&
+          !await Permission.manageExternalStorage.request().isGranted) {
+
+        // Nếu user từ chối quyền, mở cài đặt
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text("Vui lòng cấp quyền truy cập ảnh trong Cài đặt."),
+              action: SnackBarAction(label: "Mở Cài đặt", onPressed: openAppSettings),
+            ),
+          );
+        }
+        return;
+      }
+
+      await Gal.putImageBytes(
+        bytes,
+        name: "outfit_${DateTime.now().millisecondsSinceEpoch}",
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Đã lưu ảnh vào thư viện thành công!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on GalException catch (e) {
+      debugPrint(e.toString());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Lỗi khi lưu ảnh: ${e.type.message}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi không xác định: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

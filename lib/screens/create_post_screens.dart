@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart'; //
 import '../constants/app_colors.dart';
 import '../utils/post_manager.dart';
+import 'main_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final Uint8List? imageBytes;
@@ -65,6 +66,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
+  void _handlePost() {
+    if (_selectedImageBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài!")),
+      );
+      return;
+    }
+
+    postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
+
+    Navigator.of(context).popUntil((route) => route.isFirst);
+
+    if (mainScreenKey.currentState != null) {
+      mainScreenKey.currentState!.switchTab(0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,6 +103,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: _handlePost,
+            child: const Text("ĐĂNG", style: TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold)),
+          )
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -305,14 +329,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () {
-                  // Chỉnh sửa điều kiện đăng: Có ảnh HOẶC có nội dung văn bản
-                  if (_selectedImageBytes != null || _contentController.text.trim().isNotEmpty) {
-                    // Nếu bạn chưa hoàn thiện API upload thực tế, logic này dùng để demo
-                    // postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
-                    Navigator.pop(context);
-                  }
-                },
+                onPressed: _handlePost,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.textPink,
                   foregroundColor: Colors.white,
