@@ -231,7 +231,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                         if (!postSnapshot.hasData || postSnapshot.data!.isEmpty) {
                           return const SliverToBoxAdapter(
-                            child: Padding(padding: EdgeInsets.all(40), child: Center(child: Text("Chưa có bài viết nào.", style: TextStyle(color: Colors.white38)))),
+                            child: Padding(padding: EdgeInsets.all(40),
+                                child: Center(child: Text("Chưa có bài viết nào.", style: TextStyle(color: Colors.white38)))),
                           );
                         }
 
@@ -243,7 +244,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: AppColors.background,
                                 child: Column(
                                   children: [
-                                    PostItem(postData: posts[index]),
+                                    PostItem(postData: posts[index],
+                                              isMyPost: true,),
                                     if (index < posts.length - 1)
                                       const Divider(color: AppColors.divider, height: 1, indent: 16, endIndent: 16),
                                   ],
