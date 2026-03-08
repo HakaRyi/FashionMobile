@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../constants/app_colors.dart'; // Đảm bảo bạn đã có file này hoặc dùng màu cứng
 
 // Enum để định nghĩa loại thông báo
@@ -92,14 +93,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     bool isEmpty = _allNotifications.isEmpty;
-    var todayList;
-    var yesterdayList;
-    var earlierList;
-    if(!isEmpty){
-       todayList = _allNotifications.take(3).toList();
-       yesterdayList = _allNotifications.skip(3).take(2).toList();
-       earlierList = _allNotifications.skip(5).toList();
-    }else{
+    List<NotificationModel> todayList;
+    List<NotificationModel> yesterdayList;
+    List<NotificationModel> earlierList;
+    if (!isEmpty) {
+      todayList = _allNotifications.take(3).toList();
+      yesterdayList = _allNotifications.skip(3).take(2).toList();
+      earlierList = _allNotifications.skip(5).toList();
+    } else {
       todayList = [];
       yesterdayList = [];
       earlierList = [];
@@ -112,7 +113,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -130,17 +135,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
-      body:
-      isEmpty ? const EmptyNotificationState() :
-      ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 20),
-        children: [
-          _buildSection("HÔM NAY", todayList),
-          _buildSection("HÔM QUA", yesterdayList),
-          _buildSection("TRƯỚC ĐÓ", earlierList),
-        ],
-      ),
+      body: isEmpty
+          ? const EmptyNotificationState()
+          : ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 20),
+              children: [
+                _buildSection("HÔM NAY", todayList),
+                _buildSection("HÔM QUA", yesterdayList),
+                _buildSection("TRƯỚC ĐÓ", earlierList),
+              ],
+            ),
     );
   }
 
@@ -285,11 +290,16 @@ class NotificationItem extends StatelessWidget {
   // Helper: Chọn icon theo loại
   IconData _getBadgeIcon(NotificationType type) {
     switch (type) {
-      case NotificationType.like: return Icons.favorite;
-      case NotificationType.comment: return Icons.chat_bubble;
-      case NotificationType.share: return Icons.share; // Hoặc Icons.repeat
-      case NotificationType.bookmark: return Icons.bookmark;
-      case NotificationType.follow: return Icons.person_add;
+      case NotificationType.like:
+        return Icons.favorite;
+      case NotificationType.comment:
+        return Icons.chat_bubble;
+      case NotificationType.share:
+        return Icons.share; // Hoặc Icons.repeat
+      case NotificationType.bookmark:
+        return Icons.bookmark;
+      case NotificationType.follow:
+        return Icons.person_add;
     }
   }
 
@@ -297,7 +307,9 @@ class NotificationItem extends StatelessWidget {
   LinearGradient _getBadgeGradient(NotificationType type) {
     switch (type) {
       case NotificationType.like:
-        return const LinearGradient(colors: [Colors.pinkAccent, Colors.redAccent]);
+        return const LinearGradient(
+          colors: [Colors.pinkAccent, Colors.redAccent],
+        );
       case NotificationType.comment:
         return const LinearGradient(colors: [Colors.blueAccent, Colors.cyan]);
       case NotificationType.share:
@@ -305,7 +317,9 @@ class NotificationItem extends StatelessWidget {
       case NotificationType.bookmark:
         return const LinearGradient(colors: [Colors.orange, Colors.amber]);
       case NotificationType.follow:
-        return const LinearGradient(colors: [Colors.purpleAccent, Colors.deepPurple]);
+        return const LinearGradient(
+          colors: [Colors.purpleAccent, Colors.deepPurple],
+        );
     }
   }
 }
@@ -354,7 +368,8 @@ class EmptyNotificationState extends StatelessWidget {
                     ),
                   ),
                   child: Icon(
-                    Icons.notifications_paused_outlined, // Icon cái chuông "ngủ"
+                    Icons
+                        .notifications_paused_outlined, // Icon cái chuông "ngủ"
                     size: 40,
                     color: AppColors.textSecondary.withOpacity(0.5),
                   ),
@@ -400,7 +415,8 @@ class EmptyNotificationState extends StatelessWidget {
                   // Điều hướng sang trang Khám phá hoặc Home
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, // Nút trắng nổi bật trên nền đen
+                  backgroundColor:
+                      Colors.white, // Nút trắng nổi bật trên nền đen
                   foregroundColor: Colors.black,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -409,10 +425,7 @@ class EmptyNotificationState extends StatelessWidget {
                 ),
                 child: const Text(
                   "Khám phá ngay",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
             ),

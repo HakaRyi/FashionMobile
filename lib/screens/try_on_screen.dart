@@ -173,15 +173,13 @@ class _TryOnScreenState extends State<TryOnScreen> {
 
                       // NÚT CHIA SẺ (Logic cũ của bạn)
                       _actionButton(Icons.share_outlined, "Chia sẻ", Colors.green, () {
-                        if (resultBytes != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CreatePostScreen(imageBytes: resultBytes),
-                            ),
-                          );
-                        }
-                      }),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreatePostScreen(imageBytes: resultBytes),
+                          ),
+                        );
+                                            }),
                     ],
                   ),
                 ),

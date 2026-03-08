@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../widgets/clothing_item.dart';
 
 class SuggestionScreen extends StatelessWidget {
   const SuggestionScreen({super.key});

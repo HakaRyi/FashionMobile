@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/clothing_item.dart';
 import '../../widgets/add_clothing_card.dart'; // Import widget mới
-import '../../screens/upload_screens.dart';
 import '../../screens/suggestion_screen.dart';
 import '../../screens/try_on_screen.dart';
 import '../../screens/fashion_news_screen.dart';
@@ -98,7 +97,7 @@ class WardrobeScreen extends StatelessWidget {
               }
 
               return ClothingItem(
-                title: "Áo đồ số ${index}",
+                title: "Áo đồ số $index",
                 imageUrl: "assets/images/vietnamjersey.png",
                 onTap: () { // Bạn nên thêm thuộc tính onTap vào ClothingItem widget
                   Navigator.push(
