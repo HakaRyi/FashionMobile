@@ -143,11 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUploadProgressCard() {
-    // Logic màu sắc:
-    // - Nếu xong 100% (đang chờ duyệt): Màu Cam/Vàng (Cảnh báo/Chờ)
-    // - Nếu đang chạy: Màu Hồng/Xanh (Đang xử lý)
     final isFinishedUpload = postManager.uploadProgress >= 1.0;
-    final progressColor = isFinishedUpload ? Colors.orangeAccent : AppColors.textPink;
+    // Nếu status message chứa từ "cập nhật", dùng màu xanh dương để phân biệt với upload mới
+    final isUpdating = postManager.statusMessage.toLowerCase().contains("cập nhật");
+    final progressColor = isFinishedUpload
+        ? Colors.orangeAccent
+        : (isUpdating ? Colors.blueAccent : AppColors.textPink);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -166,14 +167,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 postManager.statusMessage,
                 style: TextStyle(
-                    color: isFinishedUpload ? Colors.orangeAccent : Colors.white,
-                    fontWeight: FontWeight.bold
+                  color: isFinishedUpload ? Colors.orangeAccent : Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               if (!isFinishedUpload)
                 Text(
                   "${(postManager.uploadProgress * 100).toInt()}%",
-                  style: const TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: progressColor, fontWeight: FontWeight.bold),
                 )
               else
                 const Icon(Icons.hourglass_bottom, color: Colors.orangeAccent, size: 20)
@@ -193,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
-                "Hệ thống đang kiểm tra hình ảnh hợp lệ...",
+                "Hệ thống đang xử lý...",
                 style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontStyle: FontStyle.italic),
               ),
             )
