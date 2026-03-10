@@ -9,7 +9,7 @@ class ApiConstants {
   static const String tryOnEndpoint = "/TryOn/try-on";
   static const String createPostEndpoint = "/Post";
 
-  static const String getMyPostEndpoint = "/Post/getMyPost";
+  static const String getMyPostEndpoint = "/Post/my";
   static const String getAllPostEndpoint = "/Post"; //cho admin nma dang test cho trang home 22/2
 
   static const String getMyProfile = "/Account/{id}";
