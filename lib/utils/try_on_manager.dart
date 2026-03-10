@@ -60,4 +60,10 @@ class TryOnManager extends ChangeNotifier {
       ),
     );
   }
+
+  void setMockResultBytes(Uint8List bytes) {
+    resultImageBytes = bytes;
+    isProcessing = false;
+    notifyListeners();
+  }
 }
