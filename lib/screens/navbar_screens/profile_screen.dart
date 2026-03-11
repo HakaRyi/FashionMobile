@@ -7,6 +7,7 @@ import '../../screens/create_post_screens.dart';
 import '../public_wardrobe_screen.dart';
 import '../../utils/route_transitions.dart';
 import '../../services/post_service.dart';
+import '../../services/account_service.dart'; // Đảm bảo ông đã tạo file này như tui hướng dẫn
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,25 +17,20 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String _email = "Đang tải...";
-  String _displayName = "User";
-  String _avatarUrl = "";
+  late Future<Map<String, dynamic>?> _profileFuture;
   late Future<List<dynamic>> _postsFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
-    // Khởi tạo Future gọi API ngay từ đầu
-    _postsFuture = PostService().fetchMyPosts();
+    _refreshData();
   }
 
-  Future<void> _loadUserProfile() async {
-    final prefs = await SharedPreferences.getInstance();
+  // Hàm để load hoặc reload dữ liệu
+  void _refreshData() {
     setState(() {
-      _email = prefs.getString('email') ?? "unknown@";
-      _avatarUrl = prefs.getString('avatar') ?? "";
-      _displayName = prefs.getString('username') ?? "unknown_user";
+      _profileFuture = AccountService().getMyProfile();
+      _postsFuture = PostService().fetchMyPosts();
     });
   }
 
@@ -45,258 +41,247 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Lớp 1: Ảnh Cover Nền (Blur nhẹ dựa trên Avatar)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: coverHeight + 50,
-            child: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: _avatarUrl.isNotEmpty
-                      ? NetworkImage(_avatarUrl)
-                      : const NetworkImage("https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=2073&auto=format&fit=crop"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.4),
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _profileFuture,
+        builder: (context, profileSnapshot) {
+          if (profileSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.pink));
+          }
 
-          // Lớp 2: Nội dung cuộn chính
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // 1. AppBar trong suốt
-              SliverAppBar(
-                backgroundColor: Colors.transparent,
-                pinned: true,
-                elevation: 0,
-                title: Text(
-                  _displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    shadows: [Shadow(color: Colors.black45, blurRadius: 5)],
-                  ),
-                ),
-                centerTitle: true,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.more_horiz, color: Colors.white),
-                    onPressed: () {
-                      Navigator.push(context, SlideRoute(page: const SettingsScreen()));
-                    },
-                  ),
-                ],
-              ),
+          // Lấy dữ liệu từ API Account, nếu lỗi thì dùng dữ liệu mặc định
+          final user = profileSnapshot.data;
+          final String avatar = user?['avatar'] ?? "";
+          final String name = user?['username'] ?? "User";
+          final String email = user?['email'] ?? "unknown@gmail.com";
+          final String bio = user?['description'] ?? "Chưa có giới thiệu về bản thân.";
 
-              // 2. Header Info (Avatar + Stats động từ API)
-              FutureBuilder<List<dynamic>>(
-                future: _postsFuture,
-                builder: (context, snapshot) {
-                  String postCount = snapshot.hasData ? snapshot.data!.length.toString() : "0";
-
-                  return SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: coverHeight - kToolbarHeight - profileOverlap,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            // Avatar Profile
-                            Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-                                gradient: const LinearGradient(
-                                  colors: [Colors.purpleAccent, Colors.pinkAccent],
-                                ),
-                              ),
-                              child: CircleAvatar(
-                                radius: 42,
-                                backgroundColor: AppColors.surface,
-                                backgroundImage: _avatarUrl.isNotEmpty
-                                    ? NetworkImage(_avatarUrl)
-                                    : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            // Thống kê Stats
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                  children: [
-                                    _buildStatItem(postCount, "Posts"),
-                                    _buildStatItem("0", "Follower"),
-                                    _buildStatItem("0", "Following"),
-                                  ],
-                                ),
-                              ),
-                            ),
+          return RefreshIndicator(
+            onRefresh: () async => _refreshData(),
+            color: Colors.pink,
+            child: Stack(
+              children: [
+                // Lớp 1: Ảnh Cover Nền (Lấy chính avatar làm mờ)
+                Positioned(
+                  top: 0, left: 0, right: 0,
+                  height: coverHeight + 50,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: avatar.isNotEmpty ? NetworkImage(avatar) : const NetworkImage("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s"),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.4),
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.9),
                           ],
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
-
-              // 3. Body: Tên, Bio và Nút hành động
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          margin: const EdgeInsets.only(top: 12),
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(2),
+                ),
+
+                // Lớp 2: Nội dung cuộn chính
+                CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  slivers: [
+                    // 1. AppBar
+                    SliverAppBar(
+                      backgroundColor: Colors.transparent,
+                      pinned: true,
+                      elevation: 0,
+                      title: Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          shadows: [Shadow(color: Colors.black45, blurRadius: 5)],
+                        ),
+                      ),
+                      centerTitle: true,
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.more_horiz, color: Colors.white),
+                          onPressed: () {
+                            Navigator.push(context, SlideRoute(page: const SettingsScreen()));
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // 2. Header Info (Avatar + Stats thực tế từ API Account)
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: coverHeight - kToolbarHeight - profileOverlap,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(colors: [Colors.purpleAccent, Colors.pinkAccent]),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 42,
+                                  backgroundColor: AppColors.surface,
+                                  backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      _buildStatItem(user?['postCount']?.toString() ?? "0", "Posts"),
+                                      _buildStatItem(user?['followerCount']?.toString() ?? "0", "Followers"),
+                                      _buildStatItem(user?['followingCount']?.toString() ?? "0", "Following"),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(20),
+                    ),
+
+                    // 3. Body: Tên, Bio và Nút hành động
+                    SliverToBoxAdapter(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _displayName,
-                              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 12),
+                                width: 40, height: 4,
+                                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                              ),
                             ),
-                            Text(
-                              _email,
-                              style: const TextStyle(color: Colors.white54, fontSize: 14),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              "Giới thiệu về bản thân",
-                              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
-                            ),
-                            const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreatePostScreen())),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.textPink,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                    child: const Text("Tạo Bài Đăng", style: TextStyle(fontWeight: FontWeight.bold)),
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                                  Text(email, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+                                  const SizedBox(height: 12),
+                                  Text(bio, style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreatePostScreen())),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.pink,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                          ),
+                                          child: const Text("Tạo Bài Đăng", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () => Navigator.push(context, SlideRoute(page: const PublicWardrobeScreen())),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            side: const BorderSide(color: Colors.white24),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                          ),
+                                          child: const Text("Tủ Đồ"),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () => Navigator.push(context, SlideRoute(page: const PublicWardrobeScreen())),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      side: const BorderSide(color: Colors.white24),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                    child: const Text("Tủ Đồ"),
-                                  ),
-                                ),
-                              ],
+                                  const SizedBox(height: 20),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
 
-              // 4. Grid bài viết thực tế từ FutureBuilder
-              FutureBuilder<List<dynamic>>(
-                future: _postsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SliverToBoxAdapter(
-                      child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppColors.textPink))),
-                    );
-                  }
+                    // 4. Grid bài viết từ FutureBuilder (Lấy từ PostService)
+                    FutureBuilder<List<dynamic>>(
+                      future: _postsFuture,
+                      builder: (context, postSnapshot) {
+                        if (postSnapshot.connectionState == ConnectionState.waiting) {
+                          return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: Colors.pink))));
+                        }
 
-                  if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                    return SliverToBoxAdapter(
-                      child: Container(
-                        padding: const EdgeInsets.all(40),
-                        child: const Center(
-                          child: Text("Bạn chưa có bài viết nào.", style: TextStyle(color: Colors.white38)),
-                        ),
-                      ),
-                    );
-                  }
+                        if (!postSnapshot.hasData || postSnapshot.data!.isEmpty) {
+                          return const SliverToBoxAdapter(
+                            child: Padding(padding: EdgeInsets.all(40), child: Center(child: Text("Chưa có bài viết nào.", style: TextStyle(color: Colors.white38)))),
+                          );
+                        }
 
-                  final posts = snapshot.data!;
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        return Container(
-                          color: AppColors.background,
-                          child: Column(
-                            children: [
-                              PostItem(postData: posts[index]), // Đảm bảo PostItem nhận dữ liệu
-                              if (index < posts.length - 1)
-                                const Divider(color: AppColors.divider, height: 1, indent: 16, endIndent: 16),
-                            ],
+                        final posts = postSnapshot.data!;
+                        return SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                              return Container(
+                                color: AppColors.background,
+                                child: Column(
+                                  children: [
+                                    PostItem(postData: posts[index]),
+                                    if (index < posts.length - 1)
+                                      const Divider(color: AppColors.divider, height: 1, indent: 16, endIndent: 16),
+                                  ],
+                                ),
+                              );
+                            },
+                            childCount: posts.length,
                           ),
                         );
                       },
-                      childCount: posts.length,
                     ),
-                  );
-                },
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 100)), // Padding dưới cùng
-            ],
-          ),
-        ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildStatItem(String value, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 }

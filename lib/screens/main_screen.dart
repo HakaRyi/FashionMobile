@@ -7,19 +7,18 @@ import './navbar_screens/wardrobe_screen.dart';
 
 
 import '../widgets/main_bottom_nav.dart';
+final GlobalKey<MainScreenState> mainScreenKey = GlobalKey<MainScreenState>();
 
-//File này chỉ dùng để load các màn hình trên bottom navigation bar nha
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  //Sau này có thêm trang nào trên Bottom Navigation Bar thì them vào mảng này
   final List<Widget> _pages = [
     const HomeScreen(),
     const SearchScreen(),
@@ -27,6 +26,12 @@ class _MainScreenState extends State<MainScreen> {
     const WardrobeScreen(),
     const ProfileScreen(),
   ];
+
+  void switchTab(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -37,6 +42,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: mainScreenKey,
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
