@@ -8,8 +8,9 @@ import 'main_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final Uint8List? imageBytes;
+  final Map<String, dynamic>? postToEdit;
 
-  const CreatePostScreen({super.key, this.imageBytes});
+  const CreatePostScreen({super.key, this.imageBytes, this.postToEdit});
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -21,6 +22,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   bool _isPublic = true;
   Uint8List? _selectedImageBytes;
+  String? _existingImageUrl;
 
   // Biến lưu thông tin người dùng
   String _username = "Đang tải...";
@@ -30,7 +32,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void initState() {
     super.initState();
     _selectedImageBytes = widget.imageBytes;
-    _loadUserInfo(); // Gọi hàm load thông tin khi khởi tạo
+    _loadUserInfo();
+
+    if (widget.postToEdit != null) {
+      _contentController.text = widget.postToEdit!['content'] ?? "";
+      _isPublic = widget.postToEdit!['isPublic'] ?? true;
+
+      List<dynamic>? urls = widget.postToEdit!['imageUrls'];
+      if (urls != null && urls.isNotEmpty) {
+        _existingImageUrl = urls[0].toString();
+      }
+    }
   }
 
   // Hàm lấy dữ liệu từ SharedPreferences tương tự các màn hình khác
@@ -67,24 +79,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   void _handlePost() {
-    if (_selectedImageBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài!")),
+    // if (widget.postToEdit != null) {
+    //   int postId = widget.postToEdit!['postId'] ?? 0;
+    //
+    //   postManager.updatePost(
+    //     postId,
+    //     _selectedImageBytes,
+    //     _contentController.text,
+    //     _isPublic,
+    //   );
+    // } else {
+    //     if (_selectedImageBytes == null) {
+    //       const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài!"));
+    //       return;
+    //     }
+    //     postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
+    //   }
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const MainScreen(),
+        ),
+            (Route<dynamic> route) => false,
       );
-      return;
     }
-
-    postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
-
-    Navigator.of(context).popUntil((route) => route.isFirst);
-
-    if (mainScreenKey.currentState != null) {
-      mainScreenKey.currentState!.switchTab(0);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    bool hasImage = _selectedImageBytes != null || _existingImageUrl != null;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -119,39 +140,36 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 children: [
                   _buildUserInfo(),
                   _buildInputArea(),
-                  if (_selectedImageBytes != null)
+                  if (hasImage)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.memory(
-                              _selectedImageBytes!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                            ),
+                            child: _selectedImageBytes != null
+                                ? Image.memory(_selectedImageBytes!,
+                                              fit: BoxFit.cover,
+                                              height: 300,
+                                              width: double.infinity)
+                                : Image.network(_existingImageUrl!,
+                                              fit: BoxFit.cover,
+                                              height: 300,
+                                              width: double.infinity),
                           ),
                           Positioned(
-                            top: 8,
-                            right: 8,
+                            top: 8, right: 8,
                             child: GestureDetector(
                               onTap: () {
                                 setState(() {
                                   _selectedImageBytes = null;
+                                  _existingImageUrl = null; // Xóa cả ảnh cũ và mới
                                 });
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                child: const Icon(Icons.close, color: Colors.white, size: 20),
                               ),
                             ),
                           ),

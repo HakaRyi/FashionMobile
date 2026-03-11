@@ -7,10 +7,12 @@ import '../widgets/comment_sheet.dart';
 class PostItem extends StatelessWidget {
 
   final Map<String, dynamic> postData;
+  final bool isMyPost;
 
   const PostItem({
     super.key,
     required this.postData,
+    this.isMyPost = false,
   });
 
   @override
@@ -255,8 +257,6 @@ class PostItem extends StatelessWidget {
     );
   }
 
-
-
   void _showPostOptions(BuildContext context) {
 
     showModalBottomSheet(
@@ -278,26 +278,43 @@ class PostItem extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              ListTile(
-                leading: const Icon(
-                  Icons.report_gmailerrorred_rounded,
-                  color: Colors.redAccent,
-                ),
-                title: const Text(
-                  "Báo cáo bài viết",
-                  style: TextStyle(color: Colors.redAccent),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
+              if (isMyPost)
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    "Xóa bài viết",
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
 
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
-                    const SnackBar(
-                      content: Text("Đã gửi báo cáo"),
-                    ),
-                  );
-                },
-              ),
+                    // TODO: gọi API delete post
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(
+                    Icons.report_gmailerrorred_rounded,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    "Báo cáo bài viết",
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
+                      const SnackBar(
+                        content: Text("Đã gửi báo cáo"),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         );

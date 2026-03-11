@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import '../constants/app_colors.dart';
 import 'dart:typed_data';
+import '../utils/model_manager.dart';
 import '../widgets/add_clothing_card.dart';
 import '../screens/model_management_screen.dart';
 import '../widgets/price_info_widget.dart';
@@ -12,6 +13,7 @@ import './create_post_screens.dart';
 import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../widgets/save_outfit_dialog.dart';
+import 'create_model_screen.dart';
 
 class TryOnScreen extends StatefulWidget {
   const TryOnScreen({super.key});
@@ -24,8 +26,16 @@ class _TryOnScreenState extends State<TryOnScreen> {
   File? selectedClothFile;
   final int currentBalance = 0;
   final int tryOnCost = 0;
-
   final ImagePicker _picker = ImagePicker();
+
+  bool _isLoadingModels = true;
+
+  final List<Map<String, dynamic>> _mockHistory = [
+    {"date": "10/03/2026 14:30", "imageUrl": "https://i.pravatar.cc/150?img=1", "bytes": Uint8List(0)},
+    {"date": "09/03/2026 09:15", "imageUrl": "https://i.pravatar.cc/150?img=2", "bytes": Uint8List(0)},
+    {"date": "08/03/2026 20:45", "imageUrl": "https://i.pravatar.cc/150?img=3", "bytes": Uint8List(0)},
+    {"date": "07/03/2026 11:20", "imageUrl": "https://i.pravatar.cc/150?img=4", "bytes": Uint8List(0)},
+  ];
 
   Future<void> _pickImage() async {
     try {
@@ -42,6 +52,139 @@ class _TryOnScreenState extends State<TryOnScreen> {
     } catch (e) {
       debugPrint(e.toString());
     }
+  }
+
+  void _showModelSelectionBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        // ListenableBuilder phải nằm TRONG builder của showModalBottomSheet
+        return ListenableBuilder(
+          listenable: modelManager,
+          builder: (context, child) {
+            final models = modelManager.userModels;
+            final isLoading = modelManager.isLoading;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: Text(
+                        "Chọn Model",
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
+                        : models.isEmpty
+                        ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.person_off_outlined, color: Colors.white54, size: 60),
+                          const SizedBox(height: 16),
+                          const Text("Chưa có model, thêm ngay đi!", style: TextStyle(color: Colors.white, fontSize: 16)),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateModelScreen()));
+                            },
+                            icon: const Icon(Icons.add_photo_alternate_outlined),
+                            label: const Text("Thêm model mới", style: TextStyle(fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.textPink,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          )
+                        ],
+                      ),
+                    )
+                        : GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: models.length + 1, // +1 cho nút Thêm mới
+                      itemBuilder: (context, index) {
+                        // Ô đầu tiên: Nút Thêm Mới
+                        if (index == 0) {
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateModelScreen()));
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.textPink.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.textPink, width: 2),
+                              ),
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add, color: AppColors.textPink, size: 40),
+                                  SizedBox(height: 8),
+                                  Text("Thêm mới", style: TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        // Các ô còn lại: Hiển thị Model
+                        final modelData = models[index - 1]; // Trừ 1 vì ô đầu là nút thêm
+
+                        // DEBUG: In ra để xem imageUrl có đúng định dạng không
+                        // print("Model Image URL: ${modelData['imageUrl']}");
+
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            // TODO: Xử lý logic khi người dùng nhấp chọn model này (Ví dụ lưu URL vào biến trạng thái của TryOnScreen)
+                            // setState(() { currentModelUrl = modelData['imageUrl']; });
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white24, width: 1),
+                              image: DecorationImage(
+                                // Kiểm tra null và fallback bằng ảnh mặc định nếu lỗi URL
+                                image: NetworkImage(modelData['imageUrl'] ?? 'https://via.placeholder.com/150'),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    modelManager.fetchMyModels();
   }
 
   @override
@@ -77,8 +220,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // BỎ flex ở đây để nó tự động chiếm hết không gian trống
               Expanded(
-                flex: 5,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Stack(
@@ -113,12 +256,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           bottom: 15,
                           right: 15,
                           child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const ModelManagementScreen()),
-                              );
-                            },
+                            onTap: _showModelSelectionBottomSheet,
                             child: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
@@ -133,6 +271,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   ),
                 ),
               ),
+
               if (resultBytes != null && !isProcessing)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -143,12 +282,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         tryOnManager.resetResult();
                         setState(() => selectedClothFile = null);
                       }),
-
                       _actionButton(Icons.file_download_outlined, "Tải về", Colors.blueAccent, () async {
                         await _saveImageToGallery(resultBytes);
                       }),
-
-                      // NÚT LƯU VÀO DATABASE (Giao diện cute)
                       _actionButton(Icons.save_alt_outlined, "Lưu", Colors.amber, () async {
                         final result = await showGeneralDialog<bool>(
                           context: context,
@@ -170,41 +306,34 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           );
                         }
                       }),
-
-                      // NÚT CHIA SẺ (Logic cũ của bạn)
                       _actionButton(Icons.share_outlined, "Chia sẻ", Colors.green, () {
-                        if (resultBytes != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CreatePostScreen(imageBytes: resultBytes),
-                            ),
-                          );
-                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreatePostScreen(imageBytes: resultBytes),
+                          ),
+                        );
                       }),
                     ],
                   ),
                 ),
-              if (resultBytes == null) ...[
+
+              if (resultBytes == null && !isProcessing) ...[
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
                     "Chọn món đồ để thử",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
                 SizedBox(
-                  height: 120,
+                  height: 90,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       SizedBox(
-                        width: 100,
+                        width: 80,
                         child: GestureDetector(
                           onTap: _pickImage,
                           child: Container(
@@ -214,7 +343,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                               border: Border.all(color: Colors.white24, width: 1.5),
                             ),
                             child: const Center(
-                              child: Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 32),
+                              child: Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 28),
                             ),
                           ),
                         ),
@@ -222,7 +351,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       const SizedBox(width: 12),
                       if (selectedClothFile != null)
                         Container(
-                          width: 100,
+                          width: 80,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppColors.textPink, width: 2),
@@ -247,11 +376,73 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     ],
                   ),
                 ),
-                const Spacer(),
+
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    "Lịch sử thử đồ",
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                // Thay Expanded bằng SizedBox cố định chiều cao (khoảng 140) để không lấn át Model
+                SizedBox(
+                  height: 140,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _mockHistory.length,
+                    itemBuilder: (context, index) {
+                      final item = _mockHistory[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                item["imageUrl"],
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                item["date"],
+                                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.textPink.withOpacity(0.2),
+                                foregroundColor: AppColors.textPink,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                tryOnManager.setMockResultBytes(item["bytes"]);
+                              },
+                              child: const Text("Xem"),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
-              if (resultBytes == null)
+
+              if (resultBytes == null && !isProcessing)
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 35),
+                  padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -279,7 +470,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           ),
                           const Spacer(),
                           Container(
-                            height: 55,
+                            height: 50,
                             width: MediaQuery.of(context).size.width * 0.45,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(15),
@@ -307,10 +498,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   borderRadius: BorderRadius.circular(15),
                                 ),
                               ),
-                              child: Text(
-                                isProcessing ? "ĐANG XỬ LÝ..." : "THỬ ĐỒ NGAY",
+                              child: const Text(
+                                "THỬ ĐỒ NGAY",
                                 style: TextStyle(
-                                  color: canProceed ? Colors.white : Colors.white24,
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                 ),
@@ -356,14 +547,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
     );
   }
 
-
   Future<void> _saveImageToGallery(Uint8List bytes) async {
     try {
       if (!await Permission.storage.request().isGranted &&
           !await Permission.photos.request().isGranted &&
           !await Permission.manageExternalStorage.request().isGranted) {
-
-        // Nếu user từ chối quyền, mở cài đặt
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -389,7 +577,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
         );
       }
     } on GalException catch (e) {
-      debugPrint(e.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

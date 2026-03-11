@@ -18,43 +18,31 @@ class UploadUtils {
   }
 
   // Hàm dùng chung cho toàn bộ App
-  static void showUploadMenu(BuildContext context) {
-    showModalBottomSheet(
+  static Future<bool?> showUploadMenu(BuildContext context) async {
+    return await showModalBottomSheet<bool>( // Thêm <bool> ở đây
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.white),
-                title: const Text("Chụp ảnh mới", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const UploadScreen(isCamera: true)),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.white),
-                title: const Text("Chọn từ thư viện", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const UploadScreen(isCamera: false)),
-                  );
-                },
-              ),
-            ],
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Chụp ảnh"),
+              onTap: () async {
+                // Phải có await và trả kết quả về cho BottomSheet bằng Navigator.pop
+                final uploaded = await Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadScreen(isCamera: true)));
+                Navigator.pop(context, uploaded); // Trả 'true' về cho WardrobeScreen
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Thư viện"),
+              onTap: () async {
+                final uploaded = await Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadScreen(isCamera: false)));
+                Navigator.pop(context, uploaded); // Trả 'true' về cho WardrobeScreen
+              },
+            ),
+          ],
         );
       },
     );

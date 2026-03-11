@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../constants/app_colors.dart'; // Đảm bảo bạn đã có file này hoặc dùng màu cứng
 
 // Enum để định nghĩa loại thông báo
-// enum NotificationType { like, comment, share, follow, bookmark }
+enum NotificationType { like, comment, share, follow, bookmark }
 
 // Model dữ liệu giả lập
 class NotificationModel {
@@ -11,7 +12,7 @@ class NotificationModel {
   final String content;
   final String timeAgo;
   final String? postImage; // Có thể null nếu là thông báo follow
-  // final NotificationType type;
+  final NotificationType type;
   final bool isRead;
 
   NotificationModel({
@@ -20,7 +21,7 @@ class NotificationModel {
     required this.content,
     required this.timeAgo,
     this.postImage,
-    // required this.type,
+    required this.type,
     this.isRead = false,
   });
 }
@@ -36,70 +37,70 @@ class _NotificationScreenState extends State<NotificationScreen> {
   // Dữ liệu giả lập (Mock Data)
   final List<NotificationModel> _allNotifications = [
     // HÔM NAY
-    // NotificationModel(
-    //   userName: "kylie_jenner",
-    //   userAvatar: "https://i.pravatar.cc/150?img=1",
-    //   content: "đã thích bài viết của bạn.",
-    //   timeAgo: "2 phút trước",
-    //   postImage: "https://picsum.photos/200/200?random=1",
-    //   type: NotificationType.like,
-    // ),
-    // NotificationModel(
-    //   userName: "fashion_weekly",
-    //   userAvatar: "https://i.pravatar.cc/150?img=2",
-    //   content: "đã bắt đầu theo dõi bạn.",
-    //   timeAgo: "1 giờ trước",
-    //   type: NotificationType.follow,
-    // ),
-    // NotificationModel(
-    //   userName: "alex_design",
-    //   userAvatar: "https://i.pravatar.cc/150?img=3",
-    //   content: "đã bình luận: 'Outfit này đỉnh quá! 🔥'",
-    //   timeAgo: "3 giờ trước",
-    //   postImage: "https://picsum.photos/200/200?random=2",
-    //   type: NotificationType.comment,
-    // ),
-    //
-    // // HÔM QUA
-    // NotificationModel(
-    //   userName: "bella_hadid",
-    //   userAvatar: "https://i.pravatar.cc/150?img=4",
-    //   content: "đã chia sẻ bài viết của bạn.",
-    //   timeAgo: "Hôm qua",
-    //   postImage: "https://picsum.photos/200/200?random=3",
-    //   type: NotificationType.share,
-    // ),
-    // NotificationModel(
-    //   userName: "vogue_magazine",
-    //   userAvatar: "https://i.pravatar.cc/150?img=5",
-    //   content: "đã lưu bài viết vào bộ sưu tập.",
-    //   timeAgo: "Hôm qua",
-    //   postImage: "https://picsum.photos/200/200?random=4",
-    //   type: NotificationType.bookmark,
-    // ),
-    //
-    // // TRƯỚC ĐÓ
-    // NotificationModel(
-    //   userName: "zara_official",
-    //   userAvatar: "https://i.pravatar.cc/150?img=6",
-    //   content: "đã nhắc đến bạn trong một bình luận.",
-    //   timeAgo: "3 ngày trước",
-    //   postImage: "https://picsum.photos/200/200?random=5",
-    //   // type: NotificationType.comment,
-    // ),
+    NotificationModel(
+      userName: "kylie_jenner",
+      userAvatar: "https://i.pravatar.cc/150?img=1",
+      content: "đã thích bài viết của bạn.",
+      timeAgo: "2 phút trước",
+      postImage: "https://picsum.photos/200/200?random=1",
+      type: NotificationType.like,
+    ),
+    NotificationModel(
+      userName: "fashion_weekly",
+      userAvatar: "https://i.pravatar.cc/150?img=2",
+      content: "đã bắt đầu theo dõi bạn.",
+      timeAgo: "1 giờ trước",
+      type: NotificationType.follow,
+    ),
+    NotificationModel(
+      userName: "alex_design",
+      userAvatar: "https://i.pravatar.cc/150?img=3",
+      content: "đã bình luận: 'Outfit này đỉnh quá! 🔥'",
+      timeAgo: "3 giờ trước",
+      postImage: "https://picsum.photos/200/200?random=2",
+      type: NotificationType.comment,
+    ),
+
+    // HÔM QUA
+    NotificationModel(
+      userName: "bella_hadid",
+      userAvatar: "https://i.pravatar.cc/150?img=4",
+      content: "đã chia sẻ bài viết của bạn.",
+      timeAgo: "Hôm qua",
+      postImage: "https://picsum.photos/200/200?random=3",
+      type: NotificationType.share,
+    ),
+    NotificationModel(
+      userName: "vogue_magazine",
+      userAvatar: "https://i.pravatar.cc/150?img=5",
+      content: "đã lưu bài viết vào bộ sưu tập.",
+      timeAgo: "Hôm qua",
+      postImage: "https://picsum.photos/200/200?random=4",
+      type: NotificationType.bookmark,
+    ),
+
+    // TRƯỚC ĐÓ
+    NotificationModel(
+      userName: "zara_official",
+      userAvatar: "https://i.pravatar.cc/150?img=6",
+      content: "đã nhắc đến bạn trong một bình luận.",
+      timeAgo: "3 ngày trước",
+      postImage: "https://picsum.photos/200/200?random=5",
+      type: NotificationType.comment,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     bool isEmpty = _allNotifications.isEmpty;
-    var todayList;
-    var yesterdayList;
-    var earlierList;
-    if(!isEmpty){
-       todayList = _allNotifications.take(3).toList();
-       yesterdayList = _allNotifications.skip(3).take(2).toList();
-       earlierList = _allNotifications.skip(5).toList();
-    }else{
+    List<NotificationModel> todayList;
+    List<NotificationModel> yesterdayList;
+    List<NotificationModel> earlierList;
+    if (!isEmpty) {
+      todayList = _allNotifications.take(3).toList();
+      yesterdayList = _allNotifications.skip(3).take(2).toList();
+      earlierList = _allNotifications.skip(5).toList();
+    } else {
       todayList = [];
       yesterdayList = [];
       earlierList = [];
@@ -112,7 +113,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -130,17 +135,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
-      body:
-      isEmpty ? const EmptyNotificationState() :
-      ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 20),
-        children: [
-          _buildSection("HÔM NAY", todayList),
-          _buildSection("HÔM QUA", yesterdayList),
-          _buildSection("TRƯỚC ĐÓ", earlierList),
-        ],
-      ),
+      body: isEmpty
+          ? const EmptyNotificationState()
+          : ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 20),
+              children: [
+                _buildSection("HÔM NAY", todayList),
+                _buildSection("HÔM QUA", yesterdayList),
+                _buildSection("TRƯỚC ĐÓ", earlierList),
+              ],
+            ),
     );
   }
 
@@ -266,16 +271,16 @@ class NotificationItem extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              // gradient: _getBadgeGradient(item.type),
+              gradient: _getBadgeGradient(item.type),
               shape: BoxShape.circle,
               // Viền ngoài cùng màu với Card nền để tạo khoảng cách (Negative Space)
               border: Border.all(color: AppColors.surface, width: 2),
             ),
-            // child: Icon(
-            //   _getBadgeIcon(item.type),
-            //   size: 12,
-            //   color: Colors.white,
-            // ),
+            child: Icon(
+              _getBadgeIcon(item.type),
+              size: 12,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -283,31 +288,40 @@ class NotificationItem extends StatelessWidget {
   }
 
   // Helper: Chọn icon theo loại
-  // IconData _getBadgeIcon(NotificationType type) {
-  //   switch (type) {
-  //     case NotificationType.like: return Icons.favorite;
-  //     case NotificationType.comment: return Icons.chat_bubble;
-  //     case NotificationType.share: return Icons.share; // Hoặc Icons.repeat
-  //     case NotificationType.bookmark: return Icons.bookmark;
-  //     case NotificationType.follow: return Icons.person_add;
-  //   }
-  // }
+  IconData _getBadgeIcon(NotificationType type) {
+    switch (type) {
+      case NotificationType.like:
+        return Icons.favorite;
+      case NotificationType.comment:
+        return Icons.chat_bubble;
+      case NotificationType.share:
+        return Icons.share; // Hoặc Icons.repeat
+      case NotificationType.bookmark:
+        return Icons.bookmark;
+      case NotificationType.follow:
+        return Icons.person_add;
+    }
+  }
 
   // Helper: Chọn màu gradient theo loại
-  // LinearGradient _getBadgeGradient(NotificationType type) {
-  //   switch (type) {
-  //     case NotificationType.like:
-  //       return const LinearGradient(colors: [Colors.pinkAccent, Colors.redAccent]);
-  //     case NotificationType.comment:
-  //       return const LinearGradient(colors: [Colors.blueAccent, Colors.cyan]);
-  //     case NotificationType.share:
-  //       return const LinearGradient(colors: [Colors.green, Colors.teal]);
-  //     case NotificationType.bookmark:
-  //       return const LinearGradient(colors: [Colors.orange, Colors.amber]);
-  //     case NotificationType.follow:
-  //       return const LinearGradient(colors: [Colors.purpleAccent, Colors.deepPurple]);
-  //   }
-  // }
+  LinearGradient _getBadgeGradient(NotificationType type) {
+    switch (type) {
+      case NotificationType.like:
+        return const LinearGradient(
+          colors: [Colors.pinkAccent, Colors.redAccent],
+        );
+      case NotificationType.comment:
+        return const LinearGradient(colors: [Colors.blueAccent, Colors.cyan]);
+      case NotificationType.share:
+        return const LinearGradient(colors: [Colors.green, Colors.teal]);
+      case NotificationType.bookmark:
+        return const LinearGradient(colors: [Colors.orange, Colors.amber]);
+      case NotificationType.follow:
+        return const LinearGradient(
+          colors: [Colors.purpleAccent, Colors.deepPurple],
+        );
+    }
+  }
 }
 
 class EmptyNotificationState extends StatelessWidget {
@@ -354,7 +368,8 @@ class EmptyNotificationState extends StatelessWidget {
                     ),
                   ),
                   child: Icon(
-                    Icons.notifications_paused_outlined, // Icon cái chuông "ngủ"
+                    Icons
+                        .notifications_paused_outlined, // Icon cái chuông "ngủ"
                     size: 40,
                     color: AppColors.textSecondary.withOpacity(0.5),
                   ),
@@ -400,7 +415,8 @@ class EmptyNotificationState extends StatelessWidget {
                   // Điều hướng sang trang Khám phá hoặc Home
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, // Nút trắng nổi bật trên nền đen
+                  backgroundColor:
+                      Colors.white, // Nút trắng nổi bật trên nền đen
                   foregroundColor: Colors.black,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -409,10 +425,7 @@ class EmptyNotificationState extends StatelessWidget {
                 ),
                 child: const Text(
                   "Khám phá ngay",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
             ),

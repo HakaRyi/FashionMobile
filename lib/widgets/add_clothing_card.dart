@@ -3,13 +3,24 @@ import '../constants/app_colors.dart';
 import '../utils/upload_utils.dart';
 
 class AddClothingCard extends StatelessWidget {
-  const AddClothingCard({super.key});
+  // 1. Khai báo hàm callback
+  final VoidCallback? onUploadSuccess;
+
+  // 2. Thêm vào constructor
+  const AddClothingCard({super.key, this.onUploadSuccess});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Gọi trực tiếp từ class UploadUtils
-      onTap: () => UploadUtils.showUploadMenu(context),
+      onTap: () async {
+        // 3. Đợi kết quả từ menu upload
+        final result = await UploadUtils.showUploadMenu(context);
+
+        // 4. Nếu upload thành công (trả về true), gọi hàm callback để load lại trang
+        if (result == true && onUploadSuccess != null) {
+          onUploadSuccess!();
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,

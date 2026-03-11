@@ -4,18 +4,18 @@ import '../constants/app_colors.dart';
 class ClothingItem extends StatelessWidget {
   final String title;
   final String? imageUrl;
-  final VoidCallback? onTap; // 1. Khai báo thêm thuộc tính onTap
+  final VoidCallback? onTap;
 
   const ClothingItem({
     super.key,
     required this.title,
     this.imageUrl,
-    this.onTap, // 2. Thêm vào constructor
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector( // 3. Bao bọc bằng GestureDetector để bắt sự kiện nhấn
+    return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -32,8 +32,8 @@ class ClothingItem extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   color: Colors.white10,
-                  child: imageUrl != null
-                      ? Image.asset(imageUrl!, fit: BoxFit.cover)
+                  child: (imageUrl != null && imageUrl!.startsWith('http'))
+                      ? Image.network(imageUrl!, fit: BoxFit.cover)
                       : const Icon(Icons.checkroom, color: Colors.grey, size: 50),
                 ),
               ),
@@ -42,11 +42,7 @@ class ClothingItem extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

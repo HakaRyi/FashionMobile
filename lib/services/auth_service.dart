@@ -29,15 +29,13 @@ class AuthService {
         String avatar = decodedToken['Avatar'] ?? "";
         String email = decodedToken['email'] ?? "";
         String userId = decodedToken['AccountId'] ?? "";
-        if (accessToken != null && refreshToken != null) {
-          await prefs.setString('token', accessToken);
-          await prefs.setString('refreshToken', refreshToken);
-          await prefs.setString('username', username);
-          await prefs.setString('avatar', avatar);
-          await prefs.setString('email', email);
-          await prefs.setString('userId', userId);
-        }
-
+        await prefs.setString('token', accessToken);
+        await prefs.setString('refreshToken', refreshToken);
+        await prefs.setString('username', username);
+        await prefs.setString('avatar', avatar);
+        await prefs.setString('email', email);
+        await prefs.setString('userId', userId);
+      
         return {"success": true, "data": responseData};
       } else if (response.statusCode == 400 || response.statusCode == 401) {
         return {"success": false, "message": responseData['message'] ?? "Sai tài khoản"};
