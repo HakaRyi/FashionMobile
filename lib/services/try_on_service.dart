@@ -2,6 +2,10 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart' show rootBundle;
 import '../constants/api_constants.dart';
+import '../services/try_on_history_service.dart';
+import '../utils/try_on_manager.dart';
+
+final TryOnManager tryOnManager = TryOnManager();
 
 class TryOnService {
   Future<Uint8List?> processTryOn(String modelAssetPath, String clothImagePath) async {
