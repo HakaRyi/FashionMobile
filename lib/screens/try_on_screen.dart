@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:fashion_mobile/screens/try_on_history_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
@@ -29,13 +30,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
   final ImagePicker _picker = ImagePicker();
 
   bool _isLoadingModels = true;
-
-  final List<Map<String, dynamic>> _mockHistory = [
-    {"date": "10/03/2026 14:30", "imageUrl": "https://i.pravatar.cc/150?img=1", "bytes": Uint8List(0)},
-    {"date": "09/03/2026 09:15", "imageUrl": "https://i.pravatar.cc/150?img=2", "bytes": Uint8List(0)},
-    {"date": "08/03/2026 20:45", "imageUrl": "https://i.pravatar.cc/150?img=3", "bytes": Uint8List(0)},
-    {"date": "07/03/2026 11:20", "imageUrl": "https://i.pravatar.cc/150?img=4", "bytes": Uint8List(0)},
-  ];
 
   Future<void> _pickImage() async {
     try {
@@ -185,6 +179,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
   void initState() {
     super.initState();
     modelManager.fetchMyModels();
+    tryOnManager.fetchHistory();
   }
 
   @override
@@ -388,11 +383,19 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 // Thay Expanded bằng SizedBox cố định chiều cao (khoảng 140) để không lấn át Model
                 SizedBox(
                   height: 140,
-                  child: ListView.builder(
+                  child: tryOnManager.isLoadingHistory
+                      ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
+                      : tryOnManager.historyList.isEmpty
+                      ? const Center(child: Text("Chưa có lịch sử thử đồ", style: TextStyle(color: Colors.white54)))
+                      : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _mockHistory.length,
+                    itemCount: tryOnManager.historyList.length,
                     itemBuilder: (context, index) {
-                      final item = _mockHistory[index];
+                      final item = tryOnManager.historyList[index];
+
+                      DateTime parsedDate = DateTime.tryParse(item["createdAt"] ?? "") ?? DateTime.now();
+                      String formattedDate = "${parsedDate.day}/${parsedDate.month}/${parsedDate.year} ${parsedDate.hour}:${parsedDate.minute.toString().padLeft(2, '0')}";
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(8),
@@ -405,16 +408,20 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
-                                item["imageUrl"],
+                                item["imageUrl"] ?? "",
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
+                                errorBuilder: (ctx, err, stack) => Container(
+                                  width: 50, height: 50, color: Colors.grey,
+                                  child: const Icon(Icons.error, color: Colors.white),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                item["date"],
+                                formattedDate,
                                 style: const TextStyle(color: Colors.white70, fontSize: 14),
                               ),
                             ),
@@ -428,7 +435,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                 ),
                               ),
                               onPressed: () {
-                                tryOnManager.setMockResultBytes(item["bytes"]);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => HistoryDetailScreen(
+                                      imageUrl: item["imageUrl"] ?? "",
+                                    ),
+                                  ),
+                                );
                               },
                               child: const Text("Xem"),
                             ),
