@@ -1,3 +1,4 @@
+// lib/screens/navbar_screens/profile_screen.dart
 import 'package:fashion_mobile/widgets/post_item.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -244,10 +245,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: AppColors.background,
                                 child: Column(
                                   children: [
-                                    PostItem(postData: posts[index],
-                                              isMyPost: true,),
+                                    PostItem(
+                                      post: posts[index],
+                                      isMyPost: true,
+                                    ),
                                     if (index < posts.length - 1)
-                                      const Divider(color: AppColors.divider, height: 1, indent: 16, endIndent: 16),
+                                      const Divider(
+                                        color: AppColors.divider,
+                                        height: 1,
+                                        indent: 16,
+                                        endIndent: 16,
+                                      ),
                                   ],
                                 ),
                               );

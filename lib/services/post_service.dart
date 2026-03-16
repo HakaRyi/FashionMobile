@@ -1,186 +1,171 @@
+// lib/services/post_service.dart
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/api_constants.dart';
-import 'auth_service.dart';
+import '../models/post_feed_model.dart';
+import 'api_client.dart';
 
 class PostService {
-
-  Future<List<dynamic>> fetchFeed({
+  /// ==========================
+  /// FETCH FEED
+  /// ==========================
+  Future<List<PostFeedModel>> fetchFeed({
     DateTime? cursor,
     int pageSize = 10,
   }) async {
+    final query = {
+      "pageSize": pageSize.toString(),
+      if (cursor != null) "cursor": cursor.toIso8601String(),
+    };
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final uri = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.feed}",
+    ).replace(queryParameters: query);
 
-    String url =
-        "${ApiConstants.baseUrl}${ApiConstants.feedEndpoint}?pageSize=$pageSize";
+    final response = await ApiClient.get(uri);
 
-    if (cursor != null) {
-      url += "&cursor=${Uri.encodeComponent(cursor.toIso8601String())}";
+    if (response.statusCode != 200) {
+      throw Exception("Failed to load feed");
     }
 
-    final uri = Uri.parse(url);
-
-    try {
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-
-        final data = jsonDecode(response.body);
-
-        if (data is List) {
-          return data;
-        }
-
-      }
-
-      return [];
-
-    } catch (e) {
-
-      print("Error fetching feed: $e");
-      return [];
-
-    }
+    final data = jsonDecode(response.body) as List;
+    return data.map((e) => PostFeedModel.fromJson(e)).toList();
   }
 
-
-  Future<bool> createPost(
-      Uint8List imageBytes,
-      String content,
-      bool isPublic,
-      ) async {
-
-    return await _attemptCreatePost(
-      imageBytes,
-      content,
-      isPublic,
-      isRetry: false,
+  /// ==========================
+  /// CREATE POST
+  /// ==========================
+  Future<int?> createPost({
+    required List<Uint8List> imageBytesList,
+    required String content,
+    String? title,
+  }) async {
+    final uri = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.createPost}",
     );
-  }
 
+    final headers = await ApiClient.getHeaders();
+    final request = http.MultipartRequest('POST', uri);
 
-  Future<bool> _attemptCreatePost(
-      Uint8List imageBytes,
-      String content,
-      bool isPublic,
-      {required bool isRetry}
-      ) async {
+    request.headers.addAll(headers);
 
-    final url =
-    Uri.parse("${ApiConstants.baseUrl}${ApiConstants.createPostEndpoint}");
+    request.fields['content'] = content;
+    if (title != null && title.trim().isNotEmpty) {
+      request.fields['title'] = title.trim();
+    }
 
-    try {
-
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
-
-      var request = http.MultipartRequest('POST', url);
-
-      request.headers.addAll({
-        'Authorization': 'Bearer $token',
-      });
-
-      request.fields['content'] = content;
-      request.fields['isPublic'] = isPublic.toString();
-
+    for (int i = 0; i < imageBytesList.length; i++) {
       request.files.add(
         http.MultipartFile.fromBytes(
-          'Images',
-          imageBytes,
-          filename: 'post_image.jpg',
+          "Images",
+          imageBytesList[i],
+          filename: "post_$i.jpg",
         ),
       );
-
-      final response = await request.send();
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-
-        return true;
-
-      }
-      else if (response.statusCode == 401 && !isRetry) {
-
-        final authService = AuthService();
-
-        final isRefreshed =
-        await authService.refreshToken();
-
-        if (isRefreshed) {
-
-          return await _attemptCreatePost(
-            imageBytes,
-            content,
-            isPublic,
-            isRetry: true,
-          );
-
-        }
-
-        return false;
-
-      }
-      else {
-
-        return false;
-
-      }
-
-    } catch (e) {
-
-      print("Create post error: $e");
-      return false;
-
     }
+
+    final response = await request.send();
+
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception("Create post failed");
+    }
+
+    final body = await response.stream.bytesToString();
+    final data = jsonDecode(body);
+
+    return data["postId"];
   }
 
+  /// ==========================
+  /// GET MY POSTS
+  /// backend trả PagedResultDto
+  /// ==========================
+  Future<List<PostFeedModel>> fetchMyPosts({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    final uri = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.getMyPosts}",
+    ).replace(queryParameters: {
+      "page": page.toString(),
+      "pageSize": pageSize.toString(),
+    });
 
-  Future<List<dynamic>> fetchMyPosts() async {
+    final response = await ApiClient.get(uri);
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-
-    final url =
-    Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getMyPostEndpoint}");
-
-    try {
-
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-
-        final data = jsonDecode(response.body);
-
-        if (data is List) {
-          return data;
-        }
-
-      }
-
-      return [];
-
-    } catch (e) {
-
-      print("Error fetching my posts: $e");
-      return [];
-
+    if (response.statusCode != 200) {
+      throw Exception("Failed to load my posts");
     }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final items = (data["items"] as List?) ?? const [];
+
+    return items.map((e) => PostFeedModel.fromJson(e)).toList();
   }
 
+  /// ==========================
+  /// SAVE POST
+  /// ==========================
+  Future<bool> savePost(int postId) async {
+    final endpoint = ApiConstants.toggleSavePost.replaceAll(
+      "{postId}",
+      postId.toString(),
+    );
+
+    final uri = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+    final response = await ApiClient.post(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception("Save post failed");
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return data["isSaved"] == true;
+  }
+
+  /// ==========================
+  /// UNSAVE POST
+  /// ==========================
+  Future<bool> unsavePost(int postId) async {
+    final endpoint = ApiConstants.toggleSavePost.replaceAll(
+      "{postId}",
+      postId.toString(),
+    );
+
+    final uri = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+    final response = await ApiClient.delete(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception("Unsave post failed");
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return data["isSaved"] == true;
+  }
+
+  /// ==========================
+  /// GET SAVED POSTS
+  /// ==========================
+  Future<List<PostFeedModel>> fetchSavedPosts({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    final uri = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.getSavedPosts}",
+    ).replace(queryParameters: {
+      "page": page.toString(),
+      "pageSize": pageSize.toString(),
+    });
+
+    final response = await ApiClient.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to load saved posts");
+    }
+
+    final data = jsonDecode(response.body) as List;
+    return data.map((e) => PostFeedModel.fromJson(e)).toList();
+  }
 }
