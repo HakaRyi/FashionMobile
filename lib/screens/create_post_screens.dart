@@ -79,22 +79,22 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   void _handlePost() {
-    if (widget.postToEdit != null) {
-      int postId = widget.postToEdit!['postId'] ?? 0;
-
-      postManager.updatePost(
-        postId,
-        _selectedImageBytes,
-        _contentController.text,
-        _isPublic,
-      );
-    } else {
-        if (_selectedImageBytes == null) {
-          const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài!"));
-          return;
-        }
-        postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
-      }
+    // if (widget.postToEdit != null) {
+    //   int postId = widget.postToEdit!['postId'] ?? 0;
+    //
+    //   postManager.updatePost(
+    //     postId,
+    //     _selectedImageBytes,
+    //     _contentController.text,
+    //     _isPublic,
+    //   );
+    // } else {
+    //     if (_selectedImageBytes == null) {
+    //       const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài!"));
+    //       return;
+    //     }
+    //     postManager.uploadPost(_selectedImageBytes!, _contentController.text, _isPublic);
+    //   }
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => const MainScreen(),

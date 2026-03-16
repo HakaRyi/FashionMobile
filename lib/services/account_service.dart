@@ -11,7 +11,6 @@ class AccountService {
 
     if (userId == null) return null;
 
-    // Thay thế {id} bằng id thực tế
     final url = Uri.parse("${ApiConstants.baseUrl}/Account/$userId");
 
     try {

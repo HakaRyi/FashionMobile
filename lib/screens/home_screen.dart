@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../utils/notification_manager.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/post_item.dart';
 import '../widgets/create_post_header.dart';
@@ -20,8 +19,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     postManager.fetchPosts();
-    notificationManager.initialize();
-    notificationManager.fetchNotificationHistory();
 
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
