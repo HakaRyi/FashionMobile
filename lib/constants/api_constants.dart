@@ -1,4 +1,5 @@
 class ApiConstants {
+  static const String baseSignalRUrl = "http://10.0.2.2:5196";
   static const String baseUrl = "http://10.0.2.2:5196/api";
   static const String baseAIUrl = "http://10.0.2.2:8000";
   //cac endpoint
