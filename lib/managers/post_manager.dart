@@ -1,8 +1,9 @@
-// lib/utils/post_manager.dart
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
+import '../constants/post_status_values.dart';
+import '../models/my_post_model.dart';
 import '../models/post_feed_model.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
@@ -16,27 +17,23 @@ class PostManager extends ChangeNotifier {
   final PostService _postService = PostService();
   final ReactionService _reactionService = ReactionService();
 
-  /// ================= FEED =================
-
   final List<PostFeedModel> _posts = [];
   final Set<int> _postIds = {};
 
   List<PostFeedModel> get posts => List.unmodifiable(_posts);
 
   DateTime? _cursor;
-
   bool isLoading = false;
   bool isLoadingMore = false;
   bool hasMore = true;
 
-  /// ================= SAVED POSTS =================
-
   final List<PostFeedModel> _savedPosts = [];
   List<PostFeedModel> get savedPosts => List.unmodifiable(_savedPosts);
-
   bool isLoadingSaved = false;
 
-  /// ================= UPLOAD =================
+  final List<MyPostModel> _myPosts = [];
+  List<MyPostModel> get myPosts => List.unmodifiable(_myPosts);
+  bool isLoadingMyPosts = false;
 
   bool isUploading = false;
   double uploadProgress = 0;
@@ -44,15 +41,20 @@ class PostManager extends ChangeNotifier {
 
   Timer? _progressTimer;
 
-  /// chống spam
   final Set<int> _likingPosts = {};
   final Set<int> _savingPosts = {};
-
-  /// ================= HELPERS =================
 
   PostFeedModel? getPostOrNull(int postId) {
     try {
       return _posts.firstWhere((p) => p.postId == postId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  MyPostModel? getMyPostOrNull(int postId) {
+    try {
+      return _myPosts.firstWhere((p) => p.postId == postId);
     } catch (_) {
       return null;
     }
@@ -78,6 +80,27 @@ class PostManager extends ChangeNotifier {
     return post?.commentCount ?? 0;
   }
 
+  String getMyPostStatusText(String? status) {
+    switch (status) {
+      case PostStatusValues.draft:
+        return 'Bản nháp';
+      case PostStatusValues.verifying:
+        return 'Đang kiểm duyệt AI';
+      case PostStatusValues.published:
+        return 'Đã đăng';
+      case PostStatusValues.aiRejected:
+        return 'Bị AI từ chối';
+      case PostStatusValues.blockedByAdmin:
+        return 'Bị admin chặn';
+      default:
+        return status ?? 'Không rõ';
+    }
+  }
+
+  bool isMyPostEditable(MyPostModel post) => post.canEdit;
+  bool canHideMyPost(MyPostModel post) => post.canHide;
+  bool canUnhideMyPost(MyPostModel post) => post.canUnhide;
+
   void replaceOrInsertTop(PostFeedModel post) {
     final index = _posts.indexWhere((p) => p.postId == post.postId);
 
@@ -96,6 +119,7 @@ class PostManager extends ChangeNotifier {
     _posts.removeWhere((p) => p.postId == postId);
     _postIds.remove(postId);
     _savedPosts.removeWhere((p) => p.postId == postId);
+    _myPosts.removeWhere((p) => p.postId == postId);
     notifyListeners();
   }
 
@@ -133,8 +157,6 @@ class PostManager extends ChangeNotifier {
     }
   }
 
-  /// ================= INITIAL FEED =================
-
   Future<void> fetchInitialFeed() async {
     if (isLoading) return;
 
@@ -168,8 +190,6 @@ class PostManager extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
   }
-
-  /// ================= LOAD MORE =================
 
   Future<void> loadMore() async {
     if (isLoadingMore || !hasMore || isLoading) return;
@@ -209,7 +229,31 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= LIKE POST =================
+  Future<void> fetchMyPosts({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    if (isLoadingMyPosts) return;
+
+    isLoadingMyPosts = true;
+    notifyListeners();
+
+    try {
+      final data = await _postService.fetchMyPosts(
+        page: page,
+        pageSize: pageSize,
+      );
+
+      _myPosts
+        ..clear()
+        ..addAll(data);
+    } catch (e) {
+      debugPrint('Fetch my posts error: $e');
+    }
+
+    isLoadingMyPosts = false;
+    notifyListeners();
+  }
 
   Future<void> toggleLike(int postId) async {
     if (_likingPosts.contains(postId)) return;
@@ -244,8 +288,6 @@ class PostManager extends ChangeNotifier {
     _likingPosts.remove(postId);
     notifyListeners();
   }
-
-  /// ================= SAVE POST =================
 
   Future<void> toggleSave(int postId) async {
     if (_savingPosts.contains(postId)) return;
@@ -309,7 +351,63 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= COMMENT COUNT =================
+  Future<void> hideMyPost(int postId) async {
+    final index = _myPosts.indexWhere((p) => p.postId == postId);
+    if (index == -1) return;
+
+    final oldPost = _myPosts[index];
+    if (!oldPost.canHide) return;
+
+    try {
+      final response = await _postService.hidePost(postId);
+
+      _myPosts[index] = oldPost.copyWith(
+        visibility: response['visibility'] ?? oldPost.visibility,
+        isPubliclyVisible: response['isPubliclyVisible'] ?? false,
+        canHide: false,
+        canUnhide: true,
+      );
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Hide post error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> unhideMyPost(int postId) async {
+    final index = _myPosts.indexWhere((p) => p.postId == postId);
+    if (index == -1) return;
+
+    final oldPost = _myPosts[index];
+    if (!oldPost.canUnhide) return;
+
+    try {
+      final response = await _postService.unhidePost(postId);
+
+      _myPosts[index] = oldPost.copyWith(
+        visibility: response['visibility'] ?? oldPost.visibility,
+        isPubliclyVisible: response['isPubliclyVisible'] ?? true,
+        canHide: true,
+        canUnhide: false,
+      );
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Unhide post error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteMyPost(int postId) async {
+    try {
+      await _postService.deletePost(postId);
+      removePost(postId);
+    } catch (e) {
+      debugPrint('Delete post error: $e');
+      rethrow;
+    }
+  }
 
   void increaseCommentCount(int postId) {
     final index = _posts.indexWhere((p) => p.postId == postId);
@@ -335,8 +433,6 @@ class PostManager extends ChangeNotifier {
     _updatePostEverywhere(updated);
     notifyListeners();
   }
-
-  /// ================= REALTIME UPDATE =================
 
   void onRealtimePostCreated(PostFeedModel post) {
     replaceOrInsertTop(post);
@@ -367,12 +463,11 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ================= CREATE POST =================
-
   Future<void> uploadPost(
-      Uint8List imageBytes,
-      String content,
-      ) async {
+      List<Uint8List> imageBytesList,
+      String content, {
+        String? title,
+      }) async {
     if (isUploading) return;
 
     isUploading = true;
@@ -386,8 +481,9 @@ class PostManager extends ChangeNotifier {
 
     try {
       final postId = await _postService.createPost(
-        imageBytesList: [imageBytes],
+        imageBytesList: imageBytesList,
         content: content,
+        title: title,
       );
 
       success = postId != null;
@@ -398,7 +494,7 @@ class PostManager extends ChangeNotifier {
     _progressTimer?.cancel();
 
     uploadProgress = 1;
-    statusMessage = success ? 'Đã gửi! Đang chờ duyệt...' : 'Đăng bài thất bại';
+    statusMessage = success ? 'Đã gửi! Bài đang chờ duyệt...' : 'Đăng bài thất bại';
     notifyListeners();
 
     await Future.delayed(const Duration(seconds: 2));
@@ -409,15 +505,13 @@ class PostManager extends ChangeNotifier {
     _showUploadResult(success);
 
     if (success) {
-      await fetchInitialFeed();
+      await fetchMyPosts();
     }
 
     uploadProgress = 0;
     statusMessage = '';
     notifyListeners();
   }
-
-  /// ================= FAKE PROGRESS =================
 
   void _startFakeProgress() {
     _progressTimer?.cancel();
@@ -443,21 +537,17 @@ class PostManager extends ChangeNotifier {
     );
   }
 
-  /// ================= SNACKBAR =================
-
   void _showUploadResult(bool success) {
     rootScaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(
-          success ? 'Đã gửi, đang chờ duyệt!' : 'Đăng bài thất bại',
+          success ? 'Đã gửi, bài đang chờ duyệt!' : 'Đăng bài thất bại',
         ),
         backgroundColor: success ? Colors.green : Colors.red,
         duration: const Duration(seconds: 3),
       ),
     );
   }
-
-  /// ================= DISPOSE =================
 
   @override
   void dispose() {

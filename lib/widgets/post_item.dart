@@ -1,4 +1,3 @@
-// lib/widgets/post_item.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -60,7 +59,6 @@ class _PostItemState extends State<PostItem> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// HEADER
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -106,7 +104,6 @@ class _PostItemState extends State<PostItem> {
                 ),
               ),
 
-              /// TEXT CONTENT
               if (title.isNotEmpty || content.trim().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -137,7 +134,6 @@ class _PostItemState extends State<PostItem> {
                   ),
                 ),
 
-              /// IMAGE CAROUSEL
               if (images.isNotEmpty)
                 GestureDetector(
                   onDoubleTap: () {
@@ -210,7 +206,6 @@ class _PostItemState extends State<PostItem> {
                   ),
                 ),
 
-              /// IMAGE INDICATOR
               if (images.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -231,7 +226,6 @@ class _PostItemState extends State<PostItem> {
                   ),
                 ),
 
-              /// INTERACTION
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -255,9 +249,7 @@ class _PostItemState extends State<PostItem> {
                             },
                             child: Icon(
                               isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: isLiked
-                                  ? Colors.red
-                                  : AppColors.textSecondary,
+                              color: isLiked ? Colors.red : AppColors.textSecondary,
                               size: 24,
                             ),
                           ),
@@ -272,9 +264,7 @@ class _PostItemState extends State<PostItem> {
                         ],
                       ),
                     ),
-
                     const SizedBox(width: 24),
-
                     InkWell(
                       onTap: () {
                         showModalBottomSheet(
@@ -324,16 +314,12 @@ class _PostItemState extends State<PostItem> {
                         ],
                       ),
                     ),
-
                     const SizedBox(width: 24),
-
                     const Icon(
                       Icons.send_outlined,
                       color: AppColors.textSecondary,
                     ),
-
                     const Spacer(),
-
                     InkWell(
                       onTap: () => postManager.toggleSave(postId),
                       borderRadius: BorderRadius.circular(20),
@@ -398,8 +384,17 @@ class _PostItemState extends State<PostItem> {
                     'Xóa bài viết',
                     style: TextStyle(color: Colors.redAccent),
                   ),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
+
+                    try {
+                      await postManager.deleteMyPost(postId);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Xóa bài thất bại: $e')),
+                      );
+                    }
                   },
                 )
               else
@@ -417,7 +412,7 @@ class _PostItemState extends State<PostItem> {
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Đã gửi báo cáo'),
+                        content: Text('Tính năng báo cáo đang được hoàn thiện'),
                       ),
                     );
                   },

@@ -1,3 +1,4 @@
+// lib/constants/api_constants.dart
 class ApiConstants {
   // static const String baseUrl = "http://10.0.2.2:5196/api";
   static const String baseUrl = "http://192.168.102.24:5196/api";
@@ -22,6 +23,11 @@ class ApiConstants {
   static const String getPostDetail = "/posts/{postId}";
   static const String getMyPosts = "/posts/me";
   static const String getUserPosts = "/posts/user/{userId}";
+
+  static const String hidePost = "/posts/{postId}/hide";
+  static const String unhidePost = "/posts/{postId}/unhide";
+  static const String updatePost = "/posts/{postId}";
+  static const String deletePost = "/posts/{postId}";
 
   static const String toggleSavePost = "/posts/{postId}/save";
   static const String getSavedPosts = "/posts/saved";

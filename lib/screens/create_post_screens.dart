@@ -23,7 +23,6 @@ class CreatePostScreen extends StatefulWidget {
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
-
   final TextEditingController _contentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
@@ -41,14 +40,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.initState();
 
     _selectedImageBytes = widget.imageBytes;
-
     _loadUserInfo();
 
     if (widget.postToEdit != null) {
       _contentController.text = widget.postToEdit!['content'] ?? "";
 
-      List<dynamic>? urls = widget.postToEdit!['imageUrls'];
-
+      final List<dynamic>? urls = widget.postToEdit!['imageUrls'];
       if (urls != null && urls.isNotEmpty) {
         _existingImageUrl = urls[0].toString();
       }
@@ -57,6 +54,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
+
+    if (!mounted) return;
 
     setState(() {
       _username = prefs.getString('username') ?? "Người dùng";
@@ -71,9 +70,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickImage() async {
-
     try {
-
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
@@ -85,23 +82,28 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
       final bytes = await pickedFile.readAsBytes();
 
+      if (!mounted) return;
+
       setState(() {
         _selectedImageBytes = bytes;
         _existingImageUrl = null;
       });
-
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('Pick image error: $e');
     }
   }
 
   Future<void> _handlePost() async {
-
     if (_isPosting) return;
 
-    if (_selectedImageBytes == null) {
+    final content = _contentController.text.trim();
+    final hasImage = _selectedImageBytes != null || _existingImageUrl != null;
+
+    if (!hasImage && content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài")),
+        const SnackBar(
+          content: Text("Bài viết phải có nội dung hoặc ảnh"),
+        ),
       );
       return;
     }
@@ -112,10 +114,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
 
     try {
-
-      /// Fake progress animation
       for (int i = 1; i <= 8; i++) {
-
         await Future.delayed(const Duration(milliseconds: 80));
 
         if (!mounted) return;
@@ -126,8 +125,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       }
 
       await postManager.uploadPost(
-        _selectedImageBytes!,
-        _contentController.text,
+        _selectedImageBytes != null ? [_selectedImageBytes!] : <Uint8List>[],
+        content,
       );
 
       if (!mounted) return;
@@ -144,17 +143,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ),
             (route) => false,
       );
-
     } catch (e) {
-
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Đăng bài thất bại: $e")),
       );
-
     } finally {
-
       if (mounted) {
         setState(() {
           _isPosting = false;
@@ -165,23 +160,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
-
-    bool hasImage =
-        _selectedImageBytes != null || _existingImageUrl != null;
+    final hasImage = _selectedImageBytes != null || _existingImageUrl != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-
         leading: IconButton(
-          icon: const Icon(Icons.close,
-              color: AppColors.textPrimary),
+          icon: const Icon(
+            Icons.close,
+            color: AppColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-
         title: const Text(
           "Tạo bài viết",
           style: TextStyle(
@@ -190,9 +182,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             fontSize: 18,
           ),
         ),
-
         centerTitle: true,
-
         actions: [
           TextButton(
             onPressed: _isPosting ? null : _handlePost,
@@ -200,9 +190,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ? const SizedBox(
               height: 18,
               width: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2),
             )
                 : const Text(
               "ĐĂNG",
@@ -214,12 +202,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           )
         ],
       ),
-
       body: SafeArea(
         child: Column(
           children: [
-
-            /// Upload progress
             if (_isPosting)
               LinearProgressIndicator(
                 value: _uploadProgress,
@@ -227,52 +212,41 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 valueColor:
                 const AlwaysStoppedAnimation(AppColors.textPink),
               ),
-
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
                 children: [
-
                   _buildUserInfo(),
-
                   _buildInputArea(),
-
                   if (hasImage)
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Stack(
                         children: [
-
                           ClipRRect(
-                            borderRadius:
-                            BorderRadius.circular(12),
-
+                            borderRadius: BorderRadius.circular(12),
                             child: AnimatedSwitcher(
-                              duration:
-                              const Duration(milliseconds: 300),
-
+                              duration: const Duration(milliseconds: 300),
                               child: _selectedImageBytes != null
                                   ? Image.memory(
                                 _selectedImageBytes!,
-                                key: const ValueKey(
-                                    "memoryImage"),
+                                key: const ValueKey("memoryImage"),
                                 fit: BoxFit.cover,
                                 height: 300,
                                 width: double.infinity,
                               )
                                   : Image.network(
                                 _existingImageUrl!,
-                                key: const ValueKey(
-                                    "networkImage"),
+                                key: const ValueKey("networkImage"),
                                 fit: BoxFit.cover,
                                 height: 300,
                                 width: double.infinity,
                               ),
                             ),
                           ),
-
                           Positioned(
                             top: 8,
                             right: 8,
@@ -284,10 +258,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 });
                               },
                               child: Container(
-                                padding:
-                                const EdgeInsets.all(4),
-                                decoration:
-                                const BoxDecoration(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
                                   color: Colors.black54,
                                   shape: BoxShape.circle,
                                 ),
@@ -305,14 +277,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ],
               ),
             ),
-
             _buildAttachmentArea(),
-
             const Divider(
               height: 1,
               color: Colors.white10,
             ),
-
             _buildBottomActionArea(),
           ],
         ),
@@ -322,8 +291,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   Widget _buildUserInfo() {
     return Padding(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           CircleAvatar(
@@ -331,14 +299,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             backgroundColor: AppColors.surface,
             backgroundImage: _avatarUrl.isNotEmpty
                 ? NetworkImage(_avatarUrl)
-                : const AssetImage(
-                'assets/images/default_avatar.png')
+                : const AssetImage('assets/images/default_avatar.png')
             as ImageProvider,
           ),
           const SizedBox(width: 12),
           Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 _username,
@@ -365,22 +331,19 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   Widget _buildInputArea() {
     return Padding(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
         controller: _contentController,
         autofocus: true,
         maxLines: null,
-        keyboardType:
-        TextInputType.multiline,
+        keyboardType: TextInputType.multiline,
         style: const TextStyle(
           color: AppColors.textPrimary,
           fontSize: 18,
           height: 1.5,
         ),
         decoration: const InputDecoration(
-          hintText:
-          "Chia sẻ phong cách của bạn...",
+          hintText: "Chia sẻ phong cách của bạn...",
           hintStyle: TextStyle(
             color: Colors.white38,
             fontSize: 18,
@@ -393,14 +356,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   Widget _buildAttachmentArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           _attachmentButton(
-              Icons.photo_library_outlined,
-              "Ảnh",
-              _pickImage),
+            Icons.photo_library_outlined,
+            "Ảnh",
+            _pickImage,
+          ),
         ],
       ),
     );
@@ -409,27 +372,26 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget _attachmentButton(
       IconData icon,
       String label,
-      VoidCallback onTap) {
+      VoidCallback onTap,
+      ) {
     return InkWell(
       onTap: onTap,
-      borderRadius:
-      BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding:
-        const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(8.0),
         child: Row(
           children: [
-            Icon(icon,
-                color: AppColors.textPink,
-                size: 22),
+            Icon(
+              icon,
+              color: AppColors.textPink,
+              size: 22,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
-                color:
-                AppColors.textPrimary,
-                fontWeight:
-                FontWeight.w500,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),
             ),
@@ -441,13 +403,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   Widget _buildBottomActionArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        mainAxisAlignment:
-        MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-
           const Text(
             "Công khai",
             style: TextStyle(
@@ -455,32 +414,24 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               fontSize: 13,
             ),
           ),
-
           ElevatedButton(
-            onPressed:
-            _isPosting ? null : _handlePost,
+            onPressed: _isPosting ? null : _handlePost,
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-              AppColors.textPink,
-              foregroundColor:
-              Colors.white,
-              padding:
-              const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12),
-              shape:
-              RoundedRectangleBorder(
-                borderRadius:
-                BorderRadius.circular(
-                    24),
+              backgroundColor: AppColors.textPink,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
               elevation: 0,
             ),
             child: const Text(
               "Đăng",
               style: TextStyle(
-                fontWeight:
-                FontWeight.bold,
+                fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
             ),

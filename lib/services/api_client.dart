@@ -51,6 +51,21 @@ class ApiClient {
         .timeout(timeout);
   }
 
+  static Future<http.Response> patch(
+      Uri url, {
+        Map<String, dynamic>? body,
+      }) async {
+    final headers = await _headers();
+
+    return http
+        .patch(
+      url,
+      headers: headers,
+      body: body == null ? null : jsonEncode(body),
+    )
+        .timeout(timeout);
+  }
+
   static Future<http.Response> delete(
       Uri url, {
         Map<String, dynamic>? body,
