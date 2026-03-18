@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../managers/post_manager.dart';
 import '../widgets/create_post_header.dart';
+import '../utils/notification_manager.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/post_item.dart';
 
@@ -21,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-
     postManager.fetchInitialFeed();
 
     _scrollController.addListener(() {
@@ -30,6 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
         postManager.loadMore();
       }
     });
+
+    // postManager.fetchPosts();
+    notificationManager.initialize();
+    notificationManager.fetchNotificationHistory();
 
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {

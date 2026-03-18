@@ -10,12 +10,22 @@ import 'comments/comment_sheet.dart';
 class PostItem extends StatefulWidget {
   final PostFeedModel post;
   final bool isMyPost;
+  // final Map<String, dynamic> postData;
+  // final VoidCallback? onEdit;
+  // final VoidCallback? onDelete;
 
   const PostItem({
     super.key,
     required this.post,
     this.isMyPost = false,
   });
+
+  // const PostItem({
+  //   super.key,
+  //   required this.postData,
+  //   this.isMyPost = false,
+  //   this.onEdit,
+  //   this.onDelete,});
 
   @override
   State<PostItem> createState() => _PostItemState();

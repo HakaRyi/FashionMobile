@@ -574,6 +574,20 @@ class PostManager extends ChangeNotifier {
     await fetchFeed();
   }
 
+  // Future<void> fetchPosts() async {
+  //   try {
+  //     final data = await _postService.getAllPosts();
+  //
+  //     posts = data;
+  //     isLoading = false;
+  //
+  //     notifyListeners();
+  //   } catch (e) {
+  //     debugPrint("Lỗi: $e");
+  //     isLoading = false;
+  //     notifyListeners();
+  //   }
+
   @override
   void dispose() {
     _progressTimer?.cancel();
