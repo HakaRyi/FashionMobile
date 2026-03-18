@@ -1,5 +1,7 @@
+// lib/services/post_service.dart
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:http/http.dart' as http;
 
 import '../constants/api_constants.dart';
@@ -81,7 +83,7 @@ class PostService {
 
     request.headers.addAll(headers);
 
-    request.fields['content'] = content;
+    request.fields['content'] = content.trim();
     if (title != null && title.trim().isNotEmpty) {
       request.fields['title'] = title.trim();
     }
@@ -97,16 +99,16 @@ class PostService {
     }
 
     final response = await request.send();
+    final body = await response.stream.bytesToString();
 
     if (response.statusCode != 201 && response.statusCode != 200) {
-      final body = await response.stream.bytesToString();
       throw Exception('Create post failed: $body');
     }
 
-    final body = await response.stream.bytesToString();
-    final data = jsonDecode(body) as Map<String, dynamic>;
+    if (body.isEmpty) return null;
 
-    return data['postId'];
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    return data['postId'] as int?;
   }
 
   Future<List<MyPostModel>> fetchMyPosts({
@@ -206,13 +208,13 @@ class PostService {
     final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
 
     final body = <String, dynamic>{};
-    if (title != null) body['title'] = title;
-    if (content != null) body['content'] = content;
+    if (title != null) body['title'] = title.trim();
+    if (content != null) body['content'] = content.trim();
 
     final response = await ApiClient.put(uri, body: body);
 
     if (response.statusCode != 204) {
-      throw Exception('Update post failed');
+      throw Exception('Update post failed: ${response.body}');
     }
   }
 

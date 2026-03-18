@@ -1,9 +1,10 @@
+// lib/constants/post_status_values.dart
 class PostStatusValues {
   static const draft = 'Draft';
   static const verifying = 'Verifying';
+  static const pendingAdmin = 'PendingAdmin';
   static const published = 'Published';
-  static const aiRejected = 'AIRejected';
-  static const blockedByAdmin = 'BlockedByAdmin';
+  static const rejected = 'Rejected';
 }
 
 class PostVisibilityValues {

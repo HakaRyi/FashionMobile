@@ -1,4 +1,3 @@
-// lib/constants/api_constants.dart
 class ApiConstants {
   // static const String baseUrl = "http://10.0.2.2:5196/api";
   static const String baseUrl = "http://192.168.102.24:5196/api";
@@ -17,28 +16,31 @@ class ApiConstants {
   static const String AIidentityClothesEndpoint = "/analyze-fashion";
   static const String getAllMyItemEndpoint = "/my-items";
 
-  static const String createPost = "/posts";
-  static const String feed = "/posts/feed";
-  static const String trendingPosts = "/posts/trending";
-  static const String getPostDetail = "/posts/{postId}";
-  static const String getMyPosts = "/posts/me";
-  static const String getUserPosts = "/posts/user/{userId}";
+  static const String createPost = "/post";
+  static const String feed = "/post/feed";
+  static const String trendingPosts = "/post/trending";
+  static const String getPostDetail = "/post/{postId}";
+  static const String getMyPosts = "/post/me";
+  static const String getUserPosts = "/post/user/{userId}";
+  static const String hidePost = "/post/{postId}/hide";
+  static const String unhidePost = "/post/{postId}/unhide";
+  static const String updatePost = "/post/{postId}";
+  static const String deletePost = "/post/{postId}";
 
-  static const String hidePost = "/posts/{postId}/hide";
-  static const String unhidePost = "/posts/{postId}/unhide";
-  static const String updatePost = "/posts/{postId}";
-  static const String deletePost = "/posts/{postId}";
+  static const String toggleSavePost = "/post/{postId}/save";
+  static const String getSavedPosts = "/post/saved";
 
-  static const String toggleSavePost = "/posts/{postId}/save";
-  static const String getSavedPosts = "/posts/saved";
+  static const String getComments = "/post/{postId}/comment";
+  static const String createComment = "/post/{postId}/comment";
+  static const String getReplies = "/comment/{commentId}/replies";
+  static const String replyComment = "/comment/{commentId}/replies";
+  static const String updateComment = "/comment/{commentId}";
+  static const String deleteComment = "/comment/{commentId}";
 
-  static const String getComments = "/posts/{postId}/comments";
-  static const String createComment = "/posts/{postId}/comments";
-  static const String getReplies = "/comments/{commentId}/replies";
-  static const String replyComment = "/comments/{commentId}/replies";
-  static const String updateComment = "/comments/{commentId}";
-  static const String deleteComment = "/comments/{commentId}";
+  static const String togglePostLike = "/post/{postId}/like";
+  static const String toggleCommentLike = "/comment/{commentId}/like";
 
-  static const String togglePostLike = "/posts/{postId}/like";
-  static const String toggleCommentLike = "/comments/{commentId}/like";
+  static const String getPendingAdminPosts = "/admin/post/pending-admin";
+  static const String getRejectedPosts = "/admin/post/rejected";
+  static const String updateAdminPostStatus = "/admin/post/{postId}/status";
 }

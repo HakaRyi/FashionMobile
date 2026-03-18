@@ -26,35 +26,36 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _contentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
+  bool _isPublic = true; // Hiện chỉ giữ ở UI, backend chưa support
+  bool _isSubmitting = false;
+
   Uint8List? _selectedImageBytes;
   String? _existingImageUrl;
 
   String _username = "Đang tải...";
   String _avatarUrl = "";
 
-  bool _isPosting = false;
-  double _uploadProgress = 0;
+  bool get _isEditMode => widget.postToEdit != null;
 
   @override
   void initState() {
     super.initState();
-
     _selectedImageBytes = widget.imageBytes;
     _loadUserInfo();
 
-    if (widget.postToEdit != null) {
-      _contentController.text = widget.postToEdit!['content'] ?? "";
+    if (_isEditMode) {
+      _contentController.text = widget.postToEdit!['content'] ?? '';
+      _isPublic = widget.postToEdit!['isPublic'] ?? true;
 
       final List<dynamic>? urls = widget.postToEdit!['imageUrls'];
       if (urls != null && urls.isNotEmpty) {
-        _existingImageUrl = urls[0].toString();
+        _existingImageUrl = urls.first.toString();
       }
     }
   }
 
   Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
-
     if (!mounted) return;
 
     setState(() {
@@ -73,94 +74,96 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1080,
-        maxHeight: 1080,
+        imageQuality: 80,
       );
 
       if (pickedFile == null) return;
 
       final bytes = await pickedFile.readAsBytes();
-
       if (!mounted) return;
 
       setState(() {
         _selectedImageBytes = bytes;
-        _existingImageUrl = null;
       });
     } catch (e) {
       debugPrint('Pick image error: $e');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể chọn ảnh: $e')),
+      );
     }
   }
 
   Future<void> _handlePost() async {
-    if (_isPosting) return;
+    if (_isSubmitting) return;
 
     final content = _contentController.text.trim();
-    final hasImage = _selectedImageBytes != null || _existingImageUrl != null;
 
-    if (!hasImage && content.isEmpty) {
+    if (!_isEditMode && _selectedImageBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Bài viết phải có nội dung hoặc ảnh"),
-        ),
+        const SnackBar(content: Text("Vui lòng chọn ảnh để đăng bài!")),
+      );
+      return;
+    }
+
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng nhập nội dung bài viết!")),
       );
       return;
     }
 
     setState(() {
-      _isPosting = true;
-      _uploadProgress = 0;
+      _isSubmitting = true;
     });
 
     try {
-      for (int i = 1; i <= 8; i++) {
-        await Future.delayed(const Duration(milliseconds: 80));
+      if (_isEditMode) {
+        final int postId = widget.postToEdit!['postId'] ?? 0;
+
+        await postManager.updatePost(
+          postId: postId,
+          content: content,
+        );
 
         if (!mounted) return;
-
-        setState(() {
-          _uploadProgress = i / 10;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cập nhật bài viết thành công")),
+        );
+      } else {
+        await postManager.uploadPost(
+          [_selectedImageBytes!],
+          content,
+        );
       }
 
-      await postManager.uploadPost(
-        _selectedImageBytes != null ? [_selectedImageBytes!] : <Uint8List>[],
-        content,
-      );
-
       if (!mounted) return;
-
-      setState(() {
-        _uploadProgress = 1;
-      });
-
-      await Future.delayed(const Duration(milliseconds: 200));
 
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => const MainScreen(),
         ),
-            (route) => false,
+            (Route<dynamic> route) => false,
       );
     } catch (e) {
-      if (!mounted) return;
+      debugPrint('Handle post error: $e');
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Đăng bài thất bại: $e")),
+        SnackBar(content: Text("Thao tác thất bại: $e")),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isPosting = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = _selectedImageBytes != null || _existingImageUrl != null;
+    final bool hasImage = _selectedImageBytes != null || _existingImageUrl != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -168,15 +171,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.close,
-            color: AppColors.textPrimary,
-          ),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          "Tạo bài viết",
-          style: TextStyle(
+        title: Text(
+          _isEditMode ? "Chỉnh sửa bài viết" : "Tạo bài viết",
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -185,33 +185,22 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _isPosting ? null : _handlePost,
-            child: _isPosting
-                ? const SizedBox(
-              height: 18,
-              width: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : const Text(
-              "ĐĂNG",
-              style: TextStyle(
+            onPressed: _isSubmitting ? null : _handlePost,
+            child: Text(
+              _isSubmitting
+                  ? "ĐANG XỬ LÝ"
+                  : (_isEditMode ? "LƯU" : "ĐĂNG"),
+              style: const TextStyle(
                 color: AppColors.textPink,
                 fontWeight: FontWeight.bold,
               ),
             ),
-          )
+          ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            if (_isPosting)
-              LinearProgressIndicator(
-                value: _uploadProgress,
-                backgroundColor: Colors.white12,
-                valueColor:
-                const AlwaysStoppedAnimation(AppColors.textPink),
-              ),
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
@@ -228,30 +217,27 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: _selectedImageBytes != null
-                                  ? Image.memory(
-                                _selectedImageBytes!,
-                                key: const ValueKey("memoryImage"),
-                                fit: BoxFit.cover,
-                                height: 300,
-                                width: double.infinity,
-                              )
-                                  : Image.network(
-                                _existingImageUrl!,
-                                key: const ValueKey("networkImage"),
-                                fit: BoxFit.cover,
-                                height: 300,
-                                width: double.infinity,
-                              ),
+                            child: _selectedImageBytes != null
+                                ? Image.memory(
+                              _selectedImageBytes!,
+                              fit: BoxFit.cover,
+                              height: 300,
+                              width: double.infinity,
+                            )
+                                : Image.network(
+                              _existingImageUrl!,
+                              fit: BoxFit.cover,
+                              height: 300,
+                              width: double.infinity,
                             ),
                           ),
                           Positioned(
                             top: 8,
                             right: 8,
                             child: GestureDetector(
-                              onTap: () {
+                              onTap: _isSubmitting
+                                  ? null
+                                  : () {
                                 setState(() {
                                   _selectedImageBytes = null;
                                   _existingImageUrl = null;
@@ -278,10 +264,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
             ),
             _buildAttachmentArea(),
-            const Divider(
-              height: 1,
-              color: Colors.white10,
-            ),
+            const Divider(height: 1, color: Colors.white10),
             _buildBottomActionArea(),
           ],
         ),
@@ -315,7 +298,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              const Text(
+              Text(
                 "Bạn đang nghĩ gì?",
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -349,6 +332,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             fontSize: 18,
           ),
           border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
         ),
       ),
     );
@@ -362,8 +346,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           _attachmentButton(
             Icons.photo_library_outlined,
             "Ảnh",
-            _pickImage,
+            _isSubmitting ? null : _pickImage,
           ),
+          const SizedBox(width: 16),
+          _attachmentButton(Icons.videocam_outlined, "Video", null),
+          const SizedBox(width: 16),
+          _attachmentButton(Icons.location_on_outlined, "Vị trí", null),
         ],
       ),
     );
@@ -372,30 +360,29 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget _attachmentButton(
       IconData icon,
       String label,
-      VoidCallback onTap,
+      VoidCallback? onTap,
       ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: AppColors.textPink,
-              size: 22,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.textPink, size: 22),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -404,37 +391,92 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget _buildBottomActionArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: AppColors.background,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            "Công khai",
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
+          InkWell(
+            onTap: _isSubmitting
+                ? null
+                : () {
+              setState(() {
+                _isPublic = !_isPublic;
+              });
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Opacity(
+              opacity: _isSubmitting ? 0.6 : 1,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isPublic ? Icons.public : Icons.lock_outline,
+                      color: AppColors.textSecondary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _isPublic ? "Công khai" : "Riêng tư",
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColors.textSecondary,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          ElevatedButton(
-            onPressed: _isPosting ? null : _handlePost,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.textPink,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
+          Row(
+            children: [
+              TextButton(
+                onPressed: null,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                ),
+                child: const Text("Lưu nháp"),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : _handlePost,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.textPink,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  _isSubmitting
+                      ? "Đang xử lý..."
+                      : (_isEditMode ? "Lưu" : "Đăng"),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ),
-              elevation: 0,
-            ),
-            child: const Text(
-              "Đăng",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+            ],
           ),
         ],
       ),

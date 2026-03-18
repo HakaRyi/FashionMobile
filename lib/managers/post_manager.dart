@@ -1,3 +1,4 @@
+// lib/managers/post_manager.dart
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../constants/post_status_values.dart';
 import '../models/my_post_model.dart';
 import '../models/post_feed_model.dart';
+import '../models/post_reaction_result.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
 
@@ -83,244 +85,38 @@ class PostManager extends ChangeNotifier {
   String getMyPostStatusText(String? status) {
     switch (status) {
       case PostStatusValues.draft:
-        return 'Bản nháp';
+        return 'Nháp';
       case PostStatusValues.verifying:
-        return 'Đang kiểm duyệt AI';
+        return 'Đang duyệt';
+      case PostStatusValues.pendingAdmin:
+        return 'Chờ admin duyệt';
       case PostStatusValues.published:
         return 'Đã đăng';
-      case PostStatusValues.aiRejected:
-        return 'Bị AI từ chối';
-      case PostStatusValues.blockedByAdmin:
-        return 'Bị admin chặn';
+      case PostStatusValues.rejected:
+        return 'Bị từ chối';
       default:
         return status ?? 'Không rõ';
     }
   }
 
-  bool isMyPostEditable(MyPostModel post) => post.canEdit;
-  bool canHideMyPost(MyPostModel post) => post.canHide;
-  bool canUnhideMyPost(MyPostModel post) => post.canUnhide;
-
-  void replaceOrInsertTop(PostFeedModel post) {
-    final index = _posts.indexWhere((p) => p.postId == post.postId);
-
-    if (index != -1) {
-      _posts[index] = post;
-    } else {
-      _posts.insert(0, post);
-      _postIds.add(post.postId);
+  Color getMyPostStatusColor(String? status) {
+    switch (status) {
+      case PostStatusValues.published:
+        return Colors.green;
+      case PostStatusValues.verifying:
+      case PostStatusValues.pendingAdmin:
+        return Colors.orange;
+      case PostStatusValues.rejected:
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
-
-    _syncSavedState(post);
-    notifyListeners();
-  }
-
-  void removePost(int postId) {
-    _posts.removeWhere((p) => p.postId == postId);
-    _postIds.remove(postId);
-    _savedPosts.removeWhere((p) => p.postId == postId);
-    _myPosts.removeWhere((p) => p.postId == postId);
-    notifyListeners();
-  }
-
-  void _syncSavedState(PostFeedModel post) {
-    final savedIndex = _savedPosts.indexWhere((p) => p.postId == post.postId);
-
-    if (post.isSaved) {
-      if (savedIndex != -1) {
-        _savedPosts[savedIndex] = post;
-      } else {
-        _savedPosts.insert(0, post);
-      }
-    } else {
-      if (savedIndex != -1) {
-        _savedPosts.removeAt(savedIndex);
-      }
-    }
-  }
-
-  void _updatePostEverywhere(PostFeedModel updated) {
-    final feedIndex = _posts.indexWhere((p) => p.postId == updated.postId);
-    if (feedIndex != -1) {
-      _posts[feedIndex] = updated;
-    }
-
-    final savedIndex = _savedPosts.indexWhere((p) => p.postId == updated.postId);
-    if (savedIndex != -1) {
-      if (updated.isSaved) {
-        _savedPosts[savedIndex] = updated;
-      } else {
-        _savedPosts.removeAt(savedIndex);
-      }
-    } else if (updated.isSaved) {
-      _savedPosts.insert(0, updated);
-    }
-  }
-
-  Future<void> fetchInitialFeed() async {
-    if (isLoading) return;
-
-    isLoading = true;
-    hasMore = true;
-    _cursor = null;
-
-    _posts.clear();
-    _postIds.clear();
-
-    notifyListeners();
-
-    try {
-      final data = await _postService.fetchFeed(pageSize: 10);
-
-      for (final post in data) {
-        if (_postIds.add(post.postId)) {
-          _posts.add(post);
-        }
-      }
-
-      if (data.isNotEmpty) {
-        _cursor = data.last.createdAt;
-      } else {
-        hasMore = false;
-      }
-    } catch (e) {
-      debugPrint('Feed load error: $e');
-    }
-
-    isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> loadMore() async {
-    if (isLoadingMore || !hasMore || isLoading) return;
-
-    isLoadingMore = true;
-    notifyListeners();
-
-    try {
-      final data = await _postService.fetchFeed(
-        cursor: _cursor,
-        pageSize: 10,
-      );
-
-      if (data.isEmpty) {
-        hasMore = false;
-      } else {
-        int inserted = 0;
-
-        for (final post in data) {
-          if (_postIds.add(post.postId)) {
-            _posts.add(post);
-            inserted++;
-          }
-        }
-
-        if (inserted == 0) {
-          hasMore = false;
-        } else {
-          _cursor = data.last.createdAt;
-        }
-      }
-    } catch (e) {
-      debugPrint('Load more error: $e');
-    }
-
-    isLoadingMore = false;
-    notifyListeners();
-  }
-
-  Future<void> fetchMyPosts({
-    int page = 1,
-    int pageSize = 20,
-  }) async {
-    if (isLoadingMyPosts) return;
-
-    isLoadingMyPosts = true;
-    notifyListeners();
-
-    try {
-      final data = await _postService.fetchMyPosts(
-        page: page,
-        pageSize: pageSize,
-      );
-
-      _myPosts
-        ..clear()
-        ..addAll(data);
-    } catch (e) {
-      debugPrint('Fetch my posts error: $e');
-    }
-
-    isLoadingMyPosts = false;
-    notifyListeners();
-  }
-
-  Future<void> toggleLike(int postId) async {
-    if (_likingPosts.contains(postId)) return;
-
-    final index = _posts.indexWhere((p) => p.postId == postId);
-    if (index == -1) return;
-
-    final oldPost = _posts[index];
-    final optimistic = oldPost.copyWith(
-      isLiked: !oldPost.isLiked,
-      likeCount: oldPost.isLiked ? oldPost.likeCount - 1 : oldPost.likeCount + 1,
-    );
-
-    _updatePostEverywhere(optimistic);
-
-    _likingPosts.add(postId);
-    notifyListeners();
-
-    try {
-      final result = await _reactionService.togglePostLike(postId);
-
-      final confirmed = optimistic.copyWith(
-        isLiked: result.isLiked,
-        likeCount: result.likeCount,
-      );
-
-      _updatePostEverywhere(confirmed);
-    } catch (_) {
-      _updatePostEverywhere(oldPost);
-    }
-
-    _likingPosts.remove(postId);
-    notifyListeners();
-  }
-
-  Future<void> toggleSave(int postId) async {
-    if (_savingPosts.contains(postId)) return;
-
-    final index = _posts.indexWhere((p) => p.postId == postId);
-    if (index == -1) return;
-
-    final oldPost = _posts[index];
-    final optimistic = oldPost.copyWith(isSaved: !oldPost.isSaved);
-
-    _savingPosts.add(postId);
-    _updatePostEverywhere(optimistic);
-    notifyListeners();
-
-    try {
-      final isSaved = oldPost.isSaved
-          ? await _postService.unsavePost(postId)
-          : await _postService.savePost(postId);
-
-      final confirmed = optimistic.copyWith(isSaved: isSaved);
-      _updatePostEverywhere(confirmed);
-    } catch (e) {
-      debugPrint('Toggle save error: $e');
-      _updatePostEverywhere(oldPost);
-    }
-
-    _savingPosts.remove(postId);
-    notifyListeners();
   }
 
   Future<void> fetchSavedPosts({
+    bool refresh = true,
     int page = 1,
-    int pageSize = 20,
+    int pageSize = 10,
   }) async {
     if (isLoadingSaved) return;
 
@@ -328,27 +124,135 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _postService.fetchSavedPosts(
+      final items = await _postService.fetchSavedPosts(
         page: page,
         pageSize: pageSize,
       );
 
-      _savedPosts
-        ..clear()
-        ..addAll(data);
-
-      for (final saved in data) {
-        final feedIndex = _posts.indexWhere((p) => p.postId == saved.postId);
-        if (feedIndex != -1) {
-          _posts[feedIndex] = _posts[feedIndex].copyWith(isSaved: true);
-        }
+      if (refresh) {
+        _savedPosts
+          ..clear()
+          ..addAll(items);
+      } else {
+        _savedPosts.addAll(items);
       }
     } catch (e) {
       debugPrint('Fetch saved posts error: $e');
+      rethrow;
+    } finally {
+      isLoadingSaved = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchMyPosts({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    if (isLoadingMyPosts) return;
+
+    isLoadingMyPosts = true;
+    notifyListeners();
+
+    try {
+      final items = await _postService.fetchMyPosts(
+        page: page,
+        pageSize: pageSize,
+      );
+
+      _myPosts
+        ..clear()
+        ..addAll(items);
+    } catch (e) {
+      debugPrint('Fetch my posts error: $e');
+      rethrow;
+    } finally {
+      isLoadingMyPosts = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleLikePost(int postId) async {
+    if (_likingPosts.contains(postId)) return;
+    _likingPosts.add(postId);
+
+    final post = getPostOrNull(postId);
+    if (post == null) {
+      _likingPosts.remove(postId);
+      return;
     }
 
-    isLoadingSaved = false;
+    final bool oldIsLiked = post.isLiked;
+    final int oldLikeCount = post.likeCount;
+
+    final updated = post.copyWith(
+      isLiked: !oldIsLiked,
+      likeCount: oldIsLiked ? oldLikeCount - 1 : oldLikeCount + 1,
+    );
+
+    _updatePostEverywhere(updated);
     notifyListeners();
+
+    try {
+      final PostReactionResult result =
+      await _reactionService.togglePostLike(postId);
+
+      final synced = updated.copyWith(
+        isLiked: result.isLiked,
+        likeCount: result.likeCount,
+      );
+
+      _updatePostEverywhere(synced);
+    } catch (e) {
+      debugPrint('Toggle like error: $e');
+      _updatePostEverywhere(post);
+      rethrow;
+    } finally {
+      _likingPosts.remove(postId);
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleSavePost(int postId) async {
+    if (_savingPosts.contains(postId)) return;
+    _savingPosts.add(postId);
+
+    final post = getPostOrNull(postId);
+    if (post == null) {
+      _savingPosts.remove(postId);
+      return;
+    }
+
+    final oldValue = post.isSaved;
+    final optimistic = post.copyWith(isSaved: !oldValue);
+
+    _updatePostEverywhere(optimistic);
+    notifyListeners();
+
+    try {
+      final bool newValue = oldValue
+          ? await _postService.unsavePost(postId)
+          : await _postService.savePost(postId);
+
+      final synced = optimistic.copyWith(isSaved: newValue);
+      _updatePostEverywhere(synced);
+
+      if (newValue) {
+        final exists = _savedPosts.any((p) => p.postId == postId);
+        if (!exists) {
+          _savedPosts.insert(0, synced);
+        }
+      } else {
+        _savedPosts.removeWhere((p) => p.postId == postId);
+      }
+    } catch (e) {
+      debugPrint('Toggle save error: $e');
+      _updatePostEverywhere(post);
+      rethrow;
+    } finally {
+      _savingPosts.remove(postId);
+      notifyListeners();
+    }
   }
 
   Future<void> hideMyPost(int postId) async {
@@ -409,6 +313,86 @@ class PostManager extends ChangeNotifier {
     }
   }
 
+  Future<void> uploadPost(
+      List<Uint8List> imageBytesList,
+      String content, {
+        String? title,
+      }) async {
+    if (isUploading) return;
+
+    isUploading = true;
+    uploadProgress = 0;
+    statusMessage = 'Đang tải lên...';
+    notifyListeners();
+
+    _startFakeProgress();
+
+    bool success = false;
+
+    try {
+      final postId = await _postService.createPost(
+        imageBytesList: imageBytesList,
+        content: content,
+        title: title,
+      );
+
+      success = postId != null;
+    } catch (e) {
+      debugPrint('Upload error: $e');
+      rethrow;
+    } finally {
+      _progressTimer?.cancel();
+
+      uploadProgress = 1;
+      statusMessage =
+      success ? 'Đã gửi! Bài đang chờ duyệt...' : 'Đăng bài thất bại';
+      notifyListeners();
+
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      isUploading = false;
+      notifyListeners();
+
+      _showUploadResult(success);
+
+      if (success) {
+        await fetchMyPosts();
+      }
+
+      uploadProgress = 0;
+      statusMessage = '';
+      notifyListeners();
+    }
+  }
+
+  Future<void> updatePost({
+    required int postId,
+    String? title,
+    String? content,
+  }) async {
+    await _postService.updatePost(
+      postId: postId,
+      title: title,
+      content: content,
+    );
+
+    await fetchMyPosts();
+
+    final myPost = getMyPostOrNull(postId);
+    if (myPost != null) {
+      final existing = getPostOrNull(postId);
+      if (existing != null) {
+        final updated = existing.copyWith(
+          title: title ?? existing.title,
+          content: content ?? existing.content,
+        );
+        _updatePostEverywhere(updated);
+      }
+    }
+
+    notifyListeners();
+  }
+
   void increaseCommentCount(int postId) {
     final index = _posts.indexWhere((p) => p.postId == postId);
     if (index == -1) return;
@@ -463,54 +447,35 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> uploadPost(
-      List<Uint8List> imageBytesList,
-      String content, {
-        String? title,
-      }) async {
-    if (isUploading) return;
-
-    isUploading = true;
-    uploadProgress = 0;
-    statusMessage = 'Đang tải lên...';
+  void replaceOrInsertTop(PostFeedModel post) {
+    final index = _posts.indexWhere((p) => p.postId == post.postId);
+    if (index >= 0) {
+      _posts[index] = post;
+    } else {
+      _posts.insert(0, post);
+      _postIds.add(post.postId);
+    }
     notifyListeners();
+  }
 
-    _startFakeProgress();
+  void removePost(int postId) {
+    _posts.removeWhere((p) => p.postId == postId);
+    _savedPosts.removeWhere((p) => p.postId == postId);
+    _myPosts.removeWhere((p) => p.postId == postId);
+    _postIds.remove(postId);
+    notifyListeners();
+  }
 
-    bool success = false;
-
-    try {
-      final postId = await _postService.createPost(
-        imageBytesList: imageBytesList,
-        content: content,
-        title: title,
-      );
-
-      success = postId != null;
-    } catch (e) {
-      debugPrint('Upload error: $e');
+  void _updatePostEverywhere(PostFeedModel updated) {
+    final feedIndex = _posts.indexWhere((p) => p.postId == updated.postId);
+    if (feedIndex != -1) {
+      _posts[feedIndex] = updated;
     }
 
-    _progressTimer?.cancel();
-
-    uploadProgress = 1;
-    statusMessage = success ? 'Đã gửi! Bài đang chờ duyệt...' : 'Đăng bài thất bại';
-    notifyListeners();
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    isUploading = false;
-    notifyListeners();
-
-    _showUploadResult(success);
-
-    if (success) {
-      await fetchMyPosts();
+    final savedIndex = _savedPosts.indexWhere((p) => p.postId == updated.postId);
+    if (savedIndex != -1) {
+      _savedPosts[savedIndex] = updated;
     }
-
-    uploadProgress = 0;
-    statusMessage = '';
-    notifyListeners();
   }
 
   void _startFakeProgress() {
@@ -547,6 +512,66 @@ class PostManager extends ChangeNotifier {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> fetchFeed({bool refresh = false, int pageSize = 10}) async {
+    if (isLoading || isLoadingMore) return;
+
+    if (refresh) {
+      _cursor = null;
+      hasMore = true;
+      _posts.clear();
+      _postIds.clear();
+    }
+
+    if (!hasMore) return;
+
+    if (_posts.isEmpty) {
+      isLoading = true;
+    } else {
+      isLoadingMore = true;
+    }
+    notifyListeners();
+
+    try {
+      final items = await _postService.fetchFeed(
+        cursor: _cursor,
+        pageSize: pageSize,
+      );
+
+      if (refresh) {
+        _posts.clear();
+        _postIds.clear();
+      }
+
+      for (final post in items) {
+        if (_postIds.add(post.postId)) {
+          _posts.add(post);
+        }
+      }
+
+      if (items.isNotEmpty) {
+        _cursor = items.last.createdAt;
+      }
+
+      hasMore = items.length >= pageSize;
+    } catch (e) {
+      debugPrint('Fetch feed error: $e');
+      rethrow;
+    } finally {
+      isLoading = false;
+      isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchInitialFeed() async {
+    await fetchFeed(refresh: true);
+  }
+
+  Future<void> loadMore() async {
+    if (!hasMore || isLoading || isLoadingMore) return;
+    await fetchFeed();
   }
 
   @override
