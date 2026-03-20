@@ -1,0 +1,175 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../constants/app_colors.dart';
+import '../../screens/create_post_screens.dart';
+import '../../screens/settings_screen.dart';
+import '../../services/account_service.dart';
+import '../../services/post_service.dart';
+import '../../utils/route_transitions.dart';
+import '../../widgets/post_item.dart';
+import '../../models/post_feed_model.dart';
+
+// [THÊM MỚI]
+import '../screens/transaction_history_screen.dart';
+import '../screens/deposit_screen.dart';
+
+class WapoPaySheet extends StatefulWidget {
+  final double initialBalance;
+  const WapoPaySheet({super.key, required this.initialBalance});
+
+  @override
+  State<WapoPaySheet> createState() => _WapoPaySheetState();
+}
+
+class _WapoPaySheetState extends State<WapoPaySheet> {
+  bool _isBalanceObscured = false;
+  final NumberFormat _currencyFormat = NumberFormat.decimalPattern('vi_VN');
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // [SỬA LẠI]
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      SlideRoute(page: const TransactionHistoryScreen()),
+                    );
+                  },
+                ),
+              ),
+              const Text(
+                "Wapo Pay",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Số dư ví",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isBalanceObscured = !_isBalanceObscured;
+                        });
+                      },
+                      child: Icon(
+                        _isBalanceObscured ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.white54,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _isBalanceObscured ? "******" : _currencyFormat.format(widget.initialBalance),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (!_isBalanceObscured)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 4, left: 4),
+                        child: Text(
+                          "đ",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // [SỬA LẠI]
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                SlideRoute(page: const DepositScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pink,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text(
+              "Nạp Tiền",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}

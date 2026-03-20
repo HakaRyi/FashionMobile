@@ -111,7 +111,7 @@ class PostService {
     return data['postId'] as int?;
   }
 
-  Future<List<MyPostModel>> fetchMyPosts({
+  Future<List<PostFeedModel>> fetchMyPosts({
     int page = 1,
     int pageSize = 10,
   }) async {
@@ -131,7 +131,7 @@ class PostService {
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final items = (data['items'] as List?) ?? const [];
 
-    return items.map((e) => MyPostModel.fromJson(e)).toList();
+    return items.map((e) => PostFeedModel.fromJson(e)).toList();
   }
 
   Future<List<PostFeedModel>> fetchUserPosts({

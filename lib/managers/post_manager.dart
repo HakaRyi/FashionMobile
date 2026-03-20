@@ -1,10 +1,8 @@
-// lib/managers/post_manager.dart
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../constants/post_status_values.dart';
-import '../models/my_post_model.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_reaction_result.dart';
 import '../services/post_service.dart';
@@ -33,8 +31,8 @@ class PostManager extends ChangeNotifier {
   List<PostFeedModel> get savedPosts => List.unmodifiable(_savedPosts);
   bool isLoadingSaved = false;
 
-  final List<MyPostModel> _myPosts = [];
-  List<MyPostModel> get myPosts => List.unmodifiable(_myPosts);
+  final List<PostFeedModel> _myPosts = [];
+  List<PostFeedModel> get myPosts => List.unmodifiable(_myPosts);
   bool isLoadingMyPosts = false;
 
   bool isUploading = false;
@@ -54,7 +52,7 @@ class PostManager extends ChangeNotifier {
     }
   }
 
-  MyPostModel? getMyPostOrNull(int postId) {
+  PostFeedModel? getMyPostOrNull(int postId) {
     try {
       return _myPosts.firstWhere((p) => p.postId == postId);
     } catch (_) {
@@ -260,16 +258,13 @@ class PostManager extends ChangeNotifier {
     if (index == -1) return;
 
     final oldPost = _myPosts[index];
-    if (!oldPost.canHide) return;
+    if (oldPost.status != PostStatusValues.published || oldPost.visibility != 'Visible') return;
 
     try {
       final response = await _postService.hidePost(postId);
 
       _myPosts[index] = oldPost.copyWith(
         visibility: response['visibility'] ?? oldPost.visibility,
-        isPubliclyVisible: response['isPubliclyVisible'] ?? false,
-        canHide: false,
-        canUnhide: true,
       );
 
       notifyListeners();
@@ -284,16 +279,13 @@ class PostManager extends ChangeNotifier {
     if (index == -1) return;
 
     final oldPost = _myPosts[index];
-    if (!oldPost.canUnhide) return;
+    if (oldPost.status != PostStatusValues.published || oldPost.visibility != 'Hidden') return;
 
     try {
       final response = await _postService.unhidePost(postId);
 
       _myPosts[index] = oldPost.copyWith(
         visibility: response['visibility'] ?? oldPost.visibility,
-        isPubliclyVisible: response['isPubliclyVisible'] ?? true,
-        canHide: true,
-        canUnhide: false,
       );
 
       notifyListeners();
@@ -573,20 +565,6 @@ class PostManager extends ChangeNotifier {
     if (!hasMore || isLoading || isLoadingMore) return;
     await fetchFeed();
   }
-
-  // Future<void> fetchPosts() async {
-  //   try {
-  //     final data = await _postService.getAllPosts();
-  //
-  //     posts = data;
-  //     isLoading = false;
-  //
-  //     notifyListeners();
-  //   } catch (e) {
-  //     debugPrint("Lỗi: $e");
-  //     isLoading = false;
-  //     notifyListeners();
-  //   }
 
   @override
   void dispose() {

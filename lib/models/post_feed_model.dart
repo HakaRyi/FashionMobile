@@ -12,6 +12,8 @@ class PostFeedModel {
   final bool isLiked;
   final bool isSaved;
   final DateTime createdAt;
+  final String? status;
+  final String? visibility;
 
   List<String> get imageUrls => images;
 
@@ -29,6 +31,8 @@ class PostFeedModel {
     required this.isLiked,
     required this.isSaved,
     required this.createdAt,
+    this.status,
+    this.visibility,
   });
 
   factory PostFeedModel.fromJson(Map<String, dynamic> json) {
@@ -46,7 +50,29 @@ class PostFeedModel {
       isLiked: json['isLiked'] ?? false,
       isSaved: json['isSaved'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
+      status: json['status'],
+      visibility: json['visibility'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'postId': postId,
+      'accountId': accountId,
+      'userName': userName,
+      'avatarUrl': avatarUrl,
+      'title': title,
+      'content': content,
+      'images': images,
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+      'shareCount': shareCount,
+      'isLiked': isLiked,
+      'isSaved': isSaved,
+      'createdAt': createdAt.toIso8601String(),
+      'status': status,
+      'visibility': visibility,
+    };
   }
 
   PostFeedModel copyWith({
@@ -63,6 +89,8 @@ class PostFeedModel {
     bool? isLiked,
     bool? isSaved,
     DateTime? createdAt,
+    String? status,
+    String? visibility,
   }) {
     return PostFeedModel(
       postId: postId ?? this.postId,
@@ -78,6 +106,8 @@ class PostFeedModel {
       isLiked: isLiked ?? this.isLiked,
       isSaved: isSaved ?? this.isSaved,
       createdAt: createdAt ?? this.createdAt,
+      status: status ?? this.status,
+      visibility: visibility ?? this.visibility,
     );
   }
 }
