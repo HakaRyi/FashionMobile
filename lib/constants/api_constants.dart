@@ -2,7 +2,9 @@ class ApiConstants {
   static const String baseSignalRUrl = "http://10.0.2.2:5196";
   static const String baseUrl = "http://10.0.2.2:5196/api";
   static const String baseAIUrl = "http://10.0.2.2:8000";
-
+  static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
+  static const String chatEndpoint = "/Chat";
+  static const String groupEndpoint = "/Group";
   //static const String baseUrl = "http://192.168.102.24:5196/api";
 
   static const String refreshTokenEndpoint = "/Auth/refresh-token";
@@ -13,7 +15,7 @@ class ApiConstants {
   static const String createPostEndpoint = "/Post";
 
   static const String feedEndpoint = "/Post/feed";
-  static const String getMyPostEndpoint = "/Post/my";
+  static const String getMyPostEndpoint = "/Post/me";
   static const String getAllPostEndpoint = "/Post";
 
   static const String getMyProfile = "/Account/{id}";

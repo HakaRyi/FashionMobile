@@ -28,7 +28,7 @@ class PostItem extends StatelessWidget {
     final String title = postData['title'] ?? "";
     final String content = postData['content'] ?? "";
 
-    final List<dynamic> imageUrls = postData['imageUrls'] ?? [];
+    final List<dynamic> imageUrls = postData['images'] ?? [];
 
     final int likeCount = postData['likeCount'] ?? 0;
     final int commentCount = postData['commentCount'] ?? 0;

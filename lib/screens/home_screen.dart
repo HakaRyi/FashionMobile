@@ -15,10 +15,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isVisible = false;
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
-    postManager.fetchPosts();
+
+    postManager.fetchInitialFeed();
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        postManager.loadMore();
+      }
+    });
 
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
@@ -29,8 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleRefresh() async {
-    await postManager.fetchPosts();
+    await postManager.fetchInitialFeed();
   }
 
   @override
@@ -49,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
               duration: const Duration(milliseconds: 500),
               opacity: _isVisible ? 1.0 : 0.0,
               child: CustomScrollView(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
                 ),
@@ -130,6 +147,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         childCount: postManager.posts.length,
                       ),
                     ),
+
+                  if (postManager.isLoadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.textPink,
+                          ),
+                        ),
+                      ),
+                    ),
+
                   const SliverToBoxAdapter(
                     child: SizedBox(height: 80),
                   ),

@@ -144,7 +144,72 @@ class PostService {
     }
   }
 
+  Future<bool> updatePost(int postId, Uint8List? newImageBytes, String content, bool isPublic) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/Post/$postId");
 
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      var request = http.MultipartRequest('PUT', url);
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'multipart/form-data',
+      });
+
+      request.fields['Content'] = content;
+      request.fields['IsPublic'] = isPublic.toString();
+
+      if (newImageBytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'Images',
+            newImageBytes,
+            filename: 'updated_image.jpg',
+          ),
+        );
+      }
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        return true;
+      } else if (response.statusCode == 401) {
+        final authService = AuthService();
+        final isRefreshed = await authService.refreshToken();
+        if (isRefreshed) {
+          return await updatePost(postId, newImageBytes, content, isPublic);
+        }
+        return false;
+      } else {
+        final respStr = await response.stream.bytesToString();
+        print("Update failed: ${response.statusCode} - $respStr");
+        return false;
+      }
+    } catch (e) {
+      print("Error updating post: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deletePost(int postId) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/Post/$postId");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.delete(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Delete error: $e");
+      return false;
+    }
+  }
   Future<List<dynamic>> fetchMyPosts() async {
 
     final prefs = await SharedPreferences.getInstance();
@@ -167,8 +232,8 @@ class PostService {
 
         final data = jsonDecode(response.body);
 
-        if (data is List) {
-          return data;
+        if (data is Map && data.containsKey('items')) {
+          return data['items'] as List<dynamic>;
         }
 
       }
@@ -181,6 +246,7 @@ class PostService {
       return [];
 
     }
+
   }
 
 }

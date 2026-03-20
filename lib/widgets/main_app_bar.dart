@@ -1,5 +1,6 @@
 import 'package:fashion_mobile/screens/notification_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../constants/app_colors.dart';
 import '../utils/route_transitions.dart';
 import '../screens/chat_list_screen.dart';
@@ -49,7 +50,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           onPressed: () {
             Navigator.push(context, SlideRoute(page: const ChatListScreen()));
           },
-          icon: const Icon(Icons.chat_bubble, color: AppColors.textPrimary),
+          icon: Icon(PhosphorIcons.chatsCircle(), color: AppColors.textPrimary)
         )
       ],
     );
