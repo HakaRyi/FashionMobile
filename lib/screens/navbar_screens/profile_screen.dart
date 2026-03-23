@@ -11,6 +11,7 @@ import '../order_manager_screen.dart';
 import '../public_wardrobe_screen.dart';
 import '../../widgets/post_item.dart';
 import '../../models/post_feed_model.dart';
+import '../../services/wallet_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +23,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _profileFuture;
   late Future<List<PostFeedModel>> _postsFuture;
+  late Future<double> _walletFuture;
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _profileFuture = AccountService().getMyProfile();
       _postsFuture = PostService().fetchMyPosts();
+      _walletFuture = WalletService().getMyWalletBalance();
     });
   }
 
@@ -337,28 +340,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
-                                            child: OutlinedButton(
-                                              onPressed: () => _showWapoPaySheet(context, balance),
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: Colors.white,
-                                                side: const BorderSide(
-                                                  color: Colors.white24,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                padding: const EdgeInsets.symmetric(
-                                                  vertical: 12,
-                                                ),
-                                              ),
-                                              child: const Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(Icons.account_balance_wallet_outlined, size: 16),
-                                                  SizedBox(width: 4),
-                                                  Text("Wapo"),
-                                                ],
-                                              ),
+                                            child: FutureBuilder<double>(
+                                              future: _walletFuture,
+                                              builder: (context, walletSnapshot) {
+                                                final double currentBalance = walletSnapshot.data ?? 0.0;
+                                                return OutlinedButton(
+                                                  onPressed: () => _showWapoPaySheet(context, currentBalance),
+                                                  style: OutlinedButton.styleFrom(
+                                                    foregroundColor: Colors.white,
+                                                    side: const BorderSide(
+                                                      color: Colors.white24,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(Icons.account_balance_wallet_outlined, size: 16),
+                                                      SizedBox(width: 4),
+                                                      Text("Wapo"),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ),
                                         ],
