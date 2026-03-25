@@ -1,6 +1,8 @@
+// lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
-import 'login_screen.dart'; // Đảm bảo bạn đã import trang Login
+import '../constants/app_colors.dart';
+import 'login_screen.dart';
+import 'expense_management_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -15,7 +17,11 @@ class SettingsScreen extends StatelessWidget {
         centerTitle: true,
         title: const Text(
           "Cài đặt và Hoạt động",
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
@@ -24,7 +30,6 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          // --- NHÓM 1: TÀI KHOẢN ---
           _buildSectionTitle("Cách bạn sử dụng Fashion AI"),
           _buildSettingItem(Icons.person_outline, "Chỉnh sửa hồ sơ", () {}),
           _buildSettingItem(Icons.notifications_none, "Thông báo", () {}),
@@ -32,22 +37,31 @@ class SettingsScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // --- NHÓM 2: HOẠT ĐỘNG ---
           _buildSectionTitle("Hoạt động của bạn"),
           _buildSettingItem(Icons.history, "Nhật ký thử đồ", () {}),
           _buildSettingItem(Icons.favorite_border, "Trang phục đã lưu", () {}),
           _buildSettingItem(Icons.analytics_outlined, "Thống kê phong cách", () {}),
+          _buildSettingItem(
+            Icons.account_balance_wallet_outlined,
+            "Quản lý chi tiêu",
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ExpenseManagementScreen(),
+                ),
+              );
+            },
+          ),
 
           const SizedBox(height: 20),
 
-          // --- NHÓM 3: HỖ TRỢ & PHÁP LÝ ---
           _buildSectionTitle("Thông tin thêm"),
           _buildSettingItem(Icons.help_outline, "Trợ giúp", () {}),
           _buildSettingItem(Icons.info_outline, "Về chúng tôi", () {}),
 
           const SizedBox(height: 40),
 
-          // --- NÚT ĐĂNG XUẤT ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextButton(
@@ -60,7 +74,10 @@ class SettingsScreen extends StatelessWidget {
                   side: const BorderSide(color: Colors.redAccent, width: 1),
                 ),
               ),
-              child: const Text("Đăng xuất", style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                "Đăng xuất",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const SizedBox(height: 50),
@@ -69,36 +86,48 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // Widget tiêu đề nhóm
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+        style: const TextStyle(
+          color: Colors.grey,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1,
+        ),
       ),
     );
   }
 
-  // Widget từng mục cài đặt
   Widget _buildSettingItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: Colors.white, size: 22),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 15)),
-      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
+      title: Text(
+        title,
+        style: const TextStyle(color: Colors.white, fontSize: 15),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        color: Colors.white24,
+        size: 14,
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
     );
   }
 
-  // Logic hiển thị Dialog đăng xuất
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text("Đăng xuất?", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Đăng xuất?",
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?",
           style: TextStyle(color: Colors.white70),
@@ -110,15 +139,20 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Đóng dialog
-              // Chuyển sang trang Login và xóa sạch lịch sử stack
+              Navigator.pop(context);
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                     (route) => false,
               );
             },
-            child: const Text("Đăng xuất", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: const Text(
+              "Đăng xuất",
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),

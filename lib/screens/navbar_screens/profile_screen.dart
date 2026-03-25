@@ -1,8 +1,8 @@
-// lib/screens/navbar_screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/my_post_model.dart';
 import '../../screens/create_post_screens.dart';
+import '../../screens/expense_management_screen.dart';
 import '../../screens/settings_screen.dart';
 import '../../services/account_service.dart';
 import '../../services/post_service.dart';
@@ -93,7 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-
                 CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
@@ -130,7 +129,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
-
                     SliverToBoxAdapter(
                       child: SizedBox(
                         height: coverHeight - kToolbarHeight - profileOverlap,
@@ -192,7 +190,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-
                     SliverToBoxAdapter(
                       child: Container(
                         decoration: const BoxDecoration(
@@ -271,11 +268,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
+                                              fontSize: 13,
                                             ),
+                                            textAlign: TextAlign.center,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 10),
                                       Expanded(
                                         child: OutlinedButton(
                                           onPressed: () => Navigator.push(
@@ -297,7 +296,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               vertical: 12,
                                             ),
                                           ),
-                                          child: const Text("Tủ Đồ"),
+                                          child: const Text(
+                                            "Tủ Đồ",
+                                            style: TextStyle(fontSize: 13),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                              const ExpenseManagementScreen(),
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            side: const BorderSide(
+                                              color: Colors.white24,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                              BorderRadius.circular(12),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            "Chi Tiêu",
+                                            style: TextStyle(fontSize: 13),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -310,7 +343,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-
                     FutureBuilder<List<MyPostModel>>(
                       future: _postsFuture,
                       builder: (context, postSnapshot) {
@@ -399,7 +431,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                       },
                     ),
-
                     const SliverToBoxAdapter(
                       child: SizedBox(height: 100),
                     ),
