@@ -4,11 +4,13 @@ import '../../widgets/clothing_item.dart';
 import '../../widgets/add_clothing_card.dart';
 import '../../widgets/action_button.dart';
 import '../../services/item_service.dart';
+import '../ai_suggestion_screen.dart';
 import '../clothing_detail_screen.dart';
 import '../../utils/upload_utils.dart';
 import '../../screens/suggestion_screen.dart';
 import '../../screens/try_on_screen.dart';
 import '../../screens/fashion_news_screen.dart';
+import 'package:flutter/services.dart';
 class WardrobeScreen extends StatefulWidget {
   const WardrobeScreen({super.key});
 
@@ -18,6 +20,7 @@ class WardrobeScreen extends StatefulWidget {
 
 class _WardrobeScreenState extends State<WardrobeScreen> {
   late Future<List<dynamic>> _itemsFuture;
+  Key _gridKey = UniqueKey();
 
   @override
   void initState() {
@@ -27,6 +30,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
 
   void _loadItems() {
     setState(() {
+      _gridKey = UniqueKey();
       _itemsFuture = ItemService().getMyItems();
     });
   }
@@ -35,7 +39,68 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     _loadItems();
     await _itemsFuture;
   }
+  Future<void> _confirmDelete(BuildContext context, dynamic item) async {
+    // Luôn kiểm tra mounted trước khi show dialog
+    if (!mounted) return;
 
+    final bool? confirm = await showDialog<bool>(
+      context: context,                    // context gốc của WardrobeScreen
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text("Xác nhận xóa", style: TextStyle(color: Colors.white)),
+        content: Text("Món đồ '${item['itemName']}' sẽ bị xóa vĩnh viễn."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text("Hủy"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text("Xóa", style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Không cho user tắt bằng cách bấm ra ngoài
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.textPink),
+      ),
+    );
+    //if (!mounted) return;
+
+    try {
+      final bool success = await ItemService().deleteItem(item['itemId']);
+
+      //if (!mounted) return;
+      if (mounted) Navigator.pop(context);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(   // context gốc an toàn
+          const SnackBar(
+            content: Text("Đã xóa món đồ thành công!"),
+            backgroundColor: Colors.greenAccent,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        _loadItems();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Xóa thất bại!"), backgroundColor: Colors.redAccent),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Lỗi: $e"), backgroundColor: Colors.redAccent),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +130,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   return SliverPadding(
                     padding: const EdgeInsets.all(16.0),
                     sliver: SliverGrid(
+                      key: _gridKey,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 12,
@@ -92,6 +158,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                               );
                               _loadItems(); // Luôn load lại cho chắc
                             },
+                            onLongPress: () {
+                              HapticFeedback.mediumImpact();
+                              _showActionMenu(context, item);
+                            },
                           );
                         },
                         childCount: items.length + 1,
@@ -107,7 +177,47 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       ),
     );
   }
-
+  void _showActionMenu(BuildContext context, dynamic item) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.auto_awesome, color: Colors.white),
+                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => AISuggestionScreen(selectedItem: item)
+                  ));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.favorite, color: Colors.white),
+                title: const Text("Thêm vào outfit yêu thích", style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.white),
+                title: const Text("Xóa khỏi tủ đồ", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _confirmDelete(context, item);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),

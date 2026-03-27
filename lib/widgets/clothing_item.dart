@@ -5,18 +5,20 @@ class ClothingItem extends StatelessWidget {
   final String title;
   final String? imageUrl;
   final VoidCallback? onTap;
-
+  final VoidCallback? onLongPress;
   const ClothingItem({
     super.key,
     required this.title,
     this.imageUrl,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress, // Gắn vào đây
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,

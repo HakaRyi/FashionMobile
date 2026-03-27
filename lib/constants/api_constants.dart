@@ -28,6 +28,8 @@ class ApiConstants {
   static const String uploadItemEndpoint = "/item/upload";
   static const String AIidentityClothesEndpoint = "/analyze-fashion";
   static const String getAllMyItemEndpoint = "/my-items";
+  static const String updateItemEndpoint = "/item/update/{itemId}";
+  static const String deleteItemEndpoint = "/item/delete/{itemId}";
 
   static const String createPost = "/post";
   static const String feed = "/post/feed";

@@ -6,8 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../constants/api_constants.dart';
+import '../constants/fashion_constants.dart'; // Đảm bảo đã import hằng số
 import '../widgets/ai_result_panel.dart';
-import 'package:http_parser/http_parser.dart';
+
 class UploadScreen extends StatefulWidget {
   final bool isCamera;
   const UploadScreen({super.key, required this.isCamera});
@@ -26,7 +27,6 @@ class _UploadScreenState extends State<UploadScreen> {
   @override
   void initState() {
     super.initState();
-    // Tự động mở camera/gallery khi màn hình vừa hiện lên
     WidgetsBinding.instance.addPostFrameCallback((_) => _pickImage());
   }
 
@@ -39,66 +39,84 @@ class _UploadScreenState extends State<UploadScreen> {
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
-        _aiResult = null; // Reset kết quả cũ để chọn lại
+        _aiResult = null;
       });
     } else if (_image == null) {
       Navigator.pop(context);
     }
   }
 
-  // --- HÀM GỌI AI: Đã được sửa để xử lý Response an toàn hơn ---
   Future<void> _analyzeFashion() async {
     if (_image == null) return;
     setState(() => _isAnalyzing = true);
 
     try {
-      final url = Uri.parse("${ApiConstants.baseAIUrl}${ApiConstants.AIidentityClothesEndpoint}");
-      var request = http.MultipartRequest('POST', url);
+      final processUrl = Uri.parse("${ApiConstants.baseAIUrl}/process-image");
+      var request = http.MultipartRequest('POST', processUrl);
+      request.files.add(await http.MultipartFile.fromPath('file', _image!.path));
 
-      // Xác định định dạng file (ví dụ: jpg, png)
-      String extension = _image!.path.split('.').last.toLowerCase();
-      if (extension == 'jpg') extension = 'jpeg'; // API thường mong đợi jpeg thay vì jpg
+      var streamRes = await request.send();
+      var res = await http.Response.fromStream(streamRes);
 
-      // THAY ĐỔI Ở ĐÂY: Thêm contentType
-      request.files.add(await http.MultipartFile.fromPath(
-        'file',
-        _image!.path,
-        contentType: MediaType('image', extension), // Ép kiểu image/jpeg hoặc image/png
-      ));
+      if (res.statusCode == 200) {
+        var jsonImg = jsonDecode(res.body);
+        String remoteUrl = jsonImg['processed_url'];
 
-      // Thêm header Accept để khớp với curl
-      request.headers.addAll({
-        'accept': 'application/json',
-      });
+        setState(() {
+          _aiResult = {'processed_url': remoteUrl, 'data': {}};
+        });
+          final classifyUrl = Uri.parse("${ApiConstants.baseAIUrl}/analyze-fashion?image_url=$remoteUrl");
+          final resAI = await http.get(classifyUrl);
 
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      print("Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
-
-      if (response.statusCode == 200) {
-        var json = jsonDecode(utf8.decode(response.bodyBytes));
-        if (json['status'] == 'success') {
-          setState(() {
-            _aiResult = json;
-            _selectedAttributes.clear();
-            Map<String, dynamic> data = json['data'];
-            data.forEach((key, value) {
-              if (value is List && value.isNotEmpty) {
-                _selectedAttributes[key] = value[0]['label'].toString();
-              }
+          if (resAI.statusCode == 200) {
+            var jsonAI = jsonDecode(resAI.body);
+            Map<String, dynamic> detected = Map<String, dynamic>.from(jsonAI['detected_info']);
+            final Map<String, String> aiToAppMapper = {
+              'item': 'itemName',          // AI trả "item" -> DB cần "itemName"
+              'category': 'category',
+              'sub_category': 'subCategory',
+              'gender': 'gender',
+              'main_color': 'mainColor',   // AI trả "main_color" -> DB cần "mainColor"
+              'sub_color': 'subColor',
+              'material': 'material',
+              'style': 'style',
+              'pattern': 'pattern',
+              'fit': 'fit',
+              'neckline': 'neckline',
+              'sleeve_length': 'sleeveLength',
+              'length': 'length',
+            };
+            setState(() {
+              _aiResult['data'] = detected;
+              _selectedAttributes = {};
+              detected.forEach((aiKey, value) {
+                String appKey = aiToAppMapper[aiKey] ?? aiKey;
+                _selectedAttributes[appKey] = value.toString();
+              });
+              _selectedAttributes['description'] = jsonAI['suggested_summary']?? "";
+              _selectedAttributes['isPublic'] = "false";
+              _selectedAttributes['itemType'] = detected['item'] ?? "clothing";
             });
-          });
-        }
-      } else {
-        _showToast("Lỗi ${response.statusCode}: ${response.body}");
+          }
       }
     } catch (e) {
-      _showToast("Lỗi kết nối: $e");
+      _showToast("AI Error: $e");
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
+  }
+
+  void _initializeEmptyAttributes() {
+    setState(() {
+      _aiResult = {
+        'processed_url': _aiResult?['processed_url'] ?? '',
+        'data': <String, dynamic>{}
+      };
+      // Khởi tạo toàn bộ field từ bộ hằng số dùng chung
+      for (var key in FashionConstants.categories.keys) {
+        _selectedAttributes[key] = _selectedAttributes[key] ?? "";
+      }
+    });
   }
 
   Future<void> _saveToDatabase() async {
@@ -107,20 +125,30 @@ class _UploadScreenState extends State<UploadScreen> {
     final token = prefs.getString('token');
 
     try {
+      bool isPublicBool = _selectedAttributes['isPublic'] == "true";
+      print("Dữ liệu thực tế trong Map: $_selectedAttributes");
       final Map<String, dynamic> body = {
-        "PrimaryImageUrl": _aiResult['processed_url'],
-        "ItemName": _selectedAttributes['item'] ?? "New Item",
-        "Style": _selectedAttributes['style'] ?? "",
-        "MainColor": _selectedAttributes['color'] ?? "",
-        "Pattern":_selectedAttributes['pattern'] ?? "",
-        "Fabric": _selectedAttributes['fabric'] ?? "",
-        "Description": _selectedAttributes['details'] ?? "",
-        "Placement": _selectedAttributes['placement']?? "",
-        "Texture": _selectedAttributes['visual_texture'] ?? "",
-        "Brand": _selectedAttributes['graphic_branding'] ?? "",
+        "itemName": _selectedAttributes['item'] ?? "New Fashion Item",
+        "wardrobeId": 1,
+        "itemType": _selectedAttributes['item'] ?? "clothing",
+        "category": _selectedAttributes['category'] ?? "upper_body",
+        "subCategory": _selectedAttributes['subCategory'] ?? "top",
+        "style": _selectedAttributes['style'] ?? "casual",
+        "gender": _selectedAttributes['gender'] ?? "unisex",
+        "mainColor": _selectedAttributes['mainColor'] ?? "unknown",
+        "subColor": _selectedAttributes['subColor'] ?? "none",
+        "material": _selectedAttributes['material'] ?? "cotton",
+        "pattern": _selectedAttributes['pattern'] ?? "solid",
+        "fit": _selectedAttributes['fit'] ?? "regular",
+        "neckline": _selectedAttributes['neckline'] ?? "none",
+        "sleeveLength": _selectedAttributes['sleeveLength'] ?? "none",
+        "length": _selectedAttributes['length'] ?? "none",
+        "brand": _selectedAttributes['brand'] ?? "none",
+        "description": _selectedAttributes['description'] ?? "",
+        "isPublic": isPublicBool,
+        "status": 1, // Enum: 1 = Active
+        "primaryImageUrl": _aiResult['processed_url']
       };
-
-      print("Gửi dữ liệu lưu: ${jsonEncode(body)}");
 
       final response = await http.post(
         Uri.parse("${ApiConstants.baseUrl}${ApiConstants.uploadItemEndpoint}"),
@@ -132,22 +160,22 @@ class _UploadScreenState extends State<UploadScreen> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _showToast("Lưu vào tủ đồ thành công! ✨");
-        // Quay về trang Wardrobe và refresh
+        _showToast("Added to wardrobe successfully!");
         Navigator.pop(context, true);
       } else {
-        print("Lỗi Backend: ${response.body}");
-        _showToast("Lỗi lưu DB: ${response.statusCode}");
+        _showToast("Server Error: ${response.body}");
       }
     } catch (e) {
-      _showToast("Lỗi kết nối lưu trữ: $e");
+      _showToast("Connection Error");
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
   }
 
   void _showToast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   @override
@@ -157,7 +185,7 @@ class _UploadScreenState extends State<UploadScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("AI Phân loại", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text("AI CLASSIFICATION", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         centerTitle: true,
         actions: [
           if (_aiResult != null && !_isAnalyzing)
@@ -210,10 +238,6 @@ class _UploadScreenState extends State<UploadScreen> {
             _aiResult['processed_url'],
             key: ValueKey(_aiResult['processed_url']),
             fit: BoxFit.contain,
-            loadingBuilder: (context, child, loading) {
-              if (loading == null) return child;
-              return const Center(child: CircularProgressIndicator(color: Colors.white24));
-            },
           )
               : Image.file(_image!, key: ValueKey(_image!.path), fit: BoxFit.cover),
         ),
@@ -228,7 +252,7 @@ class _UploadScreenState extends State<UploadScreen> {
       child: ElevatedButton.icon(
         onPressed: _analyzeFashion,
         icon: const Icon(Icons.auto_awesome, size: 20),
-        label: const Text("BẮT ĐẦU PHÂN LOẠI", style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text("START ANALYSIS", style: TextStyle(fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.pinkAccent,
           foregroundColor: Colors.white,
@@ -239,7 +263,6 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 }
 
-// Widget phụ hiển thị khi đang load AI
 class _AnalyzingLoader extends StatelessWidget {
   const _AnalyzingLoader();
   @override
@@ -248,7 +271,7 @@ class _AnalyzingLoader extends StatelessWidget {
       children: [
         const CircularProgressIndicator(color: Colors.pinkAccent),
         const SizedBox(height: 16),
-        Text("AI đang phân tích & tách nền...",
+        Text("AI is analyzing & removing background...",
             style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
       ],
     );

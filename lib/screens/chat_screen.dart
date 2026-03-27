@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input_field.dart';
@@ -25,6 +26,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ChatService _chatService = ChatService();
+  String myId = "";
   final TextEditingController _controller = TextEditingController();
   List<dynamic> _messages = [];
   bool _isLoading = true;
@@ -32,10 +34,16 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _loadMyId();
     _loadHistory();
     _initRealtime();
   }
-
+  void _loadMyId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      myId = prefs.getString('userId') ?? "";
+    });
+  }
   void _initRealtime() {
     _chatService.initSignalR(
       onMessageReceived: (msg) {
@@ -204,7 +212,8 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final m = _messages[index];
-                final bool isMe = m['senderName'] != widget.userName; // Logic hiện tại của ông
+
+                final bool isMe = m['isOwner'] == true ||m['senderId']?.toString() == myId.toString();
 
                 final DateTime sentTime = m['sentAt'] != null
                     ? DateTime.parse(m['sentAt'].toString()).toLocal()
@@ -223,7 +232,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         if (!isMe) ...[
                           CircleAvatar(
                             radius: 14, // Kích thước nhỏ xinh
-                            backgroundImage: NetworkImage(widget.avatarUrl), // Lấy avatar từ widget truyền vào
+                            backgroundImage: NetworkImage(m['senderAvatarUrl'] ?? "https://i.pravatar.cc/150?img=11"), // Lấy avatar từ widget truyền vào
                           ),
                           const SizedBox(width: 8),
                         ],

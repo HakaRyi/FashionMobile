@@ -50,4 +50,51 @@ class ItemService {
     }
     return null;
   }
+  Future<bool> deleteItem(int itemId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final endpoint = ApiConstants.deleteItemEndpoint.replaceFirst('{itemId}', itemId.toString());
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("Server báo: ${data['message']}");
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print("Lỗi deleteItem: $e");
+      return false;
+    }
+  }
+  Future<bool> updateItem(int itemId, Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final endpoint = ApiConstants.updateItemEndpoint.replaceFirst('{itemId}', itemId.toString());
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Lỗi updateItem: $e");
+      return false;
+    }
+  }
 }
