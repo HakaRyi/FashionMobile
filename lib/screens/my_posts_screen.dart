@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
 import '../managers/post_manager.dart';
-import '../models/my_post_model.dart';
-import '../widgets/my_post_item.dart';
+import '../models/post_feed_model.dart';
+import '../widgets/post_item.dart';
 import 'create_post_screens.dart';
+import '../constants/post_status_values.dart';
 
 class MyPostsScreen extends StatefulWidget {
   const MyPostsScreen({super.key});
@@ -40,25 +41,25 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     });
   }
 
-  void _openEditPost(MyPostModel post) {
+  void _openEditPost(PostFeedModel post) {
     Navigator.of(context)
         .push(
       MaterialPageRoute(
         builder: (_) => CreatePostScreen(
-          postToEdit: {
-            'postId': post.postId,
-            'title': post.title,
-            'content': post.content,
-            'imageUrls': post.images,
-            'status': post.status,
-            'visibility': post.visibility,
-          },
+          postToEdit: post.toJson(),
         ),
       ),
     )
         .then((_) async {
       await _loadMyPosts();
     });
+  }
+
+  bool _canEditPost(PostFeedModel post) {
+    final status = post.status?.toLowerCase();
+    return status != PostStatusValues.rejected.toLowerCase() &&
+        status != 'airejected' &&
+        status != 'blockedbyadmin';
   }
 
   @override
@@ -87,12 +88,10 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                     onRefresh: _refreshMyPosts,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding:
-                      const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
                       children: [
                         SizedBox(
-                          height:
-                          MediaQuery.of(context).size.height * 0.68,
+                          height: MediaQuery.of(context).size.height * 0.68,
                           child: _buildEmptyState(),
                         ),
                       ],
@@ -101,13 +100,10 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                       : RefreshIndicator(
                     onRefresh: _refreshMyPosts,
                     child: ListView.separated(
-                      padding:
-                      const EdgeInsets.fromLTRB(16, 12, 16, 120),
-                      physics:
-                      const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       itemCount: posts.length + 1,
-                      separatorBuilder: (_, __) =>
-                      const SizedBox(height: 12),
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return _buildOverviewCard(posts);
@@ -128,11 +124,10 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(22),
-                            child: MyPostItem(
+                            child: PostItem(
                               post: post,
-                              onEdit: post.canEdit
-                                  ? () => _openEditPost(post)
-                                  : null,
+                              isMyPost: true,
+                              onRefresh: _refreshMyPosts,
                             ),
                           ),
                         );
@@ -235,12 +230,10 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     );
   }
 
-  Widget _buildOverviewCard(List<MyPostModel> posts) {
+  Widget _buildOverviewCard(List<PostFeedModel> posts) {
     final total = posts.length;
-    final published =
-        posts.where((e) => e.status?.toLowerCase() == 'published').length;
-    final verifying =
-        posts.where((e) => e.status?.toLowerCase() == 'verifying').length;
+    final published = posts.where((e) => e.status?.toLowerCase() == 'published').length;
+    final verifying = posts.where((e) => e.status?.toLowerCase() == 'verifying').length;
     final rejected = posts.where((e) {
       final s = e.status?.toLowerCase();
       return s == 'rejected' || s == 'airejected' || s == 'blockedbyadmin';

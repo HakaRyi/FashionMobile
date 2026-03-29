@@ -1,31 +1,26 @@
-// lib/widgets/post_item.dart
+// Thay thế TOÀN BỘ file lib/widgets/post_item.dart bằng đoạn code sau:
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/post_status_values.dart';
 import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
 import 'comments/comment_sheet.dart';
+import '../screens/create_post_screens.dart';
 
 class PostItem extends StatefulWidget {
   final PostFeedModel post;
   final bool isMyPost;
-  // final Map<String, dynamic> postData;
-  // final VoidCallback? onEdit;
-  // final VoidCallback? onDelete;
+  final VoidCallback? onRefresh;
 
   const PostItem({
     super.key,
     required this.post,
     this.isMyPost = false,
+    this.onRefresh,
   });
-
-  // const PostItem({
-  //   super.key,
-  //   required this.postData,
-  //   this.isMyPost = false,
-  //   this.onEdit,
-  //   this.onDelete,});
 
   @override
   State<PostItem> createState() => _PostItemState();
@@ -48,6 +43,13 @@ class _PostItemState extends State<PostItem> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  bool _canEditPost(String? status) {
+    final s = status?.toLowerCase();
+    return s != PostStatusValues.rejected.toLowerCase() &&
+        s != 'airejected' &&
+        s != 'blockedbyadmin';
   }
 
   @override
@@ -82,6 +84,7 @@ class _PostItemState extends State<PostItem> {
                 userName: userName,
                 avatarUrl: avatarUrl,
                 createdAt: createdAt,
+                status: post.status,
               ),
 
               if (title.isNotEmpty || content.isNotEmpty)
@@ -117,11 +120,47 @@ class _PostItemState extends State<PostItem> {
     );
   }
 
+  Widget _buildStatusBanner(String? status) {
+    final statusText = postManager.getMyPostStatusText(status);
+    final statusColor = postManager.getMyPostStatusColor(status);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            statusText,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildHeader({
     required BuildContext context,
     required String userName,
     required String avatarUrl,
     required String createdAt,
+    String? status,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
@@ -159,6 +198,10 @@ class _PostItemState extends State<PostItem> {
               ],
             ),
           ),
+          if (widget.isMyPost && status != null) ...[
+            _buildStatusBanner(status),
+            const SizedBox(width: 8),
+          ],
           IconButton(
             splashRadius: 20,
             icon: const Icon(
@@ -166,7 +209,7 @@ class _PostItemState extends State<PostItem> {
               color: AppColors.textSecondary,
               size: 22,
             ),
-            onPressed: () => _showPostOptions(context),
+            onPressed: () => _showPostOptions(context, status),
           ),
         ],
       ),
@@ -451,89 +494,152 @@ class _PostItemState extends State<PostItem> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _showPostOptions(BuildContext context) {
+  void _showPostOptions(BuildContext context, String? status) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) {
+      builder: (ctx) {
         return Container(
+          padding: const EdgeInsets.only(bottom: 20),
           decoration: const BoxDecoration(
-            color: Color(0xFF1B1B1B),
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(20),
-            ),
+            color: Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  width: 42,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 8),
-                if (widget.isMyPost)
+              ),
+              if (widget.isMyPost) ...[
+                if (_canEditPost(status))
                   ListTile(
-                    leading: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
-                    ),
+                    leading: const Icon(Icons.edit_outlined, color: AppColors.textPrimary),
                     title: const Text(
-                      'Xóa bài viết',
-                      style: TextStyle(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    onTap: () async {
-                      Navigator.pop(context);
-
-                      try {
-                        await postManager.deleteMyPost(postId);
-                      } catch (e) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Xóa bài thất bại: $e'),
-                          ),
-                        );
-                      }
-                    },
-                  )
-                else
-                  ListTile(
-                    leading: const Icon(
-                      Icons.report_gmailerrorred_rounded,
-                      color: Colors.redAccent,
-                    ),
-                    title: const Text(
-                      'Báo cáo bài viết',
-                      style: TextStyle(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      "Chỉnh sửa bài viết",
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
                     ),
                     onTap: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tính năng báo cáo đang được hoàn thiện'),
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CreatePostScreen(
+                            postToEdit: {
+                              'postId': widget.post.postId,
+                              'title': widget.post.title,
+                              'content': widget.post.content,
+                              'imageUrls': widget.post.images,
+                              'status': widget.post.status,
+                              'visibility': widget.post.visibility,
+                            },
+                          ),
                         ),
-                      );
+                      ).then((_) {
+                        if (widget.onRefresh != null) {
+                          widget.onRefresh!();
+                        }
+                      });
                     },
                   ),
-                const SizedBox(height: 12),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  title: const Text(
+                    "Xóa bài viết",
+                    style: TextStyle(color: Colors.redAccent, fontSize: 16),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showDeleteConfirmDialog(context);
+                  },
+                ),
+              ] else ...[
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent, size: 22),
+                  ),
+                  title: const Text(
+                    "Báo cáo bài viết",
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    "Tôi lo ngại về bài viết này",
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Đã gửi báo cáo")),
+                    );
+                  },
+                ),
+                const Divider(color: Colors.white10, indent: 16, endIndent: 16),
+                ListTile(
+                  leading: const Icon(Icons.visibility_off_outlined, color: AppColors.textPrimary),
+                  title: const Text(
+                    "Không quan tâm",
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+                  ),
+                  onTap: () => Navigator.pop(ctx),
+                ),
               ],
-            ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext parentContext) {
+    showDialog(
+      context: parentContext,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF2C2C2C),
+        title: const Text("Xóa bài viết?", style: TextStyle(color: Colors.white)),
+        content: const Text(
+          "Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.",
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Hủy", style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await postManager.deleteMyPost(postId);
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(parentContext).showSnackBar(
+                  SnackBar(
+                    content: Text('Xóa bài thất bại: $e'),
+                  ),
+                );
+              }
+            },
+            child: const Text("Xóa", style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
     );
   }
 }
