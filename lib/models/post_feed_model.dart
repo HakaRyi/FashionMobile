@@ -14,6 +14,8 @@ class PostFeedModel {
   final DateTime createdAt;
   final String? status;
   final String? visibility;
+  final bool isEvent;
+  final String? eventName;
 
   List<String> get imageUrls => images;
 
@@ -33,6 +35,8 @@ class PostFeedModel {
     required this.createdAt,
     this.status,
     this.visibility,
+    required this.isEvent,
+    this.eventName,
   });
 
   factory PostFeedModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +56,8 @@ class PostFeedModel {
       createdAt: DateTime.parse(json['createdAt']),
       status: json['status'],
       visibility: json['visibility'],
+      isEvent: json['isEvent'] ?? false,
+      eventName: json['eventName'],
     );
   }
 
@@ -72,6 +78,8 @@ class PostFeedModel {
       'createdAt': createdAt.toIso8601String(),
       'status': status,
       'visibility': visibility,
+      'isEvent': isEvent,
+      'eventName': eventName,
     };
   }
 
@@ -91,6 +99,8 @@ class PostFeedModel {
     DateTime? createdAt,
     String? status,
     String? visibility,
+    bool? isEvent,
+    String? eventName,
   }) {
     return PostFeedModel(
       postId: postId ?? this.postId,
@@ -108,6 +118,8 @@ class PostFeedModel {
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
       visibility: visibility ?? this.visibility,
+      isEvent: isEvent ?? this.isEvent,
+      eventName: eventName ?? this.eventName,
     );
   }
 }

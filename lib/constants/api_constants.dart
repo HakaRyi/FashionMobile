@@ -59,4 +59,6 @@ class ApiConstants {
   static const String getRejectedPosts = "/admin/post/rejected";
   static const String updateAdminPostStatus = "/admin/post/{postId}/status";
   static const String topUpWallet = "/payment/create-order-vnpay";
+
+  static const String publicEventsEndpoint = "/events/public/all";
 }

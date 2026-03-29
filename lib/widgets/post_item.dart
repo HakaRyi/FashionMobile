@@ -1,5 +1,7 @@
 // Thay thế TOÀN BỘ file lib/widgets/post_item.dart bằng đoạn code sau:
 
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -86,6 +88,7 @@ class _PostItemState extends State<PostItem> {
                 avatarUrl: avatarUrl,
                 createdAt: createdAt,
                 status: post.status,
+
               ),
 
               if (title.isNotEmpty || content.isNotEmpty)
@@ -98,6 +101,8 @@ class _PostItemState extends State<PostItem> {
                 _buildImageSlider(
                   images: images,
                   isLiked: isLiked,
+                  isEvent: post.isEvent,
+                  eventName: post.eventName,
                 ),
 
               _buildActions(
@@ -189,6 +194,7 @@ class _PostItemState extends State<PostItem> {
                   ),
                 ),
                 const SizedBox(height: 2),
+
                 Text(
                   createdAt,
                   style: const TextStyle(
@@ -196,6 +202,7 @@ class _PostItemState extends State<PostItem> {
                     fontSize: 11,
                   ),
                 ),
+
               ],
             ),
           ),
@@ -254,6 +261,8 @@ class _PostItemState extends State<PostItem> {
   Widget _buildImageSlider({
     required List<String> images,
     required bool isLiked,
+    bool isEvent = false,
+    String? eventName,
   }) {
     return GestureDetector(
       onDoubleTap: () async {
@@ -309,7 +318,41 @@ class _PostItemState extends State<PostItem> {
               },
             ),
           ),
-
+          if (isEvent && eventName != null)
+            Positioned(
+              top: 12,
+              left: 12,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.event_repeat, color: AppColors.textPink, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          eventName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (showHeart)
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0.6, end: 1.15),
