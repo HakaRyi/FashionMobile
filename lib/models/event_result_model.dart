@@ -6,6 +6,7 @@ class EventLeaderboardModel {
   final String? avatarUrl;
   final double finalScore;
   final int postId;
+  final double? rewardAmount;
 
   EventLeaderboardModel({
     required this.rank,
@@ -14,6 +15,7 @@ class EventLeaderboardModel {
     this.avatarUrl,
     required this.finalScore,
     required this.postId,
+    this.rewardAmount,
   });
 
   factory EventLeaderboardModel.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,7 @@ class EventLeaderboardModel {
       avatarUrl: json['avatarUrl'],
       finalScore: (json['finalScore'] as num).toDouble(),
       postId: json['postId'],
+      rewardAmount: json['rewardAmount'] != null ? (json['rewardAmount'] as num).toDouble() : null,
     );
   }
 }

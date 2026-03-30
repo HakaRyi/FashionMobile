@@ -309,6 +309,7 @@ class PostManager extends ChangeNotifier {
       List<Uint8List> imageBytesList,
       String content, {
         String? title,
+        int? eventId,
       }) async {
     if (isUploading) return;
 
@@ -322,11 +323,22 @@ class PostManager extends ChangeNotifier {
     bool success = false;
 
     try {
-      final postId = await _postService.createPost(
-        imageBytesList: imageBytesList,
-        content: content,
-        title: title,
-      );
+      int? postId;
+
+      if (eventId != null) {
+        postId = await _postService.joinEventWithPost(
+          imageBytesList: imageBytesList,
+          content: content,
+          eventId: eventId,
+          title: title,
+        );
+      } else {
+        postId = await _postService.createPost(
+          imageBytesList: imageBytesList,
+          content: content,
+          title: title,
+        );
+      }
 
       success = postId != null;
     } catch (e) {

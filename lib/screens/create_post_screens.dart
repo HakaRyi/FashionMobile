@@ -10,11 +10,15 @@ import 'main_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final Uint8List? imageBytes;
+  final int? eventId;     // Thêm
+  final String? eventName;
   final Map<String, dynamic>? postToEdit;
 
   const CreatePostScreen({
     super.key,
     this.imageBytes,
+    this.eventId,
+    this.eventName,
     this.postToEdit,
   });
 
@@ -135,6 +139,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         await postManager.uploadPost(
           [_selectedImageBytes!],
           content,
+          eventId: widget.eventId,
         );
       }
 
@@ -207,6 +212,29 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 physics: const BouncingScrollPhysics(),
                 children: [
                   _buildUserInfo(),
+                  if (widget.eventId != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.textPink.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.textPink.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.event_available, color: AppColors.textPink, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              "BẠN ĐANG THAM GIA: ${widget.eventName}",
+                              style: const TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   _buildInputArea(),
                   if (hasImage)
                     Padding(

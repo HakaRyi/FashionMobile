@@ -69,7 +69,44 @@
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return PostFeedModel.fromJson(data);
     }
+    Future<int?> joinEventWithPost({
+      required List<Uint8List> imageBytesList,
+      required String content,
+      required int eventId,
+      String? title,
+    }) async {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/post/event-participation');
 
+      final headers = await ApiClient.getHeaders();
+      final request = http.MultipartRequest('POST', uri);
+
+      request.headers.addAll(headers);
+
+      request.fields['Content'] = content.trim();
+      request.fields['EventId'] = eventId.toString();
+      if (title != null) request.fields['Title'] = title.trim();
+
+      for (int i = 0; i < imageBytesList.length; i++) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'Images',
+            imageBytesList[i],
+            filename: 'event_post_$i.jpg',
+          ),
+        );
+      }
+
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(body);
+        return data['postId'] as int?;
+      } else {
+        final errorData = jsonDecode(body);
+        throw Exception(errorData['message'] ?? 'Lỗi tham gia sự kiện');
+      }
+    }
     Future<int?> createPost({
       required List<Uint8List> imageBytesList,
       required String content,

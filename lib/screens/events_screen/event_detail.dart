@@ -6,6 +6,9 @@ import '../../models/event_model.dart';
 import '../../services/event_service.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/route_transitions.dart';
+import '../create_post_screens.dart';
+
 class EventDetailScreen extends StatefulWidget {
   final int eventId;
   const EventDetailScreen({super.key, required this.eventId});
@@ -38,7 +41,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         _event = data;
         _isLoading = false;
       });
-
     }
   }
 
@@ -55,8 +57,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    print("DEBUG: Event ID đang xem: ${_event?.eventId}");
-    print("DEBUG: Trạng thái isJoined từ API: ${_event?.isJoined}");
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0D0D0D),
@@ -88,18 +88,27 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     children: [
                       _buildMainStats(),
                       const SizedBox(height: 32),
+
+                      // --- MỚI: HIỂN THỊ CƠ CHẾ CHẤM ĐIỂM ---
+                      _buildSectionTitle("Cơ chế tính điểm"),
+                      _buildWeightSection(),
+                      const SizedBox(height: 32),
+
                       _buildSectionTitle("Lịch trình sự kiện"),
                       _buildTimelineSection(),
                       const SizedBox(height: 32),
+
                       _buildSectionTitle("Cơ cấu giải thưởng"),
                       _buildFlexiblePrizeUI(_event!.prizes),
                       const SizedBox(height: 32),
+
                       _buildSectionTitle("Giới thiệu sự kiện"),
                       Text(
                         _event!.description,
                         style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.6, fontSize: 15),
                       ),
                       const SizedBox(height: 32),
+
                       _buildSectionTitle("Ban giám khảo chuyên gia"),
                       _buildExpertGrid(_event!.experts),
                       const SizedBox(height: 140),
@@ -121,8 +130,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       pinned: true,
       backgroundColor: const Color(0xFF0D0D0D),
       leading: IconButton(
-        icon: const CircleAvatar(backgroundColor: Colors.black45, child: Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white)),
-        onPressed: () => Navigator.pop(context),
+        icon: const CircleAvatar(
+            backgroundColor: Colors.black45,
+            child: Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white)),
+        onPressed: () => Navigator.maybePop(context),
       ),
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
@@ -160,6 +171,52 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Sửa Main Stats: Hiện Miễn Phí thay vì con số lệ phí
+  Widget _buildMainStats() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildStatItem(Icons.people_alt_outlined, "${_event!.participantCount}", "Tham gia"),
+        _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "Giải thưởng"),
+        _buildStatItem(Icons.verified_user_outlined, "Miễn phí", "Lệ phí"),
+      ],
+    );
+  }
+
+  // Widget hiển thị Trọng số chấm điểm
+  Widget _buildWeightSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          _buildWeightItem("Ban giám khảo", _event!.expertWeight, Colors.amberAccent),
+          Container(width: 1, height: 40, color: Colors.white10),
+          _buildWeightItem("Cộng đồng", _event!.userWeight, Colors.cyanAccent),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeightItem(String label, double weight, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            "${(weight * 100).toInt()}%",
+            style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        ],
       ),
     );
   }
@@ -220,17 +277,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  Widget _buildMainStats() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildStatItem(Icons.people_alt_outlined, "${_event!.participantCount}", "Tham gia"),
-        _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "Giải thưởng"),
-        _buildStatItem(Icons.account_balance_wallet_outlined, NumberFormat.compact().format(_event!.appliedFee), "Lệ phí"),
-      ],
-    );
-  }
-
   Widget _buildStatItem(IconData icon, String value, String label) {
     return Column(
       children: [
@@ -288,9 +334,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("HẠNG ${p.ranked}", style: TextStyle(color: prizeColor, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 13)),
+                Text("HẠNG ${p.ranked}",
+                    style: TextStyle(color: prizeColor, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 13)),
                 const SizedBox(height: 6),
-                Text("${NumberFormat.decimalPattern().format(p.rewardAmount)} VNĐ", style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                Text("${NumberFormat.decimalPattern().format(p.rewardAmount)} VNĐ",
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -335,8 +383,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
+  // Sửa lại Bottom Action: Hiện trạng thái sự kiện
   Widget _buildBottomAction() {
-    // 1. Kiểm tra an toàn: Lấy trực tiếp từ đối tượng _event đã fetch
     final bool joined = _event?.isJoined ?? false;
 
     return Positioned(
@@ -359,11 +407,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text("Phí tham gia", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      const Text("Trạng thái", style: TextStyle(color: Colors.white54, fontSize: 12)),
                       Text(
-                        _event!.appliedFee == 0 ? "Miễn phí" : "${NumberFormat.decimalPattern().format(_event!.appliedFee)} VNĐ",
+                        joined ? "Đã tham gia" : "Đang mở",
                         style: TextStyle(
-                          color: joined ? Colors.white30 : Colors.white,
+                          color: joined ? Colors.pinkAccent : Colors.greenAccent,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
@@ -371,14 +419,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     ],
                   ),
                 ),
-
-                // ================== NÚT THAM GIA (BẢN FIX TRIỆT ĐỂ) ==================
                 SizedBox(
                   height: 54,
                   width: 180,
-                  child: joined
-                      ? _buildDisabledState() // Hàm render trạng thái XÁM
-                      : _buildActiveState(),   // Hàm render trạng thái HỒNG
+                  child: joined ? _buildDisabledState() : _buildActiveState(),
                 ),
               ],
             ),
@@ -386,18 +430,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         ),
       ),
     );
-  }Widget _buildDisabledState() {
+  }
+
+  Widget _buildDisabledState() {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFF1A1A1A), // Màu xám tối hẳn
+        color: const Color(0xFF1A1A1A),
         border: Border.all(color: Colors.white10),
       ),
       child: const Center(
         child: Text(
           "ĐÃ THAM GIA",
           style: TextStyle(
-            color: Colors.white24, // Chữ mờ
+            color: Colors.white24,
             fontWeight: FontWeight.w900,
             fontSize: 14,
           ),
@@ -406,7 +452,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  // Widget hiển thị khi CHƯA THAM GIA (Hồng Neon)
   Widget _buildActiveState() {
     return AnimatedBuilder(
       animation: _pulseController,
@@ -430,8 +475,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                // Thực hiện logic tham gia ở đây
-                print("Gọi API tham gia event ${_event!.eventId}");
+                Navigator.push(
+                  context,
+                  SlideRoute(
+                    page: CreatePostScreen(
+                      eventId: _event!.eventId,
+                      eventName: _event!.title,
+                    ),
+                  ),
+                );
               },
               child: const Center(
                 child: Text(
@@ -474,6 +526,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 }
+
+// ParticleOverlay và Particle class giữ nguyên phần cuối...
 
 // ParticleOverlay giữ nguyên
 class ParticleOverlay extends StatefulWidget {

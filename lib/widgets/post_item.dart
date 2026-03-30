@@ -76,7 +76,7 @@ class _PostItemState extends State<PostItem> {
         final isLiked = post.isLiked;
         final isSaved = post.isSaved;
         final createdAt = _timeAgo(post.createdAt);
-
+        final bool hideMenu = widget.isMyPost && post.isEvent;
         return Container(
           color: AppColors.background,
           child: Column(
@@ -88,6 +88,7 @@ class _PostItemState extends State<PostItem> {
                 avatarUrl: avatarUrl,
                 createdAt: createdAt,
                 status: post.status,
+                hideMenu: hideMenu,
 
               ),
 
@@ -167,6 +168,7 @@ class _PostItemState extends State<PostItem> {
     required String avatarUrl,
     required String createdAt,
     String? status,
+    required bool hideMenu,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
@@ -210,15 +212,16 @@ class _PostItemState extends State<PostItem> {
             _buildStatusBanner(status),
             const SizedBox(width: 8),
           ],
-          IconButton(
-            splashRadius: 20,
-            icon: const Icon(
-              Icons.more_horiz,
-              color: AppColors.textSecondary,
-              size: 22,
+          if (!hideMenu)
+            IconButton(
+              splashRadius: 20,
+              icon: const Icon(
+                Icons.more_horiz,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
+              onPressed: () => _showPostOptions(context, status),
             ),
-            onPressed: () => _showPostOptions(context, status),
-          ),
         ],
       ),
     );
@@ -564,7 +567,7 @@ class _PostItemState extends State<PostItem> {
                 ),
               ),
               if (widget.isMyPost) ...[
-                if (_canEditPost(status))
+                if (_canEditPost(status)&& !widget.post.isEvent)
                   ListTile(
                     leading: const Icon(Icons.edit_outlined, color: AppColors.textPrimary),
                     title: const Text(

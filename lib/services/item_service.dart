@@ -97,4 +97,42 @@ class ItemService {
       return false;
     }
   }
+  Future<List<dynamic>> getSmartRecommendations({
+    required int? referenceItemId,
+    required String prompt,
+    required bool useMyWardrobe,
+    required bool useCommunityItems,
+    int limit = 10,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.smartMatchEndpoint}");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "prompt": prompt,
+          "referenceItemId": referenceItemId,
+          "useMyWardrobe": useMyWardrobe,
+          "useCommunityItems": useCommunityItems,
+          "useSavedItems": false,
+          "limit": limit,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final decodedData = jsonDecode(response.body);
+        return decodedData['data'];
+      }
+    } catch (e) {
+      print("Lỗi getSmartRecommendations: $e");
+    }
+    return [];
+  }
 }

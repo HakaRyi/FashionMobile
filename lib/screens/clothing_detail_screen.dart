@@ -7,8 +7,9 @@ import '../widgets/fashion_autocomplete_field.dart';
 
 class ClothingDetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
+  final bool showEditButton;
 
-  const ClothingDetailScreen({super.key, required this.itemData});
+  const ClothingDetailScreen({super.key, required this.itemData,this.showEditButton = true,});
 
   @override
   State<ClothingDetailScreen> createState() => _ClothingDetailScreenState();
@@ -107,26 +108,27 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2),
         ),
         actions: [
-          _isSaving
-              ? const Center(
-            child: Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pinkAccent)),
+          if (widget.showEditButton)
+            _isSaving
+                ? const Center(
+              child: Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pinkAccent)),
+              ),
+            )
+                : TextButton(
+              onPressed: () {
+                if (_isEditing) {
+                  _handleSave();
+                } else {
+                  setState(() => _isEditing = true);
+                }
+              },
+              child: Text(
+                _isEditing ? "SAVE" : "EDIT",
+                style: const TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold),
+              ),
             ),
-          )
-              : TextButton(
-            onPressed: () {
-              if (_isEditing) {
-                _handleSave();
-              } else {
-                setState(() => _isEditing = true);
-              }
-            },
-            child: Text(
-              _isEditing ? "SAVE" : "EDIT",
-              style: const TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold),
-            ),
-          ),
         ],
       ),
       body: SingleChildScrollView(

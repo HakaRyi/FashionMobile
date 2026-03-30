@@ -33,7 +33,7 @@ class EventAccessScreen extends StatelessWidget {
                 backgroundColor: const Color(0xFF1E1E1E),
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.maybePop(context),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(

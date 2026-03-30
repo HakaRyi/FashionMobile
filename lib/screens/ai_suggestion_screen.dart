@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../widgets/clothing_item.dart';
 import '../widgets/ai_range_selector.dart';
-import 'ai_result_screen.dart'; // Import màn hình kết quả
+import 'ai_result_screen.dart';
 
 class AISuggestionScreen extends StatefulWidget {
   final Map<String, dynamic> selectedItem;
@@ -14,8 +14,10 @@ class AISuggestionScreen extends StatefulWidget {
 }
 
 class _AISuggestionScreenState extends State<AISuggestionScreen> {
+  // Mặc định chọn tìm trong tủ đồ cá nhân
   List<String> _selectedRanges = ['My Wardrobe'];
   final TextEditingController _promptController = TextEditingController();
+
   void _toggleRange(String rangeId) {
     setState(() {
       if (_selectedRanges.contains(rangeId)) {
@@ -27,14 +29,16 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("AI Stylist", style: TextStyle(fontSize: 16)),
+        title: const Text("AI Stylist", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -44,8 +48,7 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Hiển thị món đồ gốc
-                  const Text("Gợi ý đồ phối cùng với:", style: TextStyle(color: Colors.white54)),
+                  const Text("Gợi ý đồ phối cùng với:", style: TextStyle(color: Colors.white70)),
                   const SizedBox(height: 16),
                   Center(
                     child: SizedBox(
@@ -59,16 +62,14 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Range Selector
                   const Text("Phạm vi tìm kiếm (có thể chọn nhiều):",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 16),
                   AIRangeSelector(
                     selectedRanges: _selectedRanges,
                     onSelect: _toggleRange,
                   ),
 
-                  // Ô search nếu chọn 'Others'
                   if (_selectedRanges.contains('Others')) ...[
                     const SizedBox(height: 16),
                     _buildSearchBox(),
@@ -77,8 +78,6 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
               ),
             ),
           ),
-
-          // Prompt Input ở dưới cùng
           _buildPromptBar(),
         ],
       ),
@@ -88,7 +87,7 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
   Widget _buildSearchBox() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
       child: const TextField(
         style: TextStyle(color: Colors.white),
         decoration: InputDecoration(
@@ -114,12 +113,12 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(25)),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(25), border: Border.all(color: AppColors.divider)),
                 child: TextField(
                   controller: _promptController,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
-                    hintText: "Thêm yêu cầu (vd: màu xanh, đi tiệc...)",
+                    hintText: "Thêm yêu cầu (vd: đi tiệc, năng động...)",
                     hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
                     border: InputBorder.none,
                   ),
@@ -129,17 +128,20 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             const SizedBox(width: 12),
             GestureDetector(
               onTap: () {
-                // Giả lập gửi data và chuyển sang Screen 3
+                // CHUYỂN DỮ LIỆU SANG MÀN HÌNH KẾT QUẢ
                 Navigator.push(context, MaterialPageRoute(
                     builder: (context) => AIResultScreen(
                       baseItem: widget.selectedItem,
                       prompt: _promptController.text,
+                      useMyWardrobe: _selectedRanges.contains('My Wardrobe'),
+                      useCommunityItems: _selectedRanges.contains('Others'),
                     )
                 ));
               },
-              child: CircleAvatar(
+              child: const CircleAvatar(
+                radius: 25,
                 backgroundColor: AppColors.textPink,
-                child: const Icon(Icons.auto_awesome, color: Colors.white),
+                child: Icon(Icons.auto_awesome, color: Colors.white),
               ),
             )
           ],

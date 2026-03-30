@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../../utils/route_transitions.dart';
 import '../../widgets/clothing_item.dart';
 import '../../widgets/add_clothing_card.dart';
 import '../../widgets/action_button.dart';
@@ -194,8 +195,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => AISuggestionScreen(selectedItem: item)
+                  Navigator.push(context, SlideRoute(page: AISuggestionScreen(selectedItem: item)
                   ));
                 },
               ),
