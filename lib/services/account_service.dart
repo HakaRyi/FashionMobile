@@ -30,4 +30,30 @@ class AccountService {
     }
     return null;
   }
+
+  Future<Map<String, dynamic>?> getUserProfile(String targetUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('token');
+
+    if (targetUserId.trim().isEmpty) return null;
+
+    final url = Uri.parse("${ApiConstants.baseUrl}/Account/$targetUserId");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print("Lỗi fetch user profile: $e");
+    }
+    return null;
+  }
 }

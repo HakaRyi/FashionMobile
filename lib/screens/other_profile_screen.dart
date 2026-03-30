@@ -1,31 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
-import '../../screens/create_post_screens.dart';
-import '../../screens/expense_management_screen.dart';
-import '../../screens/settings_screen.dart';
-import '../../services/account_service.dart';
+// ---> BẮT ĐẦU SỬA
+// Import các thư viện cần thiết, loại bỏ import màn hình cá nhân của mình
+import '../services/account_service.dart';
 import '../../services/post_service.dart';
 import '../../utils/route_transitions.dart';
-import '../../utils/stat_skeleton_item.dart';
-import '../../widgets/wapo_pay_sheet.dart';
-import '../order_manager_screen.dart';
-import '../public_wardrobe_screen.dart';
+import '../screens/public_wardrobe_screen.dart'; // Giữ lại tủ đồ
 import '../../widgets/post_item.dart';
 import '../../models/post_feed_model.dart';
-import '../../services/wallet_service.dart';
+import '../utils/stat_skeleton_item.dart';
+// import ChatScreen nếu có
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class OtherProfileScreen extends StatefulWidget {
+  final int userId;
+
+  const OtherProfileScreen({super.key, required this.userId});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<OtherProfileScreen> createState() => _OtherProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _OtherProfileScreenState extends State<OtherProfileScreen> {
   late Future<Map<String, dynamic>?> _profileFuture;
   late Future<List<PostFeedModel>> _postsFuture;
-  late Future<double> _walletFuture;
+  bool isFollowing = false;
 
   @override
   void initState() {
@@ -35,21 +34,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _refreshData() {
     setState(() {
-      _profileFuture = AccountService().getMyProfile();
-      _postsFuture = PostService().fetchMyPosts();
-      _walletFuture = WalletService().getMyWalletBalance();
+      _profileFuture = AccountService().getUserProfile(widget.userId.toString());
+      _postsFuture = PostService().fetchUserPosts(userId: widget.userId);
     });
   }
 
-  void _showWapoPaySheet(BuildContext context, double balance) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return WapoPaySheet(initialBalance: balance);
-      },
-    );
+  void _toggleFollow() {
+    setState(() {
+      isFollowing = !isFollowing;
+    });
   }
 
   @override
@@ -70,11 +63,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final user = profileSnapshot.data;
           final String avatar = user?['avatar'] ?? "";
-          final String name = user?['username'] ?? "User";
-          final String email = user?['email'] ?? "unknown@gmail.com";
+          final String name = user?['username'] ?? "Người dùng";
+          final String email = user?['email'] ?? "Đang cập nhật...";
           final String bio =
               user?['description'] ?? "Chưa có giới thiệu về bản thân.";
-          final double balance = (user?['balance'] ?? 0.0).toDouble();
           final String followerCount = (user?['followerCount'] ?? user?['followers'] ?? 0).toString();
           final String followingCount = (user?['followingCount'] ?? user?['following'] ?? 0).toString();
 
@@ -123,6 +115,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       backgroundColor: Colors.transparent,
                       pinned: true,
                       elevation: 0,
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                       title: Text(
                         name,
                         style: const TextStyle(
@@ -135,20 +131,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       centerTitle: true,
-                      actions: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.more_horiz,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              SlideRoute(page: const SettingsScreen()),
-                            );
-                          },
-                        ),
-                      ],
                     ),
                     SliverToBoxAdapter(
                       child: SizedBox(
@@ -263,20 +245,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 20),
 
-                                  // Row 1
+                                  // Row Các nút chức năng
                                   Row(
                                     children: [
+                                      // Nút Follow
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                              const CreatePostScreen(),
-                                            ),
-                                          ).then((_) => _refreshData()),
+                                          onPressed: _toggleFollow,
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.pink,
+                                            backgroundColor: isFollowing
+                                                ? Colors.white24 // Màu xám khi đã follow
+                                                : Colors.pink, // Màu hồng khi chưa follow
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
@@ -285,9 +264,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               vertical: 12,
                                             ),
                                           ),
-                                          child: const Text(
-                                            "Tạo Bài Đăng",
-                                            style: TextStyle(
+                                          child: Text(
+                                            isFollowing ? "Đang theo dõi" : "Theo dõi",
+                                            style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
                                               fontSize: 13,
@@ -297,15 +276,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
+                                      // Nút Nhắn tin
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            SlideRoute(
-                                              page:
-                                              const OrderManagementScreen(),
-                                            ),
-                                          ),
+                                          onPressed: () {
+                                            // Navigator.push(context, SlideRoute(page: ChatScreen(userId: widget.userId)));
+                                          },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.pinkAccent
                                                 .withOpacity(0.8),
@@ -318,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Quản Lý Đơn",
+                                            "Nhắn tin",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -330,10 +306,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                     ],
                                   ),
-
                                   const SizedBox(height: 8),
-
-                                  // Row 2
+                                  // Nút Xem tủ đồ
                                   Row(
                                     children: [
                                       Expanded(
@@ -341,14 +315,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           onPressed: () => Navigator.push(
                                             context,
                                             SlideRoute(
-                                              page:
-                                              const PublicWardrobeScreen(),
+                                              // Truyền userId vào PublicWardrobeScreen nếu màn hình đó hỗ trợ xem của người khác
+                                              page: const PublicWardrobeScreen(),
                                             ),
                                           ),
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pink, // Viền màu hồng cho nổi bật
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -359,125 +333,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Tủ Đồ",
-                                            style: TextStyle(fontSize: 13),
+                                            "Xem tủ đồ công khai",
+                                            style: TextStyle(fontSize: 13, color: Colors.pinkAccent),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: FutureBuilder<double>(
-                                          future: _walletFuture,
-                                          builder: (context, walletSnapshot) {
-                                            if (walletSnapshot.connectionState == ConnectionState.waiting) {
-                                              return OutlinedButton(
-                                                onPressed: null,
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor: Colors.white,
-                                                  side: const BorderSide(
-                                                    color: Colors.white24,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  padding: const EdgeInsets.symmetric(
-                                                    vertical: 12,
-                                                  ),
-                                                ),
-                                                child: const Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    SizedBox(
-                                                      width: 16,
-                                                      height: 16,
-                                                      child: CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            }
-
-                                            final double currentBalance = walletSnapshot.hasData ? walletSnapshot.data! : balance;
-
-                                            return OutlinedButton(
-                                              onPressed: () => _showWapoPaySheet(
-                                                context,
-                                                currentBalance,
-                                              ),
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: Colors.white,
-                                                side: const BorderSide(
-                                                  color: Colors.white24,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                padding: const EdgeInsets.symmetric(
-                                                  vertical: 12,
-                                                ),
-                                              ),
-                                              child: const Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.account_balance_wallet_outlined,
-                                                    size: 16,
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  Text(
-                                                    "Wapo",
-                                                    style: TextStyle(fontSize: 13),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  // Row 3
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                              const ExpenseManagementScreen(),
-                                            ),
-                                          ),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.white,
-                                            side: const BorderSide(
-                                              color: Colors.white24,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            "Chi Tiêu",
-                                            style: TextStyle(fontSize: 13),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Expanded(
-                                        child: SizedBox(),
                                       ),
                                     ],
                                   ),
@@ -552,7 +412,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 child: PostItem(
                                   post: post,
-                                  isMyPost: true,
+                                  // Đặt isMyPost = false để nó render giống trang Home, ẩn các thao tác sửa/xóa/trạng thái cá nhân
+                                  isMyPost: false,
                                   onRefresh: () => _refreshData(),
                                 ),
                               );
@@ -608,3 +469,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+// <--- KẾT THÚC SỬA

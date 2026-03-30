@@ -1,5 +1,3 @@
-// Thay thế TOÀN BỘ file lib/widgets/post_item.dart bằng đoạn code sau:
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -9,6 +7,10 @@ import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
 import 'comments/comment_sheet.dart';
 import '../screens/create_post_screens.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/navbar_screens/profile_screen.dart';
+import '../screens/other_profile_screen.dart';
 
 class PostItem extends StatefulWidget {
   final PostFeedModel post;
@@ -52,6 +54,27 @@ class _PostItemState extends State<PostItem> {
         s != 'blockedbyadmin';
   }
 
+  void _handleProfileNavigation(BuildContext context, int postUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUserId = prefs.getString('userId');
+
+    if (!context.mounted) return;
+
+    if (currentUserId == postUserId) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OtherProfileScreen(userId: postUserId),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -59,11 +82,12 @@ class _PostItemState extends State<PostItem> {
       builder: (context, _) {
         final post = postManager.getPostOrNull(postId) ?? widget.post;
 
+        final postUserId = post.accountId;
         final userName = post.userName.trim().isNotEmpty ? post.userName : 'Người dùng';
         final avatarUrl =
         (post.avatarUrl != null && post.avatarUrl!.trim().isNotEmpty)
             ? post.avatarUrl!
-            : 'https://i.pravatar.cc/150?img=8';
+            : 'assets/images/default_avatar.png';
 
         final title = (post.title ?? '').trim();
         final content = (post.content ?? '').trim();
@@ -85,6 +109,7 @@ class _PostItemState extends State<PostItem> {
                 avatarUrl: avatarUrl,
                 createdAt: createdAt,
                 status: post.status,
+                postUserId: postUserId,
               ),
 
               if (title.isNotEmpty || content.isNotEmpty)
@@ -160,42 +185,53 @@ class _PostItemState extends State<PostItem> {
     required String userName,
     required String avatarUrl,
     required String createdAt,
+    required int postUserId,
     String? status,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white10,
-            backgroundImage: NetworkImage(avatarUrl),
-            onBackgroundImageError: (_, __) {},
-          ),
-          const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _handleProfileNavigation(context, postUserId),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white10,
+                    backgroundImage: NetworkImage(avatarUrl),
+                    onBackgroundImageError: (_, __) {},
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  createdAt,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          createdAt,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (widget.isMyPost && status != null) ...[
