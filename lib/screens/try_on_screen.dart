@@ -1,6 +1,8 @@
+// lib/screens/try_on_screen.dart
 import 'dart:io';
 import 'package:fashion_mobile/screens/try_on_history_detail.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import '../constants/app_colors.dart';
@@ -15,9 +17,17 @@ import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../widgets/save_outfit_dialog.dart';
 import 'create_model_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import '../models/try_on_source_item.dart';
+import '../models/try_on_model_source.dart';
 
 class TryOnScreen extends StatefulWidget {
-  const TryOnScreen({super.key});
+  final TryOnSourceItem? sourceItem;
+
+  const TryOnScreen({
+    super.key,
+    this.sourceItem,
+  });
 
   @override
   State<TryOnScreen> createState() => _TryOnScreenState();
@@ -28,8 +38,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
   final int currentBalance = 0;
   final int tryOnCost = 0;
   final ImagePicker _picker = ImagePicker();
-
+  String? _selectedNetworkClothUrl;
+  String? _selectedClothName;
+  bool _isPreparingNetworkCloth = false;
   bool _isLoadingModels = true;
+  TryOnModelSource _selectedModel = const TryOnModelSource(
+    assetPath: "assets/images/human1.jpg",
+    displayName: "Model mặc định",
+  );
 
   Future<void> _pickImage() async {
     try {
@@ -41,11 +57,83 @@ class _TryOnScreenState extends State<TryOnScreen> {
       if (pickedFile != null) {
         setState(() {
           selectedClothFile = File(pickedFile.path);
+          _selectedNetworkClothUrl = null;
+          _selectedClothName = null;
         });
       }
     } catch (e) {
       debugPrint(e.toString());
     }
+  }
+
+  Future<File?> _downloadNetworkImageToTempFile(String imageUrl) async {
+    try {
+      final response = await http.get(Uri.parse(imageUrl));
+      if (response.statusCode != 200) return null;
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+        '${tempDir.path}/public_item_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      await file.writeAsBytes(response.bodyBytes);
+      return file;
+    } catch (e) {
+      debugPrint('Download network cloth error: $e');
+      return null;
+    }
+  }
+
+  Future<void> _handleStartTryOn() async {
+    if (tryOnManager.isProcessing) return;
+
+    String? clothPath;
+
+    if (selectedClothFile != null) {
+      clothPath = selectedClothFile!.path;
+    } else if (_selectedNetworkClothUrl != null &&
+        _selectedNetworkClothUrl!.trim().isNotEmpty) {
+      setState(() {
+        _isPreparingNetworkCloth = true;
+      });
+
+      final downloadedFile =
+      await _downloadNetworkImageToTempFile(_selectedNetworkClothUrl!);
+
+      setState(() {
+        _isPreparingNetworkCloth = false;
+      });
+
+      if (downloadedFile == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không thể tải ảnh món đồ để thử.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      clothPath = downloadedFile.path;
+    }
+
+    if (clothPath == null || clothPath.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn món đồ trước khi thử.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await tryOnManager.startTryOn(
+      context,
+      modelAssetPath: _selectedModel.isAsset ? _selectedModel.assetPath : null,
+      modelImageUrl: _selectedModel.isNetwork ? _selectedModel.imageUrl : null,
+      clothFilePath: clothPath,
+    );
   }
 
   void _showModelSelectionBottomSheet() {
@@ -147,9 +235,23 @@ class _TryOnScreenState extends State<TryOnScreen> {
 
                         return GestureDetector(
                           onTap: () {
+                            setState(() {
+                              _selectedModel = TryOnModelSource(
+                                imageUrl: modelData['imageUrl'],
+                                displayName: modelData['name']?.toString() ?? "Model của tôi",
+                              );
+                            });
+
                             Navigator.pop(context);
-                            // TODO: Xử lý logic khi người dùng nhấp chọn model này (Ví dụ lưu URL vào biến trạng thái của TryOnScreen)
-                            // setState(() { currentModelUrl = modelData['imageUrl']; });
+
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  "Đã chọn ${_selectedModel.displayName ?? 'model'}",
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                           },
                           child: Container(
                             decoration: BoxDecoration(
@@ -180,11 +282,20 @@ class _TryOnScreenState extends State<TryOnScreen> {
     super.initState();
     modelManager.fetchMyModels();
     tryOnManager.fetchHistory();
+
+    if (widget.sourceItem != null) {
+      _selectedNetworkClothUrl = widget.sourceItem!.imageUrl;
+      _selectedClothName = widget.sourceItem!.itemName;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    bool canProceed = selectedClothFile != null && currentBalance >= tryOnCost;
+    final bool hasSelectedCloth =
+        selectedClothFile != null ||
+            (_selectedNetworkClothUrl != null && _selectedNetworkClothUrl!.trim().isNotEmpty);
+
+    bool canProceed = hasSelectedCloth && currentBalance >= tryOnCost && !_isPreparingNetworkCloth;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -234,8 +345,19 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             children: [
                               if (resultBytes != null)
                                 Image.memory(resultBytes, fit: BoxFit.cover)
+                              else if (_selectedModel.isNetwork)
+                                Image.network(
+                                  _selectedModel.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) {
+                                    return Image.asset("assets/images/human1.jpg", fit: BoxFit.cover);
+                                  },
+                                )
                               else
-                                Image.asset("assets/images/human1.jpg", fit: BoxFit.cover),
+                                Image.asset(
+                                  _selectedModel.assetPath ?? "assets/images/human1.jpg",
+                                  fit: BoxFit.cover,
+                                ),
                               if (isProcessing)
                                 Shimmer.fromColors(
                                   baseColor: Colors.white.withOpacity(0.1),
@@ -313,6 +435,27 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   ),
                 ),
 
+              if (resultBytes == null && !isProcessing)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person, color: Colors.white70, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Model hiện tại: ${_selectedModel.displayName ?? 'Model mặc định'}",
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               if (resultBytes == null && !isProcessing) ...[
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -344,6 +487,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+
                       if (selectedClothFile != null)
                         Container(
                           width: 80,
@@ -368,10 +512,62 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             ],
                           ),
                         ),
+
+                      if (selectedClothFile == null &&
+                          _selectedNetworkClothUrl != null &&
+                          _selectedNetworkClothUrl!.trim().isNotEmpty)
+                        Container(
+                          width: 80,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.textPink, width: 2),
+                          ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  _selectedNetworkClothUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: Colors.white10,
+                                    child: const Icon(Icons.broken_image, color: Colors.white54),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedNetworkClothUrl = null;
+                                      _selectedClothName = null;
+                                    });
+                                  },
+                                  child: const Icon(Icons.cancel, color: Colors.white, size: 20),
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
-
+                if (_selectedClothName != null && _selectedClothName!.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Text(
+                      'Đang chọn: $_selectedClothName',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
@@ -497,13 +693,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             ),
                             child: ElevatedButton(
                               onPressed: canProceed && !isProcessing
-                                  ? () {
-                                tryOnManager.startTryOn(
-                                  context,
-                                  "assets/images/human1.jpg",
-                                  selectedClothFile!.path,
-                                );
-                              }
+                                  ? _handleStartTryOn
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
@@ -512,9 +702,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   borderRadius: BorderRadius.circular(15),
                                 ),
                               ),
-                              child: const Text(
-                                "THỬ ĐỒ NGAY",
-                                style: TextStyle(
+                              child: Text(
+                                _isPreparingNetworkCloth
+                                    ? "ĐANG CHUẨN BỊ..."
+                                    : "THỬ ĐỒ NGAY",
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,

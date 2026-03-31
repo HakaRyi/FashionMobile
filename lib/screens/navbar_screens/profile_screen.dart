@@ -1,3 +1,4 @@
+// lib/screens/navbar_screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
@@ -67,6 +68,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
+          if (profileSnapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Tải hồ sơ thất bại: ${profileSnapshot.error}',
+                  style: const TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
           final user = profileSnapshot.data;
           final String avatar = user?['avatar'] ?? "";
           final String name = user?['username'] ?? "User";
@@ -74,6 +88,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final String bio =
               user?['description'] ?? "Chưa có giới thiệu về bản thân.";
           final double balance = (user?['balance'] ?? 0.0).toDouble();
+
+          final int? accountId = _parseAccountId(
+            user?['id'] ?? user?['accountId'] ?? user?['userId'],
+          );
 
           return RefreshIndicator(
             onRefresh: () async => _refreshData(),
@@ -338,13 +356,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     children: [
                                       Expanded(
                                         child: OutlinedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            SlideRoute(
-                                              page:
-                                              const PublicWardrobeScreen(),
-                                            ),
-                                          ),
+                                          onPressed: () {
+                                            if (accountId == null) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    "Không tìm thấy thông tin tài khoản.",
+                                                  ),
+                                                ),
+                                              );
+                                              return;
+                                            }
+
+                                            Navigator.push(
+                                              context,
+                                              SlideRoute(
+                                                page: PublicWardrobeScreen(
+                                                  accountId: accountId,
+                                                ),
+                                              ),
+                                            );
+                                          },
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
@@ -548,6 +581,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       ),
     );
+  }
+
+  int? _parseAccountId(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
   }
 
   Widget _buildStatItem(String value, String label) {

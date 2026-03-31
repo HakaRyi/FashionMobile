@@ -1,3 +1,4 @@
+// lib/constants/api_constants.dart
 class ApiConstants {
   // static const String baseUrl = "http://10.0.2.2:5196/api";
   static const String baseUrl = "http://192.168.102.24:5196/api";
@@ -13,7 +14,7 @@ class ApiConstants {
   static const String createPostEndpoint = "/Post";
 
   static const String getMyPostEndpoint = "/Post/my";
-  static const String getAllPostEndpoint = "/Post"; //cho admin nma dang test cho trang home 22/2
+  static const String getAllPostEndpoint = "/Post";
 
   static const String getMyProfile = "/Account/{id}";
 
@@ -49,4 +50,9 @@ class ApiConstants {
   static const String getRejectedPosts = "/admin/post/rejected";
   static const String updateAdminPostStatus = "/admin/post/{postId}/status";
   static const String topUpWallet = "/payment/create-order-vnpay";
+
+  static const String publicWardrobes = "/public-wardrobes";
+  static const String publicProfileEndpoint = "/wardrobes/public/{accountId}/profile";
+  static const String publicWardrobeItemsEndpoint = "/wardrobes/public/{accountId}/items";
+  static const String publicItemDetailEndpoint = "/items/public/{itemId}";
 }

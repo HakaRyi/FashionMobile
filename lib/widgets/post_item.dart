@@ -1,5 +1,4 @@
-// Thay thế TOÀN BỘ file lib/widgets/post_item.dart bằng đoạn code sau:
-
+// lib/widgets/post_item.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -7,8 +6,9 @@ import '../constants/app_colors.dart';
 import '../constants/post_status_values.dart';
 import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
-import 'comments/comment_sheet.dart';
 import '../screens/create_post_screens.dart';
+import '../screens/public_wardrobe_screen.dart';
+import 'comments/comment_sheet.dart';
 
 class PostItem extends StatefulWidget {
   final PostFeedModel post;
@@ -52,6 +52,24 @@ class _PostItemState extends State<PostItem> {
         s != 'blockedbyadmin';
   }
 
+  void _openUserPublicWardrobe() {
+    if (widget.post.accountId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không tìm thấy thông tin người dùng.'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicWardrobeScreen(accountId: widget.post.accountId),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -59,7 +77,8 @@ class _PostItemState extends State<PostItem> {
       builder: (context, _) {
         final post = postManager.getPostOrNull(postId) ?? widget.post;
 
-        final userName = post.userName.trim().isNotEmpty ? post.userName : 'Người dùng';
+        final userName =
+        post.userName.trim().isNotEmpty ? post.userName : 'Người dùng';
         final avatarUrl =
         (post.avatarUrl != null && post.avatarUrl!.trim().isNotEmpty)
             ? post.avatarUrl!
@@ -86,26 +105,22 @@ class _PostItemState extends State<PostItem> {
                 createdAt: createdAt,
                 status: post.status,
               ),
-
               if (title.isNotEmpty || content.isNotEmpty)
                 _buildCaption(
                   title: title,
                   content: content,
                 ),
-
               if (images.isNotEmpty)
                 _buildImageSlider(
                   images: images,
                   isLiked: isLiked,
                 ),
-
               _buildActions(
                 isLiked: isLiked,
                 isSaved: isSaved,
                 likeCount: likeCount,
                 commentCount: commentCount,
               ),
-
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Divider(
@@ -155,6 +170,7 @@ class _PostItemState extends State<PostItem> {
       ),
     );
   }
+
   Widget _buildHeader({
     required BuildContext context,
     required String userName,
@@ -162,40 +178,51 @@ class _PostItemState extends State<PostItem> {
     required String createdAt,
     String? status,
   }) {
+    final bool canOpenProfile = !widget.isMyPost && widget.post.accountId > 0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white10,
-            backgroundImage: NetworkImage(avatarUrl),
-            onBackgroundImageError: (_, __) {},
+          GestureDetector(
+            onTap: canOpenProfile ? _openUserPublicWardrobe : null,
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white10,
+              backgroundImage: NetworkImage(avatarUrl),
+              onBackgroundImageError: (_, __) {},
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+            child: GestureDetector(
+              onTap: canOpenProfile ? _openUserPublicWardrobe : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      decoration:
+                      canOpenProfile ? TextDecoration.underline : null,
+                      decorationColor: Colors.white38,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  createdAt,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
+                  const SizedBox(height: 2),
+                  Text(
+                    createdAt,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (widget.isMyPost && status != null) ...[
@@ -308,7 +335,6 @@ class _PostItemState extends State<PostItem> {
               },
             ),
           ),
-
           if (showHeart)
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0.6, end: 1.15),
@@ -328,7 +354,6 @@ class _PostItemState extends State<PostItem> {
                 size: 110,
               ),
             ),
-
           if (images.length > 1)
             Positioned(
               top: 12,
@@ -522,10 +547,16 @@ class _PostItemState extends State<PostItem> {
               if (widget.isMyPost) ...[
                 if (_canEditPost(status))
                   ListTile(
-                    leading: const Icon(Icons.edit_outlined, color: AppColors.textPrimary),
+                    leading: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.textPrimary,
+                    ),
                     title: const Text(
                       "Chỉnh sửa bài viết",
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                      ),
                     ),
                     onTap: () {
                       Navigator.pop(ctx);
@@ -551,10 +582,16 @@ class _PostItemState extends State<PostItem> {
                     },
                   ),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
                   title: const Text(
                     "Xóa bài viết",
-                    style: TextStyle(color: Colors.redAccent, fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 16,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -569,7 +606,11 @@ class _PostItemState extends State<PostItem> {
                       color: Colors.redAccent.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent, size: 22),
+                    child: const Icon(
+                      Icons.report_gmailerrorred_rounded,
+                      color: Colors.redAccent,
+                      size: 22,
+                    ),
                   ),
                   title: const Text(
                     "Báo cáo bài viết",
@@ -581,7 +622,10 @@ class _PostItemState extends State<PostItem> {
                   ),
                   subtitle: const Text(
                     "Tôi lo ngại về bài viết này",
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -590,12 +634,22 @@ class _PostItemState extends State<PostItem> {
                     );
                   },
                 ),
-                const Divider(color: Colors.white10, indent: 16, endIndent: 16),
+                const Divider(
+                  color: Colors.white10,
+                  indent: 16,
+                  endIndent: 16,
+                ),
                 ListTile(
-                  leading: const Icon(Icons.visibility_off_outlined, color: AppColors.textPrimary),
+                  leading: const Icon(
+                    Icons.visibility_off_outlined,
+                    color: AppColors.textPrimary,
+                  ),
                   title: const Text(
                     "Không quan tâm",
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                    ),
                   ),
                   onTap: () => Navigator.pop(ctx),
                 ),
@@ -612,7 +666,10 @@ class _PostItemState extends State<PostItem> {
       context: parentContext,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF2C2C2C),
-        title: const Text("Xóa bài viết?", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Xóa bài viết?",
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           "Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.",
           style: TextStyle(color: Colors.white70),
@@ -620,7 +677,10 @@ class _PostItemState extends State<PostItem> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Hủy", style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              "Hủy",
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -636,7 +696,10 @@ class _PostItemState extends State<PostItem> {
                 );
               }
             },
-            child: const Text("Xóa", style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              "Xóa",
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),

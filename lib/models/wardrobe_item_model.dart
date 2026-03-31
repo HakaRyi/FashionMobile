@@ -1,3 +1,4 @@
+// lib/models/wardrobe_item_model.dart
 class WardrobeItemModel {
   final int itemId;
   final String itemName;
@@ -20,12 +21,12 @@ class WardrobeItemModel {
   factory WardrobeItemModel.fromJson(Map<String, dynamic> json) {
     return WardrobeItemModel(
       itemId: json['itemId'] ?? 0,
-      itemName: json['itemName'] ?? 'Unknown Item',
+      itemName: json['itemName'] ?? '',
       description: json['description'],
       mainColor: json['mainColor'],
       brand: json['brand'],
-      status: json['status'],
-      imageUrl: json['imageUrl'],
+      status: json['status']?.toString(),
+      imageUrl: json['imageUrl'] ?? json['thumbnailUrl'],
     );
   }
 }
