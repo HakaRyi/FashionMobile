@@ -72,11 +72,11 @@ class _UploadScreenState extends State<UploadScreen> {
             var jsonAI = jsonDecode(resAI.body);
             Map<String, dynamic> detected = Map<String, dynamic>.from(jsonAI['detected_info']);
             final Map<String, String> aiToAppMapper = {
-              'item': 'itemName',          // AI trả "item" -> DB cần "itemName"
+              'item': 'itemType',
               'category': 'category',
               'sub_category': 'subCategory',
               'gender': 'gender',
-              'main_color': 'mainColor',   // AI trả "main_color" -> DB cần "mainColor"
+              'main_color': 'mainColor',
               'sub_color': 'subColor',
               'material': 'material',
               'style': 'style',
@@ -86,6 +86,8 @@ class _UploadScreenState extends State<UploadScreen> {
               'sleeve_length': 'sleeveLength',
               'length': 'length',
             };
+            final prefs = await SharedPreferences.getInstance();
+            final userName = prefs.getString('username') ?? "User";
             setState(() {
               _aiResult['data'] = detected;
               _selectedAttributes = {};
@@ -93,6 +95,9 @@ class _UploadScreenState extends State<UploadScreen> {
                 String appKey = aiToAppMapper[aiKey] ?? aiKey;
                 _selectedAttributes[appKey] = value.toString();
               });
+              _selectedAttributes['size'] = "";
+              String finalItemType = _selectedAttributes['itemType'] ?? "clothing";
+              _selectedAttributes['itemName'] = "New $userName's $finalItemType";
               _selectedAttributes['description'] = jsonAI['suggested_summary']?? "";
               _selectedAttributes['isPublic'] = "false";
               _selectedAttributes['itemType'] = detected['item'] ?? "clothing";
@@ -122,15 +127,18 @@ class _UploadScreenState extends State<UploadScreen> {
   Future<void> _saveToDatabase() async {
     setState(() => _isAnalyzing = true);
     final prefs = await SharedPreferences.getInstance();
+    final userName = prefs.getString('username');
+    final String itemType = _selectedAttributes['itemName'] ?? "item";
     final token = prefs.getString('token');
 
     try {
       bool isPublicBool = _selectedAttributes['isPublic'] == "true";
       print("Dữ liệu thực tế trong Map: $_selectedAttributes");
       final Map<String, dynamic> body = {
-        "itemName": _selectedAttributes['item'] ?? "New Fashion Item",
+        "itemName": _selectedAttributes['itemName'] ?? "New Fashion Item",
         "wardrobeId": 1,
-        "itemType": _selectedAttributes['item'] ?? "clothing",
+        "itemType": _selectedAttributes['itemType'] ?? "clothing",
+        "size": _selectedAttributes['size'],
         "category": _selectedAttributes['category'] ?? "upper_body",
         "subCategory": _selectedAttributes['subCategory'] ?? "top",
         "style": _selectedAttributes['style'] ?? "casual",
@@ -149,6 +157,7 @@ class _UploadScreenState extends State<UploadScreen> {
         "status": 1, // Enum: 1 = Active
         "primaryImageUrl": _aiResult['processed_url']
       };
+      print("JSON SENDING TO SERVER: ${jsonEncode(body)}");
 
       final response = await http.post(
         Uri.parse("${ApiConstants.baseUrl}${ApiConstants.uploadItemEndpoint}"),

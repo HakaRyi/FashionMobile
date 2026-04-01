@@ -1,8 +1,10 @@
 class FashionConstants {
   static const Map<String, List<String>> categories = {
-    "itemName": ["t-shirt", "shirt", "blazer", "hoodie", "jacket", "jeans", "dress"],
+    "itemName": [],
+    "itemType": ["t-shirt", "shirt", "blazer", "hoodie", "jacket", "jeans", "dress"],
     "category": ["upper_body", "lower_body", "full_body", "footwear", "accessory"],
     "subCategory": ["top", "bottom", "shoe", "outerwear", "headwear"],
+    "size": ["S", "M", "L","XL","2XL","3XL","4XL"],
     "gender": ["men", "women", "unisex"],
     "mainColor": ["black", "white", "navy blue", "yellow", "red", "green", "beige"],
     "subColor": ["none", "white", "black", "gold", "silver"],
