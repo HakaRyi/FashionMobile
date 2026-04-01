@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/post_feed_model.dart';
 import '../services/account_service.dart';
+import '../services/follow_service.dart';
 import '../services/post_service.dart';
 import '../utils/route_transitions.dart';
 import '../utils/stat_skeleton_item.dart';
@@ -23,7 +24,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   late Future<Map<String, dynamic>?> _profileFuture;
   late Future<List<PostFeedModel>> _postsFuture;
 
+  final FollowService _followService = FollowService();
+
   bool isFollowing = false;
+  bool isLoadingFollow = true;
+
+  int _followerOffset = 0;
 
   @override
   void initState() {
@@ -35,13 +41,120 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     setState(() {
       _profileFuture = AccountService().getUserProfile(widget.userId.toString());
       _postsFuture = PostService().fetchUserPosts(userId: widget.userId);
+      _followerOffset = 0;
     });
+    _checkFollowStatus();
   }
 
-  void _toggleFollow() {
+  Future<void> _checkFollowStatus() async {
+    setState(() => isLoadingFollow = true);
+
+    try {
+      final status = await _followService.checkIsFollowing(widget.userId);
+      if (mounted) {
+        setState(() {
+          isFollowing = status;
+          isLoadingFollow = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          isLoadingFollow = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    if (isFollowing) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E1E1E),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Bỏ theo dõi?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              'Bạn có chắc chắn muốn bỏ theo dõi người dùng này không?',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'Hủy',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'Bỏ theo dõi',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirm != true) return;
+    }
+
+    final currentStatus = isFollowing;
+
     setState(() {
-      isFollowing = !isFollowing;
+      isFollowing = !currentStatus;
+      _followerOffset += isFollowing ? 1 : -1;
     });
+
+    try {
+      final success = currentStatus
+          ? await _followService.unfollowUser(widget.userId)
+          : await _followService.followUser(widget.userId);
+
+      if (!success && mounted) {
+        setState(() {
+          isFollowing = currentStatus;
+          _followerOffset += isFollowing ? 1 : -1;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không thể thực hiện, vui lòng thử lại!'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          isFollowing = currentStatus;
+          _followerOffset += isFollowing ? 1 : -1;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không thể thực hiện, vui lòng thử lại!'),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -74,6 +187,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           }
 
           final user = profileSnapshot.data;
+
           if (user == null) {
             return const Center(
               child: Padding(
@@ -90,11 +204,14 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           final String avatar = (user['avatar'] ?? '').toString();
           final String name = (user['username'] ?? 'Người dùng').toString();
           final String email = (user['email'] ?? 'Đang cập nhật...').toString();
-          final String bio = (user['description'] ??
-              'Chưa có giới thiệu về bản thân.')
+          final String bio = (user['description'] ?? 'Chưa có giới thiệu về bản thân.')
               .toString();
+
+          final int baseFollowerCount =
+          (user['followerCount'] ?? user['followers'] ?? 0) as int;
           final String followerCount =
-          (user['followerCount'] ?? user['followers'] ?? 0).toString();
+          (baseFollowerCount + _followerOffset).toString();
+
           final String followingCount =
           (user['followingCount'] ?? user['following'] ?? 0).toString();
 
@@ -289,12 +406,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-
                                   Row(
                                     children: [
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: _toggleFollow,
+                                          onPressed:
+                                          isLoadingFollow ? null : _toggleFollow,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: isFollowing
                                                 ? Colors.white24
@@ -307,7 +424,17 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                               vertical: 12,
                                             ),
                                           ),
-                                          child: Text(
+                                          child: isLoadingFollow
+                                              ? const SizedBox(
+                                            height: 16,
+                                            width: 16,
+                                            child:
+                                            CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                              : Text(
                                             isFollowing
                                                 ? 'Đang theo dõi'
                                                 : 'Theo dõi',
@@ -330,8 +457,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                             // );
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.pinkAccent
-                                                .withOpacity(0.8),
+                                            backgroundColor:
+                                            Colors.pinkAccent.withOpacity(0.8),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fashion_mobile/services/follow_service.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/search_model.dart';
@@ -16,6 +17,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final SearchService _searchService = SearchService();
+  final FollowService _followService = FollowService() ;
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 
@@ -121,7 +123,28 @@ class _SearchScreenState extends State<SearchScreen> {
       SlideRoute(page: OtherProfileScreen(userId: accountId)),
     );
   }
-// <--- KẾT THÚC SỬA
+
+  Future<void> _handleToggleFollow(UserSuggestionModel user) async {
+    final bool currentFollowState = user.isFollowing;
+    final int currentFollowerCount = user.followerCount;
+
+    setState(() {
+      user.isFollowing = !currentFollowState;
+    });
+
+    final success = currentFollowState
+        ? await _followService.unfollowUser(user.accountId)
+        : await _followService.followUser(user.accountId);
+
+    if (!success && mounted) {
+      setState(() {
+        user.isFollowing = currentFollowState;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể thực hiện, vui lòng thử lại!')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +169,6 @@ class _SearchScreenState extends State<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSearchBar(),
-
-// ---> BẮT ĐẦU SỬA
             if (_isLoadingInitial)
               const Padding(
                 padding: EdgeInsets.only(top: 40),
@@ -180,14 +201,12 @@ class _SearchScreenState extends State<SearchScreen> {
               else
                 _buildSuggestedProfiles(_searchResults),
             ],
-// <--- KẾT THÚC SỬA
           ],
         ),
       ),
     );
   }
 
-// ---> BẮT ĐẦU SỬA
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -374,7 +393,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _handleToggleFollow(user),
               style: ElevatedButton.styleFrom(
                 backgroundColor: user.isFollowing ? Colors.white24 : Colors.pinkAccent.withOpacity(0.1),
                 foregroundColor: user.isFollowing ? Colors.white : Colors.pinkAccent,

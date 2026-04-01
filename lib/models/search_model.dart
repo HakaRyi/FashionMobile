@@ -1,10 +1,11 @@
+
 class UserSuggestionModel {
   final int accountId;
   final String fullName;
   final String username;
   final String avatarUrl;
   final int followerCount;
-  final bool isFollowing;
+  bool isFollowing;
 
   UserSuggestionModel({
     required this.accountId,
@@ -18,10 +19,10 @@ class UserSuggestionModel {
   factory UserSuggestionModel.fromJson(Map<String, dynamic> json) {
     return UserSuggestionModel(
       accountId: json['accountId'] ?? '',
-      fullName: json['fullName'] ?? '',
-      username: json['username'] ?? '',
-      avatarUrl: json['avatarUrl'] ?? '',
-      followerCount: json['followerCount'] ?? 0,
+      fullName: json['fullName']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      avatarUrl: json['avatarUrl']?.toString() ?? '',
+      followerCount: int.tryParse(json['followerCount']?.toString() ?? '0') ?? 0,
       isFollowing: json['isFollowing'] ?? false,
     );
   }
@@ -38,8 +39,8 @@ class SearchHistoryModel {
 
   factory SearchHistoryModel.fromJson(Map<String, dynamic> json) {
     return SearchHistoryModel(
-      id: json['id'] ?? 0,
-      keyword: json['keyword'] ?? '',
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      keyword: json['keyword']?.toString() ?? '',
     );
   }
 }
