@@ -102,7 +102,7 @@ class NotificationService {
 
       if (token.isEmpty) return [];
 
-      final url = Uri.parse("${ApiConstants.baseUrl}/Notification/my-notifications");
+      final url = Uri.parse("${ApiConstants.baseUrl}/notifications/me");
       final response = await http.get(
         url,
         headers: {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/account_model.dart';
-import '../models/order_detail_model.dart';
 import '../models/order_model.dart';
+import '../services/order_service.dart';
 import '../widgets/order_skeleton.dart';
+import 'wallet_payment_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
@@ -22,6 +22,7 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _isLoading = true;
   OrderModel? _order;
+  final OrderService _orderService = OrderService();
 
   @override
   void initState() {
@@ -30,36 +31,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _fetchOrderDetail() async {
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() {
-      _order = OrderModel(
-        orderId: widget.orderId,
-        buyerId: widget.isSeller ? 2 : 1,
-        sellerId: widget.isSeller ? 1 : 2,
-        subTotal: 200000,
-        serviceFee: 10000,
-        totalAmount: 210000,
-        status: 'PENDING',
-        createdAt: DateTime.now(),
-        receiverName: widget.isSeller ? 'Khách hàng A' : 'Nguyễn Văn B',
-        receiverPhone: '0987654321',
-        shippingAddress: '123 Đường ABC, Quận XYZ, TP.HCM',
-        seller: AccountModel(accountId: widget.isSeller ? 1 : 2, name: widget.isSeller ? 'Bạn' : 'Shop Thời Trang XYZ'),
-        buyer: AccountModel(accountId: widget.isSeller ? 2 : 1, name: widget.isSeller ? 'Khách hàng A' : 'Bạn'),
-        orderDetails: [
-          OrderDetailModel(
-            orderDetailId: 1,
-            orderId: widget.orderId,
-            quantity: 1,
-            unitPrice: 200000,
-            itemName: 'Áo khoác Bomber Cao Cấp',
-            itemImage: 'https://via.placeholder.com/150',
-          )
-        ],
-      );
-      _isLoading = false;
-    });
+    try {
+      final orderData = await _orderService.getOrderById(widget.orderId);
+      if (mounted) {
+        setState(() {
+          _order = orderData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _updateOrderStatus(String newStatus) async {
@@ -69,30 +58,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.pink)),
     );
 
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-
-    Navigator.pop(context);
-
-    setState(() {
-      _order = OrderModel(
-        orderId: _order!.orderId,
-        buyerId: _order!.buyerId,
-        sellerId: _order!.sellerId,
-        subTotal: _order!.subTotal,
-        serviceFee: _order!.serviceFee,
-        totalAmount: _order!.totalAmount,
-        status: newStatus,
-        createdAt: _order!.createdAt,
-        updatedAt: DateTime.now(),
-        receiverName: _order!.receiverName,
-        receiverPhone: _order!.receiverPhone,
-        shippingAddress: _order!.shippingAddress,
-        seller: _order!.seller,
-        buyer: _order!.buyer,
-        orderDetails: _order!.orderDetails,
+    try {
+      final updatedOrder = await _orderService.updateOrderStatus(widget.orderId, newStatus);
+      if (!mounted) return;
+      Navigator.pop(context);
+      setState(() {
+        _order = updatedOrder;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
-    });
+    }
+  }
+
+  void _navigateToPayment() async {
+    if (_order == null) return;
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WalletPaymentScreen(order: _order!),
+      ),
+    );
+
+    if (result == true) {
+      _fetchOrderDetail();
+    }
   }
 
   Widget _buildInfoRow(String label, String value, {bool isHighlight = false}) {
@@ -162,18 +156,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () => {}, //thay bằng hàm cập nhật đơn hàng ở đây
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.blueAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Cập nhật', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text('Cập Nhật', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
         );
-      } else if (status == 'CONFIRMED' || status == 'PAID') {
+      } else if (status == 'PAID') {
         return ElevatedButton(
           onPressed: () => _updateOrderStatus('PREPARED'),
           style: ElevatedButton.styleFrom(
@@ -186,18 +180,38 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     } else {
       if (status == 'PENDING') {
-        return ElevatedButton(
-          onPressed: () => _updateOrderStatus('CONFIRMED'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text('Xác nhận đơn hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        return Row(
+
+          children: [
+            Expanded(
+              child: OutlinedButton(
+              onPressed: () => _updateOrderStatus('CANCELLED'),
+              style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.redAccent,
+              side: const BorderSide(color: Colors.redAccent),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Hủy đơn', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(width: 10,),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () => _updateOrderStatus('CONFIRMED'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Xác nhận', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
+          ],
         );
       } else if (status == 'CONFIRMED') {
         return ElevatedButton(
-          onPressed: () => _updateOrderStatus('PAID'),
+          onPressed: _navigateToPayment,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.pink,
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -236,6 +250,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
       body: _isLoading
           ? const Padding(padding: EdgeInsets.all(16), child: OrderSkeleton())
+          : _order == null
+          ? const Center(child: Text('Không tìm thấy đơn hàng', style: TextStyle(color: Colors.white54)))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -289,10 +305,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      item.itemImage,
+                      item.itemImage.isNotEmpty ? item.itemImage : 'https://via.placeholder.com/150',
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 60, height: 60, color: Colors.grey[800],
+                        child: const Icon(Icons.image, color: Colors.white54),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),

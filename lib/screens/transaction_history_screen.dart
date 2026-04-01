@@ -1,32 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
+import '../../services/transaction_service.dart';
+import '../../models/transaction_model.dart';
 
-class TransactionHistoryScreen extends StatelessWidget {
+class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> mockHistory = [
-      {
-        "title": "Nạp tiền từ ZaloPay",
-        "amount": "+50.000",
-        "date": "19/03/2026 14:30",
-        "isPositive": true,
-      },
-      {
-        "title": "Gia hạn gói Premium",
-        "amount": "-29.000",
-        "date": "18/03/2026 09:15",
-        "isPositive": false,
-      },
-      {
-        "title": "Nạp tiền từ ZaloPay",
-        "amount": "+100.000",
-        "date": "10/03/2026 18:20",
-        "isPositive": true,
-      },
-    ];
+  State<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
+}
 
+class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
+  late Future<List<TransactionModel>> _transactionsFuture;
+  final NumberFormat _currencyFormat = NumberFormat.decimalPattern('vi_VN');
+
+  @override
+  void initState() {
+    super.initState();
+    _transactionsFuture = TransactionService().fetchTransactions();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -35,58 +31,88 @@ class TransactionHistoryScreen extends StatelessWidget {
         title: const Text('Biến động số dư'),
         centerTitle: true,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(20),
-        itemCount: mockHistory.length,
-        separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 32),
-        itemBuilder: (context, index) {
-          final item = mockHistory[index];
-          final isPositive = item["isPositive"] as bool;
+      body: FutureBuilder<List<TransactionModel>>(
+        future: _transactionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.pink));
+          }
 
-          return Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isPositive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isPositive ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                  color: isPositive ? Colors.green : Colors.redAccent,
-                ),
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Lỗi tải dữ liệu: ${snapshot.error}',
+                style: const TextStyle(color: Colors.white54),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item["title"],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+            );
+          }
+
+          final transactions = snapshot.data ?? [];
+
+          if (transactions.isEmpty) {
+            return const Center(
+              child: Text(
+                'Chưa có giao dịch nào',
+                style: TextStyle(color: Colors.white54),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(20),
+            itemCount: transactions.length,
+            separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 32),
+            itemBuilder: (context, index) {
+              final item = transactions[index];
+              final isPositive = item.isPositive;
+              final sign = isPositive ? "+" : "-";
+
+              return Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isPositive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item["date"],
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    child: Icon(
+                      isPositive ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                      color: isPositive ? Colors.green : Colors.redAccent,
                     ),
-                  ],
-                ),
-              ),
-              Text(
-                "${item["amount"]}đ",
-                style: TextStyle(
-                  color: isPositive ? Colors.green : Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.description,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('dd/MM/yyyy HH:mm').format(item.createdAt),
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    "$sign${_currencyFormat.format(item.amount)}đ",
+                    style: TextStyle(
+                      color: isPositive ? Colors.green : Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),

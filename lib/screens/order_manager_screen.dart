@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models/account_model.dart';
-import '../models/order_detail_model.dart';
 import '../models/order_model.dart';
 import '../widgets/order_skeleton.dart';
 import '../widgets/notification_overlay.dart';
+import '../services/signalr_service.dart';
+import '../services/order_service.dart';
 import 'order_detail_screen.dart';
+import 'create_order_screen.dart';
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -16,8 +17,11 @@ class OrderManagementScreen extends StatefulWidget {
 class _OrderManagementScreenState extends State<OrderManagementScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+
   final ScrollController _salesScrollController = ScrollController();
   final ScrollController _purchasesScrollController = ScrollController();
+
+  final OrderService _orderService = OrderService();
 
   List<OrderModel> _salesOrders = [];
   List<OrderModel> _purchasesOrders = [];
@@ -27,9 +31,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
   bool _isLoadingPurchases = true;
   bool _isLoadingMorePurchases = false;
 
-  final int _pageSize = 10;
-  int _salesPage = 1;
-  int _purchasesPage = 1;
+  final SignalRService _signalRService = SignalRService();
 
   @override
   void initState() {
@@ -49,7 +51,25 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
     });
 
     _fetchInitialData();
-    _listenToRealtimeOrders();
+    _initRealtimeConnection();
+  }
+
+  void _initRealtimeConnection() async {
+    _signalRService.onNewOrderReceived = (orderData) {
+      if (!mounted) return;
+
+      final newOrder = OrderModel.fromJson(orderData as Map<String, dynamic>);
+
+      setState(() {
+        _purchasesOrders.insert(0, newOrder);
+      });
+
+      NotificationOverlay.showNewOrderNotification(context, newOrder);
+      // sửa chỗ này để thông báo hiện lên ở toàn app chứ không riêng trong
+      // context này
+    };
+
+    await _signalRService.initSignalR();
   }
 
   @override
@@ -58,103 +78,46 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
     _searchController.dispose();
     _salesScrollController.dispose();
     _purchasesScrollController.dispose();
+    _signalRService.stopSignalR();
     super.dispose();
   }
 
-  void _listenToRealtimeOrders() {
-    Future.delayed(const Duration(seconds: 10), () {
-      if (!mounted) return;
-      final newMockOrder = OrderModel(
-        orderId: 999,
-        buyerId: 1,
-        sellerId: 2,
-        subTotal: 150000,
-        serviceFee: 5000,
-        totalAmount: 155000,
-        status: 'PENDING',
-        createdAt: DateTime.now(),
-        seller: AccountModel(accountId: 2, name: 'Nguyễn Văn A'),
-        orderDetails: [
-          OrderDetailModel(
-            orderDetailId: 1,
-            orderId: 999,
-            quantity: 1,
-            unitPrice: 150000,
-            itemName: 'Áo thun phong cách',
-            itemImage: 'https://via.placeholder.com/150',
-          )
-        ],
-      );
-
-      setState(() {
-        _purchasesOrders.insert(0, newMockOrder);
-      });
-      NotificationOverlay.showNewOrderNotification(context, newMockOrder);
-    });
-  }
-
   Future<void> _fetchInitialData() async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
     setState(() {
-      _salesOrders = _generateMockOrders(isSale: true, count: _pageSize);
-      _purchasesOrders = _generateMockOrders(isSale: false, count: _pageSize);
-      _isLoadingSales = false;
-      _isLoadingPurchases = false;
+      _isLoadingSales = true;
+      _isLoadingPurchases = true;
     });
+
+    try {
+      final results = await Future.wait([
+        _orderService.getSalesOrders(),
+        _orderService.getPurchasesOrders(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _salesOrders = results[0];
+          _purchasesOrders = results[1];
+          _isLoadingSales = false;
+          _isLoadingPurchases = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSales = false;
+          _isLoadingPurchases = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi tải dữ liệu: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
-  Future<void> _loadMoreSales() async {
-    if (_isLoadingMoreSales) return;
-    setState(() => _isLoadingMoreSales = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() {
-      _salesPage++;
-      _salesOrders.addAll(_generateMockOrders(isSale: true, count: _pageSize));
-      _isLoadingMoreSales = false;
-    });
-  }
+  Future<void> _loadMoreSales() async {}
 
-  Future<void> _loadMorePurchases() async {
-    if (_isLoadingMorePurchases) return;
-    setState(() => _isLoadingMorePurchases = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() {
-      _purchasesPage++;
-      _purchasesOrders.addAll(_generateMockOrders(isSale: false, count: _pageSize));
-      _isLoadingMorePurchases = false;
-    });
-  }
-
-  List<OrderModel> _generateMockOrders({required bool isSale, required int count}) {
-    return List.generate(count, (index) {
-      return OrderModel(
-        orderId: DateTime.now().millisecondsSinceEpoch + index,
-        buyerId: isSale ? 2 : 1,
-        sellerId: isSale ? 1 : 2,
-        subTotal: 200000,
-        serviceFee: 10000,
-        totalAmount: 210000,
-        status: index % 3 == 0 ? 'PENDING' : 'COMPLETED',
-        createdAt: DateTime.now().subtract(Duration(days: index)),
-        updatedAt: DateTime.now().subtract(Duration(hours: index)),
-        buyer: AccountModel(accountId: 2, name: 'Khách hàng ${index + 1}'),
-        seller: AccountModel(accountId: 1, name: 'Người bán ${index + 1}'),
-        orderDetails: [
-          OrderDetailModel(
-            orderDetailId: index,
-            orderId: 1,
-            quantity: 1,
-            unitPrice: 200000,
-            itemName: 'Sản phẩm thời trang ${index + 1}',
-            itemImage: 'https://via.placeholder.com/150',
-          )
-        ],
-      );
-    });
-  }
+  Future<void> _loadMorePurchases() async {}
 
   Widget _buildStatusBadge(String status) {
     Color bgColor;
@@ -204,7 +167,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
             isSeller: isSale,
           ),
         ),
-      ),
+      ).then((_) => _fetchInitialData()),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -235,12 +198,16 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      order.orderDetails.first.itemImage,
+                      order.firstItemImage.isNotEmpty
+                          ? order.firstItemImage
+                          : 'https://via.placeholder.com/150',
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        width: 60, height: 60, color: Colors.grey[800],
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[800],
                         child: const Icon(Icons.image, color: Colors.white54),
                       ),
                     ),
@@ -251,7 +218,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          order.orderDetails.first.itemName,
+                          order.displayItemName,
                           style: const TextStyle(color: Colors.white, fontSize: 14),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -325,7 +292,16 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CreateOrderScreen()),
+                  ).then((value) {
+                    if (value == true) {
+                      _fetchInitialData();
+                    }
+                  });
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.pink,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -343,6 +319,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
             itemCount: 5,
             itemBuilder: (_, __) => const OrderSkeleton(),
           )
+              : _salesOrders.isEmpty
+              ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.white54)))
               : ListView.builder(
             controller: _salesScrollController,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -369,6 +347,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
       itemCount: 5,
       itemBuilder: (_, __) => const OrderSkeleton(),
     )
+        : _purchasesOrders.isEmpty
+        ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.white54)))
         : ListView.builder(
       controller: _purchasesScrollController,
       padding: const EdgeInsets.all(16),

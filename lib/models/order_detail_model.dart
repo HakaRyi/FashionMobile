@@ -30,7 +30,7 @@ class OrderDetailModel {
       quantity: json['quantity'] ?? 1,
       unitPrice: (json['unitPrice'] ?? 0).toDouble(),
       itemName: json['itemName'] ?? 'Sản phẩm',
-      itemImage: json['itemImage'] ?? '',
+      itemImage: json['imageUrl'] ?? json['itemImage'] ?? '',
     );
   }
 }

@@ -1,8 +1,6 @@
 import 'package:intl/intl.dart';
-
 import 'account_model.dart';
 import 'order_detail_model.dart';
-
 
 class OrderModel {
   final int orderId;
@@ -41,7 +39,29 @@ class OrderModel {
     required this.orderDetails,
   });
 
+  String get displayItemName {
+    if (orderDetails.isEmpty) return 'Đơn hàng';
+    if (orderDetails.length == 1) return orderDetails.first.itemName;
+    return '${orderDetails.first.itemName} và ${orderDetails.length - 1} sản phẩm khác';
+  }
+
+  String get firstItemImage {
+    if (orderDetails.isNotEmpty) {
+      return orderDetails.first.itemImage;
+    }
+    return '';
+  }
+
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDateSafe(dynamic dateValue) {
+      if (dateValue == null) return null;
+      String dateStr = dateValue.toString();
+      if (!dateStr.endsWith('Z')) {
+        dateStr += 'Z';
+      }
+      return DateTime.parse(dateStr).toLocal();
+    }
+
     return OrderModel(
       orderId: json['orderId'] ?? 0,
       buyerId: json['buyerId'] ?? 0,
@@ -54,10 +74,10 @@ class OrderModel {
       shippingAddress: json['shippingAddress'],
       receiverName: json['receiverName'],
       receiverPhone: json['receiverPhone'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-      buyer: json['buyer'] != null ? AccountModel.fromJson(json['buyer']) : null,
-      seller: json['seller'] != null ? AccountModel.fromJson(json['seller']) : null,
+      createdAt: parseDateSafe(json['createdAt']) ?? DateTime.now(),
+      updatedAt: parseDateSafe(json['updatedAt']),
+      buyer: json['buyer'] != null ? AccountModel.fromJson(json['buyer']) : AccountModel(accountId: json['buyerId'] ?? 0, name: json['buyerName'] ?? 'Người mua'),
+      seller: json['seller'] != null ? AccountModel.fromJson(json['seller']) : AccountModel(accountId: json['sellerId'] ?? 0, name: json['sellerName'] ?? 'Người bán'),
       orderDetails: (json['orderDetails'] as List?)?.map((e) => OrderDetailModel.fromJson(e)).toList() ?? [],
     );
   }

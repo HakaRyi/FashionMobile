@@ -1,3 +1,4 @@
+// lib/utils/try_on_manager.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/try_on_history_service.dart';
@@ -14,14 +15,23 @@ class TryOnManager extends ChangeNotifier {
 
   final TryOnHistoryService _historyService = TryOnHistoryService();
 
-  Future<void> startTryOn(BuildContext globalContext, String modelAssetPath, String clothFilePath) async { // Sửa tham số thứ 3
+  Future<void> startTryOn(
+      BuildContext globalContext, {
+        String? modelAssetPath,
+        String? modelImageUrl,
+        required String clothFilePath,
+      }) async {
     if (isProcessing) return;
 
     isProcessing = true;
     resultImageBytes = null;
     notifyListeners();
 
-    final result = await _service.processTryOn(modelAssetPath, clothFilePath);
+    final result = await _service.processTryOn(
+      modelAssetPath: modelAssetPath,
+      modelImageUrl: modelImageUrl,
+      clothImagePath: clothFilePath,
+    );
 
     isProcessing = false;
     if (result != null) {
@@ -52,10 +62,7 @@ class TryOnManager extends ChangeNotifier {
         action: SnackBarAction(
           label: "XEM",
           textColor: Colors.white,
-          onPressed: () {
-            // Logic điều hướng ngược về màn hình TryOn nếu đang ở tab khác
-            // (Bạn tự custom theo Navigation của app bạn nhé)
-          },
+          onPressed: () {},
         ),
       ),
     );

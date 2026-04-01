@@ -1,12 +1,17 @@
+// lib/managers/post_manager.dart
 import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../constants/post_status_values.dart';
+import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_reaction_result.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
+import 'package:share_plus/share_plus.dart';
+import '../models/post_share_result.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 GlobalKey<ScaffoldMessengerState>();
@@ -22,10 +27,16 @@ class PostManager extends ChangeNotifier {
 
   List<PostFeedModel> get posts => List.unmodifiable(_posts);
 
+  final Set<int> _sharingPosts = {};
+
   DateTime? _cursor;
   bool isLoading = false;
   bool isLoadingMore = false;
   bool hasMore = true;
+
+  int _savedPage = 1;
+  bool hasMoreSaved = true;
+  bool isLoadingMoreSaved = false;
 
   final List<PostFeedModel> _savedPosts = [];
   List<PostFeedModel> get savedPosts => List.unmodifiable(_savedPosts);
@@ -44,12 +55,85 @@ class PostManager extends ChangeNotifier {
   final Set<int> _likingPosts = {};
   final Set<int> _savingPosts = {};
 
+  int getShareCount(int postId) {
+    final post = _findPostAnywhere(postId);
+    return post?.shareCount ?? 0;
+  }
+
+  PostFeedModel? _findPostAnywhere(int postId) {
+    try {
+      return _posts.firstWhere((p) => p.postId == postId);
+    } catch (_) {}
+
+    try {
+      return _savedPosts.firstWhere((p) => p.postId == postId);
+    } catch (_) {}
+
+    try {
+      return _myPosts.firstWhere((p) => p.postId == postId);
+    } catch (_) {}
+
+    return null;
+  }
+
+  Future<void> sharePost(PostFeedModel post) async {
+    if (_sharingPosts.contains(post.postId)) return;
+    _sharingPosts.add(post.postId);
+
+    try {
+      final currentPost = _findPostAnywhere(post.postId) ?? post;
+
+      final link = 'https://yourdomain.com/posts/${currentPost.postId}';
+
+      final parts = <String>[];
+      final title = (currentPost.title ?? '').trim();
+      final content = (currentPost.content ?? '').trim();
+
+      if (title.isNotEmpty) {
+        parts.add(title);
+      }
+
+      if (content.isNotEmpty) {
+        parts.add(content);
+      }
+
+      parts.add(link);
+
+      final shareText = parts.join('\n\n');
+
+      final result = await Share.share(shareText);
+
+      if (result.status != ShareResultStatus.success) {
+        return;
+      }
+
+      final PostShareResult apiResult =
+      await _postService.sharePost(currentPost.postId);
+
+      final synced = currentPost.copyWith(
+        shareCount: apiResult.shareCount,
+      );
+
+      _updatePostEverywhere(synced);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Share post error: $e');
+      rethrow;
+    } finally {
+      _sharingPosts.remove(post.postId);
+    }
+  }
+
   PostFeedModel? getPostOrNull(int postId) {
     try {
       return _posts.firstWhere((p) => p.postId == postId);
     } catch (_) {
       return null;
     }
+  }
+
+  PostFeedModel? getPostAnywhereOrNull(int postId) {
+    return _findPostAnywhere(postId);
   }
 
   PostFeedModel? getMyPostOrNull(int postId) {
@@ -61,22 +145,22 @@ class PostManager extends ChangeNotifier {
   }
 
   bool isPostLiked(int postId) {
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     return post?.isLiked ?? false;
   }
 
   bool isPostSaved(int postId) {
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     return post?.isSaved ?? false;
   }
 
   int getLikeCount(int postId) {
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     return post?.likeCount ?? 0;
   }
 
   int getCommentCount(int postId) {
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     return post?.commentCount ?? 0;
   }
 
@@ -116,31 +200,58 @@ class PostManager extends ChangeNotifier {
     int page = 1,
     int pageSize = 10,
   }) async {
-    if (isLoadingSaved) return;
+    if (isLoadingSaved || isLoadingMoreSaved) return;
 
-    isLoadingSaved = true;
+    if (refresh) {
+      isLoadingSaved = true;
+      _savedPage = 1;
+      hasMoreSaved = true;
+    } else {
+      if (!hasMoreSaved) return;
+      isLoadingMoreSaved = true;
+    }
+
     notifyListeners();
 
     try {
-      final items = await _postService.fetchSavedPosts(
-        page: page,
+      final PagedPostsResponse result = await _postService.fetchSavedPosts(
+        page: refresh ? 1 : page,
         pageSize: pageSize,
       );
 
       if (refresh) {
         _savedPosts
           ..clear()
-          ..addAll(items);
+          ..addAll(result.items);
       } else {
-        _savedPosts.addAll(items);
+        for (final item in result.items) {
+          final exists = _savedPosts.any((p) => p.postId == item.postId);
+          if (!exists) {
+            _savedPosts.add(item);
+          }
+        }
       }
+
+      _savedPage = result.page;
+      hasMoreSaved = result.hasMore;
     } catch (e) {
       debugPrint('Fetch saved posts error: $e');
       rethrow;
     } finally {
       isLoadingSaved = false;
+      isLoadingMoreSaved = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadMoreSavedPosts({int pageSize = 10}) async {
+    if (isLoadingSaved || isLoadingMoreSaved || !hasMoreSaved) return;
+
+    await fetchSavedPosts(
+      refresh: false,
+      page: _savedPage + 1,
+      pageSize: pageSize,
+    );
   }
 
   Future<void> fetchMyPosts({
@@ -174,7 +285,7 @@ class PostManager extends ChangeNotifier {
     if (_likingPosts.contains(postId)) return;
     _likingPosts.add(postId);
 
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     if (post == null) {
       _likingPosts.remove(postId);
       return;
@@ -215,7 +326,7 @@ class PostManager extends ChangeNotifier {
     if (_savingPosts.contains(postId)) return;
     _savingPosts.add(postId);
 
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     if (post == null) {
       _savingPosts.remove(postId);
       return;
@@ -258,7 +369,10 @@ class PostManager extends ChangeNotifier {
     if (index == -1) return;
 
     final oldPost = _myPosts[index];
-    if (oldPost.status != PostStatusValues.published || oldPost.visibility != 'Visible') return;
+    if (oldPost.status != PostStatusValues.published ||
+        oldPost.visibility != 'Visible') {
+      return;
+    }
 
     try {
       final response = await _postService.hidePost(postId);
@@ -279,7 +393,10 @@ class PostManager extends ChangeNotifier {
     if (index == -1) return;
 
     final oldPost = _myPosts[index];
-    if (oldPost.status != PostStatusValues.published || oldPost.visibility != 'Hidden') return;
+    if (oldPost.status != PostStatusValues.published ||
+        oldPost.visibility != 'Hidden') {
+      return;
+    }
 
     try {
       final response = await _postService.unhidePost(postId);
@@ -384,7 +501,7 @@ class PostManager extends ChangeNotifier {
 
     final myPost = getMyPostOrNull(postId);
     if (myPost != null) {
-      final existing = getPostOrNull(postId);
+      final existing = _findPostAnywhere(postId);
       if (existing != null) {
         final updated = existing.copyWith(
           title: title ?? existing.title,
@@ -398,11 +515,11 @@ class PostManager extends ChangeNotifier {
   }
 
   void increaseCommentCount(int postId) {
-    final index = _posts.indexWhere((p) => p.postId == postId);
-    if (index == -1) return;
+    final post = _findPostAnywhere(postId);
+    if (post == null) return;
 
-    final updated = _posts[index].copyWith(
-      commentCount: _posts[index].commentCount + 1,
+    final updated = post.copyWith(
+      commentCount: post.commentCount + 1,
     );
 
     _updatePostEverywhere(updated);
@@ -410,12 +527,11 @@ class PostManager extends ChangeNotifier {
   }
 
   void decreaseCommentCount(int postId) {
-    final index = _posts.indexWhere((p) => p.postId == postId);
-    if (index == -1) return;
+    final post = _findPostAnywhere(postId);
+    if (post == null) return;
 
-    final current = _posts[index];
-    final updated = current.copyWith(
-      commentCount: current.commentCount > 0 ? current.commentCount - 1 : 0,
+    final updated = post.copyWith(
+      commentCount: post.commentCount > 0 ? post.commentCount - 1 : 0,
     );
 
     _updatePostEverywhere(updated);
@@ -439,7 +555,7 @@ class PostManager extends ChangeNotifier {
     required int likeCount,
     required bool isLiked,
   }) {
-    final post = getPostOrNull(postId);
+    final post = _findPostAnywhere(postId);
     if (post == null) return;
 
     final updated = post.copyWith(
@@ -479,6 +595,11 @@ class PostManager extends ChangeNotifier {
     final savedIndex = _savedPosts.indexWhere((p) => p.postId == updated.postId);
     if (savedIndex != -1) {
       _savedPosts[savedIndex] = updated;
+    }
+
+    final myIndex = _myPosts.indexWhere((p) => p.postId == updated.postId);
+    if (myIndex != -1) {
+      _myPosts[myIndex] = updated;
     }
   }
 
