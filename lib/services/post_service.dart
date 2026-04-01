@@ -5,8 +5,9 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../constants/api_constants.dart';
-import '../models/my_post_model.dart';
+import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
+import '../models/post_share_result.dart';
 import 'api_client.dart';
 
 class PostService {
@@ -26,11 +27,32 @@ class PostService {
     final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load feed');
+      throw Exception('Failed to load feed: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as List;
-    return data.map((e) => PostFeedModel.fromJson(e)).toList();
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is List) {
+      return decoded.map((e) => PostFeedModel.fromJson(e)).toList();
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+
+      if (data is List) {
+        return data.map((e) => PostFeedModel.fromJson(e)).toList();
+      }
+
+      if (data is Map<String, dynamic>) {
+        final items = (data['items'] as List?) ?? const [];
+        return items.map((e) => PostFeedModel.fromJson(e)).toList();
+      }
+
+      final items = (decoded['items'] as List?) ?? const [];
+      return items.map((e) => PostFeedModel.fromJson(e)).toList();
+    }
+
+    throw Exception('Unexpected feed response');
   }
 
   Future<List<PostFeedModel>> fetchTrendingPosts({
@@ -45,11 +67,32 @@ class PostService {
     final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load trending posts');
+      throw Exception('Failed to load trending posts: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as List;
-    return data.map((e) => PostFeedModel.fromJson(e)).toList();
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is List) {
+      return decoded.map((e) => PostFeedModel.fromJson(e)).toList();
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+
+      if (data is List) {
+        return data.map((e) => PostFeedModel.fromJson(e)).toList();
+      }
+
+      if (data is Map<String, dynamic>) {
+        final items = (data['items'] as List?) ?? const [];
+        return items.map((e) => PostFeedModel.fromJson(e)).toList();
+      }
+
+      final items = (decoded['items'] as List?) ?? const [];
+      return items.map((e) => PostFeedModel.fromJson(e)).toList();
+    }
+
+    throw Exception('Unexpected trending response');
   }
 
   Future<PostFeedModel> getPostDetail(int postId) async {
@@ -62,11 +105,20 @@ class PostService {
     final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load post detail');
+      throw Exception('Failed to load post detail: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return PostFeedModel.fromJson(data);
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) {
+        return PostFeedModel.fromJson(data);
+      }
+      return PostFeedModel.fromJson(decoded);
+    }
+
+    throw Exception('Unexpected post detail response');
   }
 
   Future<int?> createPost({
@@ -82,8 +134,8 @@ class PostService {
     final request = http.MultipartRequest('POST', uri);
 
     request.headers.addAll(headers);
-
     request.fields['content'] = content.trim();
+
     if (title != null && title.trim().isNotEmpty) {
       request.fields['title'] = title.trim();
     }
@@ -108,7 +160,11 @@ class PostService {
     if (body.isEmpty) return null;
 
     final data = jsonDecode(body) as Map<String, dynamic>;
-    return data['postId'] as int?;
+    final root = data['data'] is Map<String, dynamic>
+        ? data['data'] as Map<String, dynamic>
+        : data;
+
+    return root['postId'] as int?;
   }
 
   Future<List<PostFeedModel>> fetchMyPosts({
@@ -125,11 +181,14 @@ class PostService {
     final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load my posts');
+      throw Exception('Failed to load my posts: ${response.body}');
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final items = (data['items'] as List?) ?? const [];
+    final root = data['data'] is Map<String, dynamic>
+        ? data['data'] as Map<String, dynamic>
+        : data;
+    final items = (root['items'] as List?) ?? const [];
 
     return items.map((e) => PostFeedModel.fromJson(e)).toList();
   }
@@ -154,11 +213,14 @@ class PostService {
     final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load user posts');
+      throw Exception('Failed to load user posts: ${response.body}');
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final items = (data['items'] as List?) ?? const [];
+    final root = data['data'] is Map<String, dynamic>
+        ? data['data'] as Map<String, dynamic>
+        : data;
+    final items = (root['items'] as List?) ?? const [];
 
     return items.map((e) => PostFeedModel.fromJson(e)).toList();
   }
@@ -173,10 +235,13 @@ class PostService {
     final response = await ApiClient.patch(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Hide post failed');
+      throw Exception('Hide post failed: ${response.body}');
     }
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+    if (data is Map<String, dynamic>) return data;
+    return decoded;
   }
 
   Future<Map<String, dynamic>> unhidePost(int postId) async {
@@ -189,10 +254,13 @@ class PostService {
     final response = await ApiClient.patch(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Unhide post failed');
+      throw Exception('Unhide post failed: ${response.body}');
     }
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+    if (data is Map<String, dynamic>) return data;
+    return decoded;
   }
 
   Future<void> updatePost({
@@ -228,7 +296,7 @@ class PostService {
     final response = await ApiClient.delete(uri);
 
     if (response.statusCode != 204) {
-      throw Exception('Delete post failed');
+      throw Exception('Delete post failed: ${response.body}');
     }
   }
 
@@ -242,11 +310,17 @@ class PostService {
     final response = await ApiClient.post(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Save post failed');
+      throw Exception('Save post failed: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return data['isSaved'] == true;
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+
+    if (data is Map<String, dynamic>) {
+      return data['isSaved'] == true;
+    }
+
+    return decoded['isSaved'] == true;
   }
 
   Future<bool> unsavePost(int postId) async {
@@ -259,14 +333,20 @@ class PostService {
     final response = await ApiClient.delete(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Unsave post failed');
+      throw Exception('Unsave post failed: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return data['isSaved'] == true;
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+
+    if (data is Map<String, dynamic>) {
+      return data['isSaved'] == true;
+    }
+
+    return decoded['isSaved'] == true;
   }
 
-  Future<List<PostFeedModel>> fetchSavedPosts({
+  Future<PagedPostsResponse> fetchSavedPosts({
     int page = 1,
     int pageSize = 10,
   }) async {
@@ -280,20 +360,42 @@ class PostService {
     final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load saved posts');
+      throw Exception('Failed to load saved posts: ${response.body}');
     }
 
     final decoded = jsonDecode(response.body);
 
-    if (decoded is List) {
-      return decoded.map((e) => PostFeedModel.fromJson(e)).toList();
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Unexpected saved posts response');
     }
 
-    if (decoded is Map<String, dynamic>) {
-      final items = (decoded['items'] as List?) ?? const [];
-      return items.map((e) => PostFeedModel.fromJson(e)).toList();
+    final root = decoded['data'] is Map<String, dynamic>
+        ? decoded['data'] as Map<String, dynamic>
+        : decoded;
+
+    return PagedPostsResponse.fromJson(root);
+  }
+
+  Future<PostShareResult> sharePost(int postId) async {
+    final endpoint = ApiConstants.sharePost.replaceAll(
+      '{postId}',
+      postId.toString(),
+    );
+
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final response = await ApiClient.post(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('Share post failed: ${response.body}');
     }
 
-    throw Exception('Unexpected saved posts response');
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+
+    if (data is Map<String, dynamic>) {
+      return PostShareResult.fromJson(data);
+    }
+
+    return PostShareResult.fromJson(decoded);
   }
 }

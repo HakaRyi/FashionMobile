@@ -1,3 +1,4 @@
+// lib/models/post_feed_model.dart
 class PostFeedModel {
   final int postId;
   final int accountId;
@@ -37,8 +38,8 @@ class PostFeedModel {
 
   factory PostFeedModel.fromJson(Map<String, dynamic> json) {
     return PostFeedModel(
-      postId: json['postId'],
-      accountId: json['accountId'],
+      postId: json['postId'] ?? 0,
+      accountId: json['accountId'] ?? 0,
       userName: json['userName'] ?? '',
       avatarUrl: json['avatarUrl'],
       title: json['title'],
@@ -49,7 +50,7 @@ class PostFeedModel {
       shareCount: json['shareCount'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       isSaved: json['isSaved'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       status: json['status'],
       visibility: json['visibility'],
     );

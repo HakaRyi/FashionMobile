@@ -1,14 +1,18 @@
 // lib/widgets/post_item.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/post_status_values.dart';
 import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
 import '../screens/create_post_screens.dart';
+import '../screens/navbar_screens/profile_screen.dart';
+import '../screens/other_profile_screen.dart';
 import '../screens/public_wardrobe_screen.dart';
 import 'comments/comment_sheet.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PostItem extends StatefulWidget {
   final PostFeedModel post;
@@ -45,6 +49,13 @@ class _PostItemState extends State<PostItem> {
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   bool _canEditPost(String? status) {
     final s = status?.toLowerCase();
     return s != PostStatusValues.rejected.toLowerCase() &&
@@ -53,7 +64,9 @@ class _PostItemState extends State<PostItem> {
   }
 
   void _openUserPublicWardrobe() {
-    if (widget.post.accountId <= 0) {
+    final currentPost = postManager.getPostAnywhereOrNull(postId) ?? widget.post;
+
+    if (currentPost.accountId <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Không tìm thấy thông tin người dùng.'),
@@ -65,9 +78,41 @@ class _PostItemState extends State<PostItem> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PublicWardrobeScreen(accountId: widget.post.accountId),
+        builder: (_) => PublicWardrobeScreen(accountId: currentPost.accountId),
       ),
     );
+  }
+
+  Future<void> _handleProfileNavigation(
+      BuildContext context,
+      int postUserId,
+      ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final dynamic rawUserId = prefs.get('userId');
+    int? currentUserId;
+
+    if (rawUserId is int) {
+      currentUserId = rawUserId;
+    } else if (rawUserId is String) {
+      currentUserId = int.tryParse(rawUserId);
+    }
+
+    if (!context.mounted) return;
+
+    if (currentUserId != null && currentUserId == postUserId) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OtherProfileScreen(userId: postUserId),
+        ),
+      );
+    }
   }
 
   @override
@@ -75,14 +120,16 @@ class _PostItemState extends State<PostItem> {
     return ListenableBuilder(
       listenable: postManager,
       builder: (context, _) {
-        final post = postManager.getPostOrNull(postId) ?? widget.post;
+        final post = postManager.getPostAnywhereOrNull(postId) ?? widget.post;
 
+        final shareCount = post.shareCount;
+        final postUserId = post.accountId;
         final userName =
         post.userName.trim().isNotEmpty ? post.userName : 'Người dùng';
         final avatarUrl =
         (post.avatarUrl != null && post.avatarUrl!.trim().isNotEmpty)
             ? post.avatarUrl!
-            : 'https://i.pravatar.cc/150?img=8';
+            : 'assets/images/default_avatar.png';
 
         final title = (post.title ?? '').trim();
         final content = (post.content ?? '').trim();
@@ -104,6 +151,7 @@ class _PostItemState extends State<PostItem> {
                 avatarUrl: avatarUrl,
                 createdAt: createdAt,
                 status: post.status,
+                postUserId: postUserId,
               ),
               if (title.isNotEmpty || content.isNotEmpty)
                 _buildCaption(
@@ -120,6 +168,7 @@ class _PostItemState extends State<PostItem> {
                 isSaved: isSaved,
                 likeCount: likeCount,
                 commentCount: commentCount,
+                shareCount: shareCount,
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -176,49 +225,72 @@ class _PostItemState extends State<PostItem> {
     required String userName,
     required String avatarUrl,
     required String createdAt,
+    required int postUserId,
     String? status,
   }) {
-    final bool canOpenProfile = !widget.isMyPost && widget.post.accountId > 0;
+    final bool canOpenProfile = postUserId > 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: canOpenProfile ? _openUserPublicWardrobe : null,
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.white10,
-              backgroundImage: NetworkImage(avatarUrl),
-              onBackgroundImageError: (_, __) {},
-            ),
-          ),
-          const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(
-              onTap: canOpenProfile ? _openUserPublicWardrobe : null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              behavior: HitTestBehavior.opaque,
+              onTap: canOpenProfile
+                  ? () => _handleProfileNavigation(context, postUserId)
+                  : null,
+              onLongPress: (!widget.isMyPost && canOpenProfile)
+                  ? _openUserPublicWardrobe
+                  : null,
+              child: Row(
                 children: [
-                  Text(
-                    userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      decoration:
-                      canOpenProfile ? TextDecoration.underline : null,
-                      decorationColor: Colors.white38,
-                    ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white10,
+                    backgroundImage: avatarUrl.startsWith('http')
+                        ? NetworkImage(avatarUrl)
+                        : null,
+                    child: !avatarUrl.startsWith('http')
+                        ? ClipOval(
+                      child: Image.asset(
+                        avatarUrl,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                        : null,
+                    onBackgroundImageError: (_, __) {},
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    createdAt,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            decoration: canOpenProfile
+                                ? TextDecoration.underline
+                                : null,
+                            decorationColor: Colors.white38,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          createdAt,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -283,18 +355,22 @@ class _PostItemState extends State<PostItem> {
   }) {
     return GestureDetector(
       onDoubleTap: () async {
-        if (!isLiked) {
-          await postManager.toggleLikePost(postId);
-        }
-
-        if (!mounted) return;
-        setState(() => showHeart = true);
-
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (mounted) {
-            setState(() => showHeart = false);
+        try {
+          if (!isLiked) {
+            await postManager.toggleLikePost(postId);
           }
-        });
+
+          if (!mounted) return;
+          setState(() => showHeart = true);
+
+          Future.delayed(const Duration(milliseconds: 600), () {
+            if (mounted) {
+              setState(() => showHeart = false);
+            }
+          });
+        } catch (e) {
+          _showError('Thích bài viết thất bại: $e');
+        }
       },
       child: Stack(
         alignment: Alignment.center,
@@ -384,6 +460,7 @@ class _PostItemState extends State<PostItem> {
     required bool isSaved,
     required int likeCount,
     required int commentCount,
+    required int shareCount,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
@@ -394,27 +471,39 @@ class _PostItemState extends State<PostItem> {
             children: [
               _buildActionIcon(
                 onTap: () async {
-                  await postManager.toggleLikePost(postId);
+                  try {
+                    await postManager.toggleLikePost(postId);
+                  } catch (e) {
+                    _showError('Thích bài viết thất bại: $e');
+                  }
                 },
                 icon: isLiked ? Icons.favorite : Icons.favorite_border,
                 color: isLiked ? Colors.redAccent : AppColors.textPrimary,
               ),
               const SizedBox(width: 14),
               _buildActionIcon(
-                onTap: () {
-                  _openComments();
-                },
+                onTap: _openComments,
                 icon: Icons.mode_comment_outlined,
                 color: AppColors.textPrimary,
               ),
               const SizedBox(width: 14),
               _buildActionIcon(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tính năng chia sẻ đang được phát triển'),
-                    ),
-                  );
+                onTap: () async {
+                  try {
+                    final currentPost =
+                        postManager.getPostAnywhereOrNull(postId) ?? widget.post;
+
+                    await postManager.sharePost(currentPost);
+
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Chia sẻ bài viết thành công'),
+                      ),
+                    );
+                  } catch (e) {
+                    _showError('Chia sẻ bài viết thất bại: $e');
+                  }
                 },
                 icon: Icons.send_outlined,
                 color: AppColors.textPrimary,
@@ -422,10 +511,15 @@ class _PostItemState extends State<PostItem> {
               const Spacer(),
               _buildActionIcon(
                 onTap: () async {
-                  await postManager.toggleSavePost(postId);
+                  try {
+                    await postManager.toggleSavePost(postId);
+                    widget.onRefresh?.call();
+                  } catch (e) {
+                    _showError('Lưu bài viết thất bại: $e');
+                  }
                 },
                 icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
-                color: AppColors.textPrimary,
+                color: isSaved ? AppColors.textPink : AppColors.textPrimary,
               ),
             ],
           ),
@@ -449,6 +543,16 @@ class _PostItemState extends State<PostItem> {
                   color: AppColors.textSecondary,
                   fontSize: 13,
                 ),
+              ),
+            ),
+          ],
+          if (shareCount > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              '$shareCount lượt chia sẻ',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
               ),
             ),
           ],
@@ -575,9 +679,7 @@ class _PostItemState extends State<PostItem> {
                           ),
                         ),
                       ).then((_) {
-                        if (widget.onRefresh != null) {
-                          widget.onRefresh!();
-                        }
+                        widget.onRefresh?.call();
                       });
                     },
                   ),
@@ -687,6 +789,7 @@ class _PostItemState extends State<PostItem> {
               Navigator.pop(ctx);
               try {
                 await postManager.deleteMyPost(postId);
+                widget.onRefresh?.call();
               } catch (e) {
                 if (!mounted) return;
                 ScaffoldMessenger.of(parentContext).showSnackBar(

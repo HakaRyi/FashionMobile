@@ -35,6 +35,7 @@ class ApiConstants {
 
   static const String toggleSavePost = "/post/{postId}/save";
   static const String getSavedPosts = "/post/saved";
+  static const String sharePost = '/api/post/{postId}/share';
 
   static const String getComments = "/post/{postId}/comment";
   static const String createComment = "/post/{postId}/comment";

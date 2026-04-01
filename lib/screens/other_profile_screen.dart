@@ -1,33 +1,29 @@
-// lib/screens/navbar_screens/profile_screen.dart
+// lib/screens/other_profile_screen.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../constants/app_colors.dart';
-import '../../screens/create_post_screens.dart';
-import '../../screens/expense_management_screen.dart';
-import '../../screens/saved_posts_screen.dart';
-import '../../screens/settings_screen.dart';
-import '../../services/account_service.dart';
-import '../../services/post_service.dart';
-import '../../utils/route_transitions.dart';
-import '../../utils/stat_skeleton_item.dart';
-import '../../widgets/wapo_pay_sheet.dart';
-import '../order_manager_screen.dart';
-import '../public_wardrobe_screen.dart';
-import '../../widgets/post_item.dart';
-import '../../models/post_feed_model.dart';
-import '../../services/wallet_service.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+import '../constants/app_colors.dart';
+import '../models/post_feed_model.dart';
+import '../services/account_service.dart';
+import '../services/post_service.dart';
+import '../utils/route_transitions.dart';
+import '../utils/stat_skeleton_item.dart';
+import '../widgets/post_item.dart';
+import 'public_wardrobe_screen.dart';
+
+class OtherProfileScreen extends StatefulWidget {
+  final int userId;
+
+  const OtherProfileScreen({super.key, required this.userId});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<OtherProfileScreen> createState() => _OtherProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _OtherProfileScreenState extends State<OtherProfileScreen> {
   late Future<Map<String, dynamic>?> _profileFuture;
   late Future<List<PostFeedModel>> _postsFuture;
-  late Future<double> _walletFuture;
+
+  bool isFollowing = false;
 
   @override
   void initState() {
@@ -35,23 +31,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _refreshData();
   }
 
-  void _refreshData() {
+  Future<void> _refreshData() async {
     setState(() {
-      _profileFuture = AccountService().getMyProfile();
-      _postsFuture = PostService().fetchMyPosts();
-      _walletFuture = WalletService().getMyWalletBalance();
+      _profileFuture = AccountService().getUserProfile(widget.userId.toString());
+      _postsFuture = PostService().fetchUserPosts(userId: widget.userId);
     });
   }
 
-  void _showWapoPaySheet(BuildContext context, double balance) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return WapoPaySheet(initialBalance: balance);
-      },
-    );
+  void _toggleFollow() {
+    setState(() {
+      isFollowing = !isFollowing;
+    });
   }
 
   @override
@@ -84,23 +74,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final user = profileSnapshot.data;
-          final String avatar = user?['avatar'] ?? "";
-          final String name = user?['username'] ?? "User";
-          final String email = user?['email'] ?? "unknown@gmail.com";
-          final String bio =
-              user?['description'] ?? "Chưa có giới thiệu về bản thân.";
-          final double balance = (user?['balance'] ?? 0.0).toDouble();
-          final String followerCount =
-          (user?['followerCount'] ?? user?['followers'] ?? 0).toString();
-          final String followingCount =
-          (user?['followingCount'] ?? user?['following'] ?? 0).toString();
+          if (user == null) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Không tìm thấy thông tin người dùng.',
+                  style: TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
 
-          final int? accountId = _parseAccountId(
-            user?['id'] ?? user?['accountId'] ?? user?['userId'],
+          final String avatar = (user['avatar'] ?? '').toString();
+          final String name = (user['username'] ?? 'Người dùng').toString();
+          final String email = (user['email'] ?? 'Đang cập nhật...').toString();
+          final String bio = (user['description'] ??
+              'Chưa có giới thiệu về bản thân.')
+              .toString();
+          final String followerCount =
+          (user['followerCount'] ?? user['followers'] ?? 0).toString();
+          final String followingCount =
+          (user['followingCount'] ?? user['following'] ?? 0).toString();
+
+          final ImageProvider avatarProvider = avatar.isNotEmpty
+              ? NetworkImage(avatar)
+              : const AssetImage('assets/images/default_avatar.png');
+
+          final ImageProvider coverProvider = avatar.isNotEmpty
+              ? NetworkImage(avatar)
+              : const NetworkImage(
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s',
           );
 
           return RefreshIndicator(
-            onRefresh: () async => _refreshData(),
+            onRefresh: _refreshData,
             color: Colors.pink,
             child: Stack(
               children: [
@@ -112,11 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       image: DecorationImage(
-                        image: avatar.isNotEmpty
-                            ? NetworkImage(avatar)
-                            : const NetworkImage(
-                          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s",
-                        ),
+                        image: coverProvider,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -144,6 +149,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       backgroundColor: Colors.transparent,
                       pinned: true,
                       elevation: 0,
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                       title: Text(
                         name,
                         style: const TextStyle(
@@ -156,20 +165,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       centerTitle: true,
-                      actions: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.more_horiz,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              SlideRoute(page: const SettingsScreen()),
-                            );
-                          },
-                        ),
-                      ],
                     ),
                     SliverToBoxAdapter(
                       child: SizedBox(
@@ -196,11 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: CircleAvatar(
                                   radius: 42,
                                   backgroundColor: AppColors.surface,
-                                  backgroundImage: avatar.isNotEmpty
-                                      ? NetworkImage(avatar)
-                                      : const AssetImage(
-                                      'assets/images/default_avatar.png')
-                                  as ImageProvider,
+                                  backgroundImage: avatarProvider,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -218,22 +209,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               ConnectionState.waiting) {
                                             return const StatSkeletonItem();
                                           }
+
                                           final postCount = snapshot.hasData
                                               ? snapshot.data!.length.toString()
-                                              : "0";
+                                              : '0';
+
                                           return _buildStatItem(
                                             postCount,
-                                            "Posts",
+                                            'Posts',
                                           );
                                         },
                                       ),
                                       _buildStatItem(
                                         followerCount,
-                                        "Followers",
+                                        'Followers',
                                       ),
                                       _buildStatItem(
                                         followingCount,
-                                        "Following",
+                                        'Following',
                                       ),
                                     ],
                                   ),
@@ -297,20 +290,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 20),
 
-                                  // Row 1
                                   Row(
                                     children: [
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                              const CreatePostScreen(),
-                                            ),
-                                          ).then((_) => _refreshData()),
+                                          onPressed: _toggleFollow,
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.pink,
+                                            backgroundColor: isFollowing
+                                                ? Colors.white24
+                                                : Colors.pink,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
@@ -319,9 +307,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               vertical: 12,
                                             ),
                                           ),
-                                          child: const Text(
-                                            "Tạo Bài Đăng",
-                                            style: TextStyle(
+                                          child: Text(
+                                            isFollowing
+                                                ? 'Đang theo dõi'
+                                                : 'Theo dõi',
+                                            style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
                                               fontSize: 13,
@@ -333,13 +323,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            SlideRoute(
-                                              page:
-                                              const OrderManagementScreen(),
-                                            ),
-                                          ),
+                                          onPressed: () {
+                                            // Navigator.push(
+                                            //   context,
+                                            //   SlideRoute(page: ChatScreen(userId: widget.userId)),
+                                            // );
+                                          },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.pinkAccent
                                                 .withOpacity(0.8),
@@ -352,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Quản Lý Đơn",
+                                            'Nhắn tin',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -364,32 +353,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                     ],
                                   ),
-
                                   const SizedBox(height: 8),
-
-                                  // Row 2
                                   Row(
                                     children: [
                                       Expanded(
                                         child: OutlinedButton(
                                           onPressed: () {
-                                            if (accountId == null) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    "Không tìm thấy thông tin tài khoản.",
-                                                  ),
-                                                ),
-                                              );
-                                              return;
-                                            }
-
                                             Navigator.push(
                                               context,
                                               SlideRoute(
                                                 page: PublicWardrobeScreen(
-                                                  accountId: accountId,
+                                                  accountId: widget.userId,
                                                 ),
                                               ),
                                             );
@@ -397,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pink,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -408,173 +382,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Tủ Đồ",
-                                            style: TextStyle(fontSize: 13),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: FutureBuilder<double>(
-                                          future: _walletFuture,
-                                          builder: (context, walletSnapshot) {
-                                            if (walletSnapshot.connectionState ==
-                                                ConnectionState.waiting) {
-                                              return OutlinedButton(
-                                                onPressed: null,
-                                                style:
-                                                OutlinedButton.styleFrom(
-                                                  foregroundColor: Colors.white,
-                                                  side: const BorderSide(
-                                                    color: Colors.white24,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                    BorderRadius.circular(
-                                                        12),
-                                                  ),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    vertical: 12,
-                                                  ),
-                                                ),
-                                                child: const Row(
-                                                  mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                                  children: [
-                                                    SizedBox(
-                                                      width: 16,
-                                                      height: 16,
-                                                      child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            }
-
-                                            final double currentBalance =
-                                            walletSnapshot.hasData
-                                                ? walletSnapshot.data!
-                                                : balance;
-
-                                            return OutlinedButton(
-                                              onPressed: () =>
-                                                  _showWapoPaySheet(
-                                                    context,
-                                                    currentBalance,
-                                                  ),
-                                              style:
-                                              OutlinedButton.styleFrom(
-                                                foregroundColor: Colors.white,
-                                                side: const BorderSide(
-                                                  color: Colors.white24,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                  BorderRadius.circular(
-                                                      12),
-                                                ),
-                                                padding:
-                                                const EdgeInsets.symmetric(
-                                                  vertical: 12,
-                                                ),
-                                              ),
-                                              child: const Row(
-                                                mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons
-                                                        .account_balance_wallet_outlined,
-                                                    size: 16,
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  Text(
-                                                    "Wapo",
-                                                    style:
-                                                    TextStyle(fontSize: 13),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  // Row 3
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                              const ExpenseManagementScreen(),
+                                            'Xem tủ đồ công khai',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.pinkAccent,
                                             ),
-                                          ),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.white,
-                                            side: const BorderSide(
-                                              color: Colors.white24,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            "Chi Tiêu",
-                                            style: TextStyle(fontSize: 13),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                              const SavedPostsScreen(),
-                                            ),
-                                          ),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.white,
-                                            side: const BorderSide(
-                                              color: Colors.white24,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            "Đã Lưu",
-                                            style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-
                                   const SizedBox(height: 20),
                                 ],
                               ),
@@ -607,8 +425,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'Tải bài viết thất bại: ${postSnapshot.error}',
-                                  style:
-                                  const TextStyle(color: Colors.white54),
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -624,7 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               padding: EdgeInsets.all(40),
                               child: Center(
                                 child: Text(
-                                  "Chưa có bài viết nào.",
+                                  'Chưa có bài viết nào.',
                                   style: TextStyle(color: Colors.white38),
                                 ),
                               ),
@@ -645,8 +464,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 child: PostItem(
                                   post: post,
-                                  isMyPost: true,
-                                  onRefresh: () => _refreshData(),
+                                  isMyPost: false,
+                                  onRefresh: _refreshData,
                                 ),
                               );
                             },
@@ -666,12 +485,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       ),
     );
-  }
-
-  int? _parseAccountId(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    return int.tryParse(value.toString());
   }
 
   Widget _buildStatItem(String value, String label) {
