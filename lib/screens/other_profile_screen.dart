@@ -9,6 +9,7 @@ import '../../utils/route_transitions.dart';
 import '../screens/public_wardrobe_screen.dart'; // Giữ lại tủ đồ
 import '../../widgets/post_item.dart';
 import '../../models/post_feed_model.dart';
+import '../services/follow_service.dart';
 import '../utils/stat_skeleton_item.dart';
 // import ChatScreen nếu có
 
@@ -24,7 +25,12 @@ class OtherProfileScreen extends StatefulWidget {
 class _OtherProfileScreenState extends State<OtherProfileScreen> {
   late Future<Map<String, dynamic>?> _profileFuture;
   late Future<List<PostFeedModel>> _postsFuture;
+
+  final FollowService _followService = FollowService();
   bool isFollowing = false;
+  bool isLoadingFollow = true;
+
+  int _followerOffset = 0;
 
   @override
   void initState() {
@@ -36,13 +42,76 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     setState(() {
       _profileFuture = AccountService().getUserProfile(widget.userId.toString());
       _postsFuture = PostService().fetchUserPosts(userId: widget.userId);
+      _followerOffset = 0;
     });
+    _checkFollowStatus();
   }
 
-  void _toggleFollow() {
+  Future<void> _checkFollowStatus() async {
+    setState(() => isLoadingFollow = true);
+    final status = await _followService.checkIsFollowing(widget.userId);
+    if (mounted) {
+      setState(() {
+        isFollowing = status;
+        isLoadingFollow = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    if (isFollowing) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E1E1E),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+                'Bỏ theo dõi?',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+            ),
+            content: const Text(
+                'Bạn có chắc chắn muốn bỏ theo dõi người dùng này không?',
+                style: TextStyle(color: Colors.white70, fontSize: 14)
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Hủy', style: TextStyle(color: Colors.white54)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Bỏ theo dõi', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirm != true) return;
+    }
+
+    final currentStatus = isFollowing;
     setState(() {
-      isFollowing = !isFollowing;
+      isFollowing = !currentStatus;
+      _followerOffset += isFollowing ? 1 : -1;
     });
+
+    final success = currentStatus
+        ? await _followService.unfollowUser(widget.userId)
+        : await _followService.followUser(widget.userId);
+
+    if (!success && mounted) {
+      setState(() {
+        isFollowing = currentStatus;
+        _followerOffset += isFollowing ? 1 : -1;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể thực hiện, vui lòng thử lại!')),
+      );
+    }
   }
 
   @override
@@ -67,7 +136,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           final String email = user?['email'] ?? "Đang cập nhật...";
           final String bio =
               user?['description'] ?? "Chưa có giới thiệu về bản thân.";
-          final String followerCount = (user?['followerCount'] ?? user?['followers'] ?? 0).toString();
+          final int baseFollowerCount = user?['followerCount'] ?? user?['followers'] ?? 0;
+          final String followerCount = (baseFollowerCount + _followerOffset).toString();
           final String followingCount = (user?['followingCount'] ?? user?['following'] ?? 0).toString();
 
           return RefreshIndicator(
@@ -251,11 +321,11 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                       // Nút Follow
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: _toggleFollow,
+                                          onPressed: isLoadingFollow ? null : _toggleFollow,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: isFollowing
-                                                ? Colors.white24 // Màu xám khi đã follow
-                                                : Colors.pink, // Màu hồng khi chưa follow
+                                                ? Colors.white24
+                                                : Colors.pink,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
@@ -264,7 +334,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                               vertical: 12,
                                             ),
                                           ),
-                                          child: Text(
+                                          child: isLoadingFollow
+                                              ? const SizedBox(
+                                              height: 16,
+                                              width: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                                          )
+                                              : Text(
                                             isFollowing ? "Đang theo dõi" : "Theo dõi",
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,

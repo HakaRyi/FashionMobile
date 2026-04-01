@@ -14,6 +14,8 @@ import '../public_wardrobe_screen.dart';
 import '../../widgets/post_item.dart';
 import '../../models/post_feed_model.dart';
 import '../../services/wallet_service.dart';
+import 'dart:async';
+import '../../utils/global_event_bus.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -27,10 +29,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late Future<List<PostFeedModel>> _postsFuture;
   late Future<double> _walletFuture;
 
+  StreamSubscription? _eventSubscription;
+
   @override
   void initState() {
     super.initState();
     _refreshData();
+    _eventSubscription = GlobalEventBus().onProfileUpdateNeeded.listen((_) {
+      if (mounted) {
+        _refreshData();
+      }
+    });
+  }
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    super.dispose();
   }
 
   void _refreshData() {
