@@ -38,7 +38,8 @@ class ItemService {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final Map<String, dynamic> decodedData = jsonDecode(response.body);
+        return decodedData['data'] ?? [];
       }
       return [];
     } catch (e) {

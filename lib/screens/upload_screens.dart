@@ -136,7 +136,6 @@ class _UploadScreenState extends State<UploadScreen> {
       print("Dữ liệu thực tế trong Map: $_selectedAttributes");
       final Map<String, dynamic> body = {
         "itemName": _selectedAttributes['itemName'] ?? "New Fashion Item",
-        "wardrobeId": 1,
         "itemType": _selectedAttributes['itemType'] ?? "clothing",
         "size": _selectedAttributes['size'],
         "category": _selectedAttributes['category'] ?? "upper_body",

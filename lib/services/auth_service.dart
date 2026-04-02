@@ -35,7 +35,6 @@ class AuthService {
         await prefs.setString('avatar', avatar);
         await prefs.setString('email', email);
         await prefs.setString('userId', userId);
-      
         return {"success": true, "data": responseData};
       } else if (response.statusCode == 400 || response.statusCode == 401) {
         return {"success": false, "message": responseData['message'] ?? "Sai tài khoản"};

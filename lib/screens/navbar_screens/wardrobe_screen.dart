@@ -119,6 +119,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               FutureBuilder<List<dynamic>>(
                 future: _itemsFuture,
                 builder: (context, snapshot) {
+                  if (snapshot.hasError) print(snapshot.error);
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SliverFillRemaining(
                       hasScrollBody: false,
