@@ -3,26 +3,24 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api_constants.dart';
 import '../models/transaction_model.dart';
+import 'api_client.dart';
 
 class TransactionService {
   Future<List<TransactionModel>> fetchTransactions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/transaction');
 
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/transaction'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-    );
+    try {
+      final response = await ApiClient.get(url);
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => TransactionModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load transactions');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => TransactionModel.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load transactions: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Lỗi fetchTransactions: $e");
+      return [];
     }
   }
 }

@@ -2,25 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api_constants.dart';
+import 'api_client.dart';
 
 class WalletService {
   Future<double> getMyWalletBalance() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/wallets/me');
 
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/wallets/me'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-    );
+    try {
+      final response = await ApiClient.get(url);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return (data['balance'] ?? 0).toDouble();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return (data['balance'] ?? 0).toDouble();
+      }
+
+      throw Exception('Failed to load wallet: ${response.statusCode}');
+    } catch (e) {
+      print("Lỗi getMyWalletBalance: $e");
+      rethrow;
     }
-    throw Exception('Failed to load wallet');
   }
 }

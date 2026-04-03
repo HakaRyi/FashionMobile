@@ -3,20 +3,13 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../models/order_model.dart';
+import 'api_client.dart';
 
 class OrderService {
   Future<OrderModel> getOrderById(int orderId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/orders/$orderId');
 
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/orders/$orderId'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-    );
+    final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -27,18 +20,9 @@ class OrderService {
   }
 
   Future<OrderModel> createOrder(Map<String, dynamic> requestBody) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/orders');
 
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/orders'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-      body: jsonEncode(requestBody),
-    );
+    final response = await ApiClient.post(url, body: requestBody);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -49,17 +33,9 @@ class OrderService {
   }
 
   Future<List<OrderModel>> getSalesOrders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/orders/sales');
 
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/orders/sales'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-    );
+    final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -70,17 +46,9 @@ class OrderService {
   }
 
   Future<List<OrderModel>> getPurchasesOrders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/orders/purchases');
 
-    final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/orders/purchases'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-    );
+    final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -91,18 +59,9 @@ class OrderService {
   }
 
   Future<OrderModel> updateOrderStatus(int orderId, String status) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/status');
 
-    final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/status'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-      body: jsonEncode({"status": status}),
-    );
+    final response = await ApiClient.put(url, body: {"status": status});
 
     if (response.statusCode == 200) {
       return OrderModel.fromJson(jsonDecode(response.body));
@@ -112,17 +71,9 @@ class OrderService {
   }
 
   Future<OrderModel> payOrder(int orderId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final url = Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/pay');
 
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/pay'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-    );
+    final response = await ApiClient.post(url);
 
     if (response.statusCode == 200) {
       return OrderModel.fromJson(jsonDecode(response.body));

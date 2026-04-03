@@ -144,7 +144,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext context) {
-        // ListenableBuilder phải nằm TRONG builder của showModalBottomSheet
         return ListenableBuilder(
           listenable: modelManager,
           builder: (context, child) {
@@ -200,9 +199,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         mainAxisSpacing: 12,
                         childAspectRatio: 1,
                       ),
-                      itemCount: models.length + 1, // +1 cho nút Thêm mới
+                      itemCount: models.length + 1,
                       itemBuilder: (context, index) {
-                        // Ô đầu tiên: Nút Thêm Mới
                         if (index == 0) {
                           return GestureDetector(
                             onTap: () {
@@ -227,14 +225,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           );
                         }
 
-                        // Các ô còn lại: Hiển thị Model
-                        final modelData = models[index - 1]; // Trừ 1 vì ô đầu là nút thêm
-
-                        // DEBUG: In ra để xem imageUrl có đúng định dạng không
-                        // print("Model Image URL: ${modelData['imageUrl']}");
+                        final modelData = models[index - 1];
+                        final String status = modelData['status']?.toString() ?? "Active";
+                        final bool isReady = status == "Active";
 
                         return GestureDetector(
-                          onTap: () {
+                          onTap: isReady ? () {
                             setState(() {
                               _selectedModel = TryOnModelSource(
                                 imageUrl: modelData['imageUrl'],
@@ -252,17 +248,49 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                 backgroundColor: Colors.green,
                               ),
                             );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white24, width: 1),
-                              image: DecorationImage(
-                                // Kiểm tra null và fallback bằng ảnh mặc định nếu lỗi URL
-                                image: NetworkImage(modelData['imageUrl'] ?? 'https://via.placeholder.com/150'),
-                                fit: BoxFit.cover,
+                          } : null,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white24, width: 1),
+                                  image: DecorationImage(
+                                    image: NetworkImage(modelData['imageUrl'] ?? 'https://via.placeholder.com/150'),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (!isReady)
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.6),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          status == "Rejected" ? Icons.error_outline : Icons.hourglass_empty,
+                                          color: status == "Rejected" ? Colors.redAccent : Colors.orangeAccent,
+                                          size: 32,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          status == "Rejected" ? "Từ chối" : "Đang xử lý",
+                                          style: TextStyle(
+                                            color: status == "Rejected" ? Colors.redAccent : Colors.orangeAccent,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         );
                       },
