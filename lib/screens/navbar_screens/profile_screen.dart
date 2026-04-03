@@ -1,6 +1,7 @@
 // lib/screens/navbar_screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../screens/create_post_screens.dart';
 import '../../screens/expense_management_screen.dart';
@@ -50,7 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _refreshData() {
-    setState(() {
+    setState(()  {
       _profileFuture = AccountService().getMyProfile();
       _postsFuture = PostService().fetchMyPosts();
       _walletFuture = WalletService().getMyWalletBalance();

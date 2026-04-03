@@ -7,6 +7,8 @@ import '../constants/api_constants.dart';
 import '../models/search_model.dart';
 import '../utils/global_event_bus.dart';
 
+import 'api_client.dart';
+
 class FollowService {
   Future<bool> followUser(int targetUserId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -15,15 +17,9 @@ class FollowService {
     final url = Uri.parse("${ApiConstants.baseUrl}/Follow/$targetUserId");
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.post(url);
       if (response.statusCode == 200) {
-        GlobalEventBus().fireProfileUpdate();
+        GlobalEventBus().fireProfileUpdate(targetUserId, true);
         return true;
       }
       return false;
@@ -39,15 +35,9 @@ class FollowService {
     final url = Uri.parse("${ApiConstants.baseUrl}/Follow/$targetUserId");
 
     try {
-      final response = await http.delete(
-        url,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.delete(url);
       if (response.statusCode == 200) {
-        GlobalEventBus().fireProfileUpdate();
+        GlobalEventBus().fireProfileUpdate(targetUserId, false);
         return true;
       }
       return false;
@@ -58,18 +48,11 @@ class FollowService {
 
   Future<bool> checkIsFollowing(int targetUserId) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
 
     final url = Uri.parse("${ApiConstants.baseUrl}/Follow/check/$targetUserId");
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.post(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['isFollowing'] ?? false;
@@ -87,13 +70,7 @@ class FollowService {
     final url = Uri.parse("${ApiConstants.baseUrl}/Follow/get-followers");
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);

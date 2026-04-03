@@ -1,4 +1,6 @@
 // lib/screens/other_profile_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
@@ -7,6 +9,7 @@ import '../services/account_service.dart';
 import '../services/chat_service.dart';
 import '../services/follow_service.dart';
 import '../services/post_service.dart';
+import '../utils/global_event_bus.dart';
 import '../utils/route_transitions.dart';
 import '../utils/stat_skeleton_item.dart';
 import '../widgets/post_item.dart';
@@ -27,6 +30,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   late Future<List<PostFeedModel>> _postsFuture;
 
   final FollowService _followService = FollowService();
+  StreamSubscription? _profileUpdateSubscription;
+  bool _isActionFromMe = false;
 
   bool isFollowing = false;
   bool isLoadingFollow = true;
@@ -37,6 +42,16 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   void initState() {
     super.initState();
     _refreshData();
+    _profileUpdateSubscription = GlobalEventBus().eventBus.on<ProfileUpdateEvent>().listen((event) {
+      if (mounted && !_isActionFromMe) {
+        _silentRefresh();
+      }
+    });
+  }
+  @override
+  void dispose() {
+    _profileUpdateSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _refreshData() async {
@@ -78,6 +93,21 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       print("Lỗi điều hướng: $e");
     }
   }
+
+  Future<void> _silentRefresh() async {
+    try {
+      final status = await _followService.checkIsFollowing(widget.userId);
+      final profile = await AccountService().getUserProfile(widget.userId.toString());
+      if (mounted) {
+        setState(() {
+          isFollowing = status;
+          _profileFuture = Future.value(profile);
+          _followerOffset = 0;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _checkFollowStatus() async {
     setState(() => isLoadingFollow = true);
 
@@ -150,6 +180,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     }
 
     final currentStatus = isFollowing;
+    _isActionFromMe = true;
 
     setState(() {
       isFollowing = !currentStatus;
@@ -186,6 +217,10 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           ),
         );
       }
+    } finally {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _isActionFromMe = false;
+      });
     }
   }
 

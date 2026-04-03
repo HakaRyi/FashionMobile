@@ -6,6 +6,10 @@ import 'main_screen.dart'; // Giả sử đây là trang chứa Navbar của b�
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 
+import '../managers/google_auth_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'onboarding_screen.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -17,6 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService(); // Khởi tạo Service
+  final GoogleAuthManager _googleAuthManager = GoogleAuthManager();
+
   bool _isLoading = false;
   Future<void> _handleLogin() async {
     String email = _emailController.text.trim();
@@ -46,6 +52,49 @@ class _LoginScreenState extends State<LoginScreen> {
       _showSnackBar(result['message']);
     }
   }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final idToken = await _googleAuthManager.getGoogleIdToken();
+
+      if (idToken == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final result = await _authService.loginWithGoogle(idToken);
+
+      if (result['success']) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', result['data']['accessToken']);
+
+        if (mounted) {
+          if (result['isNewUser'] == true) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainScreen()),
+            );
+          }
+        }
+      } else {
+        if (mounted) _showSnackBar(result['message']);
+      }
+    } catch (e) {
+      if (mounted) _showSnackBar(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
@@ -107,7 +156,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 ),
-                child: const Text("ĐĂNG NHẬP", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: _isLoading
+                    ? const SizedBox(height: 20, width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2))
+                    : const Text("ĐĂNG NHẬP",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
               ),
             ),
 
@@ -115,7 +172,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const Text("HOẶC", style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 20),
 
-            GoogleLoginButton(onTap: () => print("Login Google")),
+            GoogleLoginButton(
+              onTap: _isLoading ? () {} : _handleGoogleLogin,
+            ),
 
             const SizedBox(height: 40),
             Row(

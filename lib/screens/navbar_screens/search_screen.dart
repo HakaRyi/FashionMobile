@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/search_model.dart';
 import '../../services/search_service.dart';
+import '../../utils/global_event_bus.dart';
 import '../../utils/route_transitions.dart';
 import '../other_profile_screen.dart';
 
@@ -21,6 +22,8 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 
+  StreamSubscription? _profileUpdateSubscription;
+
   List<SearchHistoryModel> _history = [];
   List<UserSuggestionModel> _suggestions = [];
   List<UserSuggestionModel> _searchResults = [];
@@ -33,12 +36,34 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+    _profileUpdateSubscription = GlobalEventBus()
+        .eventBus
+        .on<ProfileUpdateEvent>()
+        .listen((event) async {
+      if (mounted) {
+        final status = await _followService.checkIsFollowing(event.targetUserId);
+
+        setState(() {
+          for (var user in _suggestions) {
+            if (user.accountId == event.targetUserId) {
+              user.isFollowing = status;
+            }
+          }
+          for (var user in _searchResults) {
+            if (user.accountId == event.targetUserId) {
+              user.isFollowing = status;
+            }
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    _profileUpdateSubscription?.cancel();
     super.dispose();
   }
 
@@ -126,7 +151,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _handleToggleFollow(UserSuggestionModel user) async {
     final bool currentFollowState = user.isFollowing;
-    final int currentFollowerCount = user.followerCount;
 
     setState(() {
       user.isFollowing = !currentFollowState;

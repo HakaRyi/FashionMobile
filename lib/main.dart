@@ -2,7 +2,9 @@ import 'package:fashion_mobile/managers/post_manager.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:fashion_mobile/constants/app_colors.dart';
-import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -29,7 +31,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(backgroundColor: AppColors.background),
       ),
-      home: const LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }

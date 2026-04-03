@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
+import 'api_client.dart';
 
 class TryOnHistoryService {
   Future<bool> saveHistory(Uint8List imageBytes) async {
     final url = Uri.parse("${ApiConstants.baseUrl}/TryOnHistory/save");
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
+      final headers = await ApiClient.getHeaders();
 
       var request = http.MultipartRequest('POST', url);
-      request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.headers.addAll(headers);
 
       request.files.add(http.MultipartFile.fromBytes(
         'Image',
@@ -20,34 +20,27 @@ class TryOnHistoryService {
         filename: 'try_on_result.jpg',
       ));
 
-      final response = await request.send();
-      return response.statusCode == 200 || response.statusCode == 201;
+      final streamedResponse = await request.send();
+      return streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201;
     } catch (e) {
+      print("Lỗi saveHistory: $e");
       return false;
     }
   }
 
   Future<List<Map<String, dynamic>>> getMyHistory() async {
     final url = Uri.parse("${ApiConstants.baseUrl}/TryOnHistory/my-history");
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
 
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+    try {
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.cast<Map<String, dynamic>>();
       }
-      return [];
     } catch (e) {
-      return [];
+      print("Lỗi getMyHistory: $e");
     }
+    return [];
   }
 }
