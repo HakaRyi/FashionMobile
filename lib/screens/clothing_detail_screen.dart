@@ -206,86 +206,152 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
   }
 
   Widget _buildInfoContainer() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        children: [
-          _buildItemTile("Item Name", "itemName", Icons.shopping_bag_outlined),
-          _buildItemTile("Item Type", "itemType", Icons.merge_type_outlined),
-          _buildItemTile("Gender", "gender", Icons.wc),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // NHÓM 1: THÔNG TIN CƠ BẢN
+        _buildGroupTitle("BASIC INFO"),
+        _buildTwoColumnRow([
           _buildItemTile("Category", "category", Icons.category_outlined),
           _buildItemTile("Sub Category", "subCategory", Icons.account_tree_outlined),
-          _buildItemTile("Size", "size", Icons.format_size),
+        ]),
+        _buildTwoColumnRow([
+          _buildItemTile("Item Type", "itemType", Icons.merge_type_outlined),
+          _buildItemTile("Gender", "gender", Icons.wc),
+        ]),
+        _buildItemTile("Item Name", "itemName", Icons.shopping_bag_outlined),
+
+        const SizedBox(height: 20),
+
+        // NHÓM 2: ĐẶC ĐIỂM THIẾT KẾ
+        _buildGroupTitle("DESIGN DETAILS"),
+        _buildTwoColumnRow([
           _buildItemTile("Color", "mainColor", Icons.palette_outlined),
+          _buildItemTile("Size", "size", Icons.format_size),
+        ]),
+        _buildTwoColumnRow([
           _buildItemTile("Style", "style", Icons.style_outlined),
           _buildItemTile("Fit", "fit", Icons.accessibility_new_outlined),
-          _buildItemTile("Neckline", "neckline", Icons.line_weight),
+        ]),
+        _buildTwoColumnRow([
           _buildItemTile("Material", "material", Icons.texture_outlined),
           _buildItemTile("Pattern", "pattern", Icons.grid_view_rounded),
+        ]),
+        _buildTwoColumnRow([
+          _buildItemTile("Neckline", "neckline", Icons.line_weight),
           _buildItemTile("Brand", "brand", Icons.branding_watermark_outlined),
+        ]),
+        _buildTwoColumnRow([
           _buildItemTile("Length", "length", Icons.filter_tilt_shift_rounded),
-          _buildItemTile("Sleeve Length", "sleeveLength", Icons.type_specimen_outlined),
+          _buildItemTile("Sleeve", "sleeveLength", Icons.type_specimen_outlined),
+        ]),
 
-          _buildSwitchTile("Public Item", "isPublic", Icons.visibility_outlined),
-          _buildStatusDropdownTile(),
-          _buildItemTile("Description", "description", Icons.notes_rounded, isLast: true),
+        const SizedBox(height: 20),
 
-        ],
+        // NHÓM 3: TRẠNG THÁI & MÔ TẢ
+        _buildGroupTitle("STATUS & SETTINGS"),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          child: Column(
+            children: [
+              _buildSwitchTile("Public Item", "isPublic", Icons.visibility_outlined),
+              const Divider(color: Colors.white10, height: 1, indent: 50),
+              _buildStatusDropdownTile(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildItemTile("Description", "description", Icons.notes_rounded),
+      ],
+    );
+  }
+
+  // Hàm bổ trợ chia 2 cột
+  Widget _buildTwoColumnRow(List<Widget> children) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children.map((w) => Expanded(child: w)).toList(),
+    );
+  }
+
+  // Tiêu đề nhóm cho chuyên nghiệp
+  Widget _buildGroupTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12, top: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Colors.pinkAccent.withOpacity(0.8),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
+        ),
       ),
     );
   }
-  Widget _buildSwitchTile(String label, String key, IconData icon) {
-    bool val = _controllers[key]!.text.toLowerCase() == "true";
-    return ListTile(
-      leading: Icon(icon, size: 18, color: Colors.pinkAccent.withOpacity(0.5)),
-      title: Text(label, style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12)),
-      trailing: _isEditing
-          ? Switch(
-        value: val,
-        activeColor: Colors.pinkAccent,
-        onChanged: (bool newValue) {
-          setState(() => _controllers[key]!.text = newValue.toString());
-        },
-      )
-          : Text(val ? "YES" : "NO", style: const TextStyle(color: Colors.white, fontSize: 14)),
-    );
-  }
 
-  // Widget dành riêng cho Status Enum
-  Widget _buildStatusDropdownTile() {
-    final statusMap = { "0": "Draft", "1": "Active", "2": "Inactive", "3": "Archived", "4": "Deleted" };
-    String currentStatus = _controllers['status']!.text;
-
-    return ListTile(
-      leading: Icon(Icons.check_box_outlined, size: 18, color: Colors.pinkAccent.withOpacity(0.5)),
-      title: const Text("Status", style: TextStyle(color: Colors.white, fontSize: 12)),
-      trailing: _isEditing
-          ? DropdownButton<String>(
-        value: statusMap.containsKey(currentStatus) ? currentStatus : "1",
-        dropdownColor: AppColors.surface,
-        style: const TextStyle(color: Colors.white),
-        items: statusMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-        onChanged: (val) => setState(() => _controllers['status']!.text = val!),
-      )
-          : Text(statusMap[currentStatus] ?? "Active", style: const TextStyle(color: Colors.white, fontSize: 14)),
-    );
-  }
-// Trong ClothingDetailScreen.dart
+  // Sửa lại _buildItemTile để tối ưu không gian khi chia cột
   Widget _buildItemTile(String label, String key, IconData icon, {bool isLast = false}) {
     if (!_controllers.containsKey(key)) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(4.0), // Giảm padding để khít hơn khi chia 2 cột
       child: FashionAutocompleteField(
         label: label,
         icon: icon,
         enabled: _isEditing,
         controller: _controllers[key]!,
-        options: FashionConstants.categories[key] ?? [], // Lấy từ hằng số dùng chung
+        options: FashionConstants.categories[key] ?? [],
       ),
+    );
+  }
+
+  // Giữ nguyên logic _buildSwitchTile của bạn nhưng tui căn chỉnh lại UI xíu cho đẹp
+  Widget _buildSwitchTile(String label, String key, IconData icon) {
+    bool val = _controllers[key]!.text.toLowerCase() == "true";
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      leading: Icon(icon, size: 20, color: Colors.pinkAccent.withOpacity(0.7)),
+      title: Text(label, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+      trailing: _isEditing
+          ? SizedBox(
+        height: 30,
+        child: Switch(
+          value: val,
+          activeColor: Colors.pinkAccent,
+          onChanged: (bool newValue) {
+            setState(() => _controllers[key]!.text = newValue.toString());
+          },
+        ),
+      )
+          : Text(val ? "YES" : "NO", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  // Giữ nguyên logic _buildStatusDropdownTile của bạn
+  Widget _buildStatusDropdownTile() {
+    final statusMap = { "0": "Draft", "1": "Active", "2": "Inactive", "3": "Archived", "4": "Deleted" };
+    String currentStatus = _controllers['status']!.text;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      leading: Icon(Icons.check_box_outlined, size: 20, color: Colors.pinkAccent.withOpacity(0.7)),
+      title: const Text("Status", style: TextStyle(color: Colors.white, fontSize: 13)),
+      trailing: _isEditing
+          ? DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: statusMap.containsKey(currentStatus) ? currentStatus : "1",
+          dropdownColor: AppColors.surface,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          items: statusMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+          onChanged: (val) => setState(() => _controllers['status']!.text = val!),
+        ),
+      )
+          : Text(statusMap[currentStatus] ?? "Active", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
     );
   }
   Widget _buildTimelineSection() {

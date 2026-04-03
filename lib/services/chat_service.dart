@@ -112,6 +112,29 @@ class ChatService {
       headers: {'Authorization': 'Bearer $token'},
     );
   }
+  Future<int?> createOrGet1v1Room(int targetUserId) async {
+    final token = await _getToken();
+    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.groupEndpoint}/create-1v1-room/$targetUserId");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'accept': '*/*'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        //json { "message": "...", "groupId": ... }
+        return data['groupId'] as int?;
+      }
+    } catch (e) {
+      print("Lỗi createOrGet1v1Room: $e");
+    }
+    return null;
+  }
 
   void stopConnection() {
     _hubConnection?.stop();

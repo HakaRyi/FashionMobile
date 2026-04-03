@@ -3,10 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../../models/event_model.dart';
+import '../../models/post_feed_model.dart';
 import '../../services/event_service.dart';
 import 'package:intl/intl.dart';
 
 import '../../utils/route_transitions.dart';
+import '../../widgets/post_item.dart';
 import '../create_post_screens.dart';
 
 class EventDetailScreen extends StatefulWidget {
@@ -20,26 +22,45 @@ class EventDetailScreen extends StatefulWidget {
 class _EventDetailScreenState extends State<EventDetailScreen> with TickerProviderStateMixin {
   late ScrollController _scrollController;
   late AnimationController _pulseController;
+  late TabController _tabController;
+
   EventModel? _event;
+  List<PostFeedModel> _eventPosts = [];
   bool _isLoading = true;
+  bool _isLoadingPosts = true;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _tabController = TabController(length: 2, vsync: this);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _loadDetail();
+    _loadAllData();
   }
-
-  Future<void> _loadDetail() async {
-    final data = await EventService().getEventById(widget.eventId);
+  Future<void> _handleRefreshPosts() async {
+    // Chỉ tải lại danh sách bài post
+    final updatedPosts = await EventService().getEventPosts(widget.eventId);
     if (mounted) {
       setState(() {
-        _event = data;
+        _eventPosts = updatedPosts;
+      });
+    }
+  }
+  Future<void> _loadAllData() async {
+    final results = await Future.wait([
+      EventService().getEventById(widget.eventId),
+      EventService().getEventPosts(widget.eventId),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _event = results[0] as EventModel?;
+        _eventPosts = results[1] as List<PostFeedModel>;
         _isLoading = false;
+        _isLoadingPosts = false;
       });
     }
   }
@@ -52,6 +73,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   void dispose() {
     _scrollController.dispose();
     _pulseController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -70,53 +92,43 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         body: Center(child: Text("Lỗi tải dữ liệu", style: TextStyle(color: Colors.white))),
       );
     }
-
+    final bool isPastDeadline = _event!.submissionDeadline != null &&
+        DateTime.now().isAfter(_event!.submissionDeadline!);
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       body: Stack(
         children: [
-          CustomScrollView(
+          NestedScrollView(
             controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildSliverAppBar(),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildMainStats(),
-                      const SizedBox(height: 32),
-
-                      // --- MỚI: HIỂN THỊ CƠ CHẾ CHẤM ĐIỂM ---
-                      _buildSectionTitle("Cơ chế tính điểm"),
-                      _buildWeightSection(),
-                      const SizedBox(height: 32),
-
-                      _buildSectionTitle("Lịch trình sự kiện"),
-                      _buildTimelineSection(),
-                      const SizedBox(height: 32),
-
-                      _buildSectionTitle("Cơ cấu giải thưởng"),
-                      _buildFlexiblePrizeUI(_event!.prizes),
-                      const SizedBox(height: 32),
-
-                      _buildSectionTitle("Giới thiệu sự kiện"),
-                      Text(
-                        _event!.description,
-                        style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.6, fontSize: 15),
-                      ),
-                      const SizedBox(height: 32),
-
-                      _buildSectionTitle("Ban giám khảo chuyên gia"),
-                      _buildExpertGrid(_event!.experts),
-                      const SizedBox(height: 140),
-                    ],
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                _buildSliverAppBar(),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SliverAppBarDelegate(
+                    TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.pinkAccent,
+                      indicatorWeight: 3,
+                      labelColor: Colors.pinkAccent,
+                      unselectedLabelColor: Colors.white38,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      tabs: const [
+                        Tab(text: "THÔNG TIN"),
+                        Tab(text: "BÀI DỰ THI"),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildInfoTab(),
+                _buildPostsTab(),
+              ],
+            ),
           ),
           _buildBottomAction(),
         ],
@@ -126,7 +138,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 400,
+      expandedHeight: 350,
       pinned: true,
       backgroundColor: const Color(0xFF0D0D0D),
       leading: IconButton(
@@ -158,7 +170,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 34,
+                    fontSize: 28,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2,
                     shadows: [
@@ -175,7 +187,82 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  // Sửa Main Stats: Hiện Miễn Phí thay vì con số lệ phí
+  // --- TAB 1: THÔNG TIN SỰ KIỆN ---
+  Widget _buildInfoTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMainStats(),
+          const SizedBox(height: 32),
+          _buildSectionTitle("Giới thiệu sự kiện"),
+          Text(
+            _event!.description,
+            style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.6, fontSize: 15),
+          ),
+          const SizedBox(height: 32),
+          _buildSectionTitle("Cơ chế tính điểm"),
+          _buildWeightSection(),
+
+          const SizedBox(height: 32),
+          _buildSectionTitle("Lịch trình sự kiện"),
+          _buildTimelineSection(),
+          const SizedBox(height: 32),
+          _buildSectionTitle("Cơ cấu giải thưởng"),
+          _buildFlexiblePrizeUI(_event!.prizes),
+
+
+          const SizedBox(height: 32),
+          _buildSectionTitle("Ban giám khảo chuyên gia"),
+          _buildExpertGrid(_event!.experts),
+          const SizedBox(height: 120),
+        ],
+      ),
+    );
+  }
+
+  // --- TAB 2: DANH SÁCH BÀI ĐĂNG ---
+  Widget _buildPostsTab() {
+    if (_isLoadingPosts) {
+      return const Center(child: CircularProgressIndicator(color: Colors.pinkAccent));
+    }
+
+    return RefreshIndicator(
+      color: Colors.pinkAccent,
+      backgroundColor: const Color(0xFF1A1A1A),
+      onRefresh: _handleRefreshPosts,
+      child: _eventPosts.isEmpty
+          ? SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.4,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.camera_alt_outlined, size: 64, color: Colors.white.withOpacity(0.1)),
+              const SizedBox(height: 16),
+              const Text("Chưa có bài dự thi nào", style: TextStyle(color: Colors.white38)),
+              const Text("Kéo xuống để cập nhật bài mới!", style: TextStyle(color: Colors.white24, fontSize: 12)),
+            ],
+          ),
+        ),
+      )
+          : ListView.builder(
+        padding: const EdgeInsets.fromLTRB(0, 16, 0, 120),
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: _eventPosts.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 0, top: 0),
+            child: PostItem(post: _eventPosts[index]),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildMainStats() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -187,7 +274,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  // Widget hiển thị Trọng số chấm điểm
   Widget _buildWeightSection() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -348,8 +434,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 
   Widget _buildExpertGrid(List<ExpertModel> experts) {
+    if (experts.isEmpty) return const Text("Đang cập nhật ban giám khảo...", style: TextStyle(color: Colors.white24));
     return GridView.builder(
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
@@ -383,10 +471,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  // Sửa lại Bottom Action: Hiện trạng thái sự kiện
   Widget _buildBottomAction() {
     final bool joined = _event?.isJoined ?? false;
-
+    final bool isPastDeadline = _event!.submissionDeadline != null &&
+        DateTime.now().isAfter(_event!.submissionDeadline!);
     return Positioned(
       bottom: 0,
       left: 0,
@@ -409,9 +497,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     children: [
                       const Text("Trạng thái", style: TextStyle(color: Colors.white54, fontSize: 12)),
                       Text(
-                        joined ? "Đã tham gia" : "Đang mở",
+                        isPastDeadline ? "Hết hạn nộp" : "Đang mở",
                         style: TextStyle(
-                          color: joined ? Colors.pinkAccent : Colors.greenAccent,
+                          color: isPastDeadline ? Colors.redAccent : Colors.greenAccent,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
@@ -422,7 +510,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                 SizedBox(
                   height: 54,
                   width: 180,
-                  child: joined ? _buildDisabledState() : _buildActiveState(),
+                  child: (joined || isPastDeadline) ? _buildDisabledState(isPastDeadline) : _buildActiveState(),
                 ),
               ],
             ),
@@ -432,16 +520,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  Widget _buildDisabledState() {
+  Widget _buildDisabledState(bool isPastDeadline) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: const Color(0xFF1A1A1A),
         border: Border.all(color: Colors.white10),
       ),
-      child: const Center(
+      child:  Center(
         child: Text(
-          "ĐÃ THAM GIA",
+          isPastDeadline ? "HẾT HẠN NỘP" : "ĐÃ THAM GIA",
           style: TextStyle(
             color: Colors.white24,
             fontWeight: FontWeight.w900,
@@ -527,9 +615,29 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 }
 
-// ParticleOverlay và Particle class giữ nguyên phần cuối...
+// --- HELPER DELEGATE CHO TABBAR ---
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverAppBarDelegate(this._tabBar);
+  final TabBar _tabBar;
 
-// ParticleOverlay giữ nguyên
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: const Color(0xFF0D0D0D), // Nền tối để hòa hợp với thiết kế
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
+}
+
+// ParticleOverlay và Particle class giữ nguyên phần cuối...
 class ParticleOverlay extends StatefulWidget {
   const ParticleOverlay({super.key});
   @override

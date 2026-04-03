@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/post_feed_model.dart';
 import '../services/account_service.dart';
+import '../services/chat_service.dart';
 import '../services/follow_service.dart';
 import '../services/post_service.dart';
 import '../utils/route_transitions.dart';
 import '../utils/stat_skeleton_item.dart';
 import '../widgets/post_item.dart';
+import 'chat_screen.dart';
 import 'public_wardrobe_screen.dart';
 
 class OtherProfileScreen extends StatefulWidget {
@@ -45,7 +47,37 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     });
     _checkFollowStatus();
   }
-
+  Future<void> _handleStartChat(String name, String avatar) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.pink)),
+    );
+    try {
+      final groupId = await ChatService().createOrGet1v1Room(widget.userId);
+      Navigator.pop(context);
+      if (groupId != null) {
+        Navigator.push(
+          context,
+          SlideRoute(
+            page: ChatScreen(
+              groupId: groupId,
+              userName: name,
+              avatarUrl: avatar,
+              isOnline: true,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể kết nối phòng chat!')),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      print("Lỗi điều hướng: $e");
+    }
+  }
   Future<void> _checkFollowStatus() async {
     setState(() => isLoadingFollow = true);
 
@@ -450,12 +482,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: () {
-                                            // Navigator.push(
-                                            //   context,
-                                            //   SlideRoute(page: ChatScreen(userId: widget.userId)),
-                                            // );
-                                          },
+                                          onPressed: () => _handleStartChat(name, avatar),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
                                             Colors.pinkAccent.withOpacity(0.8),

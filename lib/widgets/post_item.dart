@@ -270,10 +270,15 @@ class _PostItemState extends State<PostItem> {
                         width: 36,
                         height: 36,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, color: Colors.white),
                       ),
                     )
                         : null,
-                    onBackgroundImageError: (_, __) {},
+                    onBackgroundImageError: avatarUrl.startsWith('http')
+                        ? (exception, stackTrace) {
+                      debugPrint('Avatar load error: $exception');
+                    }
+                        : null,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

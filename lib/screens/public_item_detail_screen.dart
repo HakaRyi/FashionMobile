@@ -1,9 +1,12 @@
 // lib/screens/public_item_detail_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/public_item_detail_model.dart';
 import '../services/item_service.dart';
 import '../models/try_on_source_item.dart';
+import 'chat_screen.dart';
 import 'try_on_screen.dart';
 
 class PublicItemDetailScreen extends StatefulWidget {
@@ -12,6 +15,7 @@ class PublicItemDetailScreen extends StatefulWidget {
   const PublicItemDetailScreen({
     super.key,
     required this.itemId,
+
   });
 
   @override
@@ -27,6 +31,10 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
   PublicItemDetailModel? _item;
   int _currentImageIndex = 0;
 
+  bool _isConsulting = false;
+  int _cooldownSeconds = 0;
+  Timer? _cooldownTimer;
+  OverlayEntry? _overlayEntry;
   @override
   void initState() {
     super.initState();
@@ -38,7 +46,97 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
     _pageController.dispose();
     super.dispose();
   }
+  void _removeToast() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
 
+  // HÀM HIỂN THỊ TOAST CHUYÊN NGHIỆP Ở GÓC TRÊN PHẢI
+  void _showCustomToast(int groupId, String ownerName, String avatarUrl) {
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 10,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.textPink.withOpacity(0.5), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.textPink.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send_rounded, color: AppColors.textPink, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Thành công",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      Text(
+                        "Đã gửi yêu cầu tư vấn cho $ownerName",
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _removeToast();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          groupId: groupId,
+                          userName: ownerName,
+                          avatarUrl: avatarUrl,
+                          isOnline: true,
+                        ),
+                      ),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: AppColors.textPink,
+                  ),
+                  child: const Text("CHAT", style: TextStyle(fontWeight: FontWeight.w900)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+    // Tự động xóa sau 5 giây
+    Future.delayed(const Duration(seconds: 5), () {
+      if (_overlayEntry != null) _removeToast();
+    });
+  }
   Future<void> _loadItem() async {
     try {
       setState(() {
@@ -64,7 +162,39 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       });
     }
   }
+  Future<void> _handleConsult() async {
+    if (_item == null) return;
 
+    setState(() => _isConsulting = true);
+
+    try {
+      final groupId = await _itemService.sendConsultRequest(widget.itemId);
+
+      if (groupId != null && mounted) {
+        // Bắt đầu cooldown 5s
+        setState(() => _cooldownSeconds = 5);
+        _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (_cooldownSeconds == 0) {
+            timer.cancel();
+          } else {
+            if (mounted) setState(() => _cooldownSeconds--);
+          }
+        });
+
+        _showCustomToast(
+          groupId,
+          _item!.ownerUserName ?? "Chủ sở hữu",
+          _item!.ownerAvatarUrl ?? "",
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi: ${e.toString()}")),
+      );
+    } finally {
+      if (mounted) setState(() => _isConsulting = false);
+    }
+  }
   bool _hasText(String? value) {
     return value != null && value.trim().isNotEmpty;
   }
@@ -148,7 +278,36 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       ),
     );
   }
+  Widget _buildConsultButton() {
+    bool isCooldown = _cooldownSeconds > 0;
 
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: (_isConsulting || isCooldown) ? null : _handleConsult,
+        icon: _isConsulting
+            ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPink),
+        )
+            : Icon(isCooldown ? Icons.timer_outlined : Icons.chat_bubble_outline, size: 20),
+        label: Text(
+          isCooldown ? "Gửi lại sau (${_cooldownSeconds}s)" : "Tư vấn món đồ này",
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPink,
+          side: const BorderSide(color: AppColors.textPink, width: 1.5),
+          disabledForegroundColor: Colors.white24,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final item = _item;
@@ -216,11 +375,11 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 18),
-                    _buildTryOnButton(item),
-                    const SizedBox(height: 6),
-
                     const SizedBox(height: 24),
+                    _buildTryOnButton(item),
+                    const SizedBox(height: 12),
+                    _buildConsultButton(),
+                    const SizedBox(height: 32),
 
                     if (_hasText(item.description)) ...[
                       const Text(

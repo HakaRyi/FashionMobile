@@ -71,21 +71,21 @@ class _UploadScreenState extends State<UploadScreen> {
           if (resAI.statusCode == 200) {
             var jsonAI = jsonDecode(resAI.body);
             Map<String, dynamic> detected = Map<String, dynamic>.from(jsonAI['detected_info']);
-            final Map<String, String> aiToAppMapper = {
-              'item': 'itemType',
-              'category': 'category',
-              'sub_category': 'subCategory',
-              'gender': 'gender',
-              'main_color': 'mainColor',
-              'sub_color': 'subColor',
-              'material': 'material',
-              'style': 'style',
-              'pattern': 'pattern',
-              'fit': 'fit',
-              'neckline': 'neckline',
-              'sleeve_length': 'sleeveLength',
-              'length': 'length',
-            };
+              final Map<String, String> aiToAppMapper = {
+                'item': 'itemType',
+                'category': 'category',
+                'sub_category': 'subCategory',
+                'gender': 'gender',
+                'main_color': 'mainColor',
+                'sub_color': 'subColor',
+                'material': 'material',
+                'style': 'style',
+                'pattern': 'pattern',
+                'fit': 'fit',
+                'neckline': 'neckline',
+                'sleeve_length': 'sleeveLength',
+                'length': 'length',
+              };
             final prefs = await SharedPreferences.getInstance();
             final userName = prefs.getString('username') ?? "User";
             setState(() {
@@ -151,7 +151,7 @@ class _UploadScreenState extends State<UploadScreen> {
         "sleeveLength": _selectedAttributes['sleeveLength'] ?? "none",
         "length": _selectedAttributes['length'] ?? "none",
         "brand": _selectedAttributes['brand'] ?? "none",
-        "description": _selectedAttributes['description'] ?? "",
+        "description": _selectedAttributes['description'] ?? "none",
         "isPublic": isPublicBool,
         "status": 1, // Enum: 1 = Active
         "primaryImageUrl": _aiResult['processed_url']

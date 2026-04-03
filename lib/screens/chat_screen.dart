@@ -113,8 +113,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _handleSend(String text, List<String> imagePaths) async {
+    print("DEBUG: MyId hiện tại là: '$myId'");
     if (text.trim().isEmpty && imagePaths.isEmpty) return;
-    // final text = _controller.text;
     final String currentText = text.trim();
     _controller.clear();
     final String clientMsgId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -122,6 +122,7 @@ class _ChatScreenState extends State<ChatScreen> {
       "messageId": -1,
       "clientMsgId": clientMsgId,
       "content": currentText,
+      "senderId": myId,
       "senderName": "Me",
       "photos": imagePaths,
       "sentAt": DateTime.now().toIso8601String(),
@@ -212,8 +213,9 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final m = _messages[index];
-
-                final bool isMe = m['isOwner'] == true ||m['senderId']?.toString() == myId.toString();
+                final bool isTemp = m['isTemp'] == true;
+                final bool isMe = isTemp||m['isOwner'] == true ||
+                                  m['senderId']?.toString() == myId.toString();
 
                 final DateTime sentTime = m['sentAt'] != null
                     ? DateTime.parse(m['sentAt'].toString()).toLocal()

@@ -141,7 +141,7 @@ class EventCard extends StatelessWidget {
       if (event.status == "Completed") {
         Navigator.push(context, SlideRoute(page: EventResultScreen(event: event)));
       } else {
-        Navigator.push(context, SlideRoute(page: EventAccessScreen(event: event)));
+        Navigator.push(context, SlideRoute(page: EventDetailScreen(eventId: event.eventId)));
       }
     } else {
       Navigator.push(context, SlideRoute(page: EventDetailScreen(eventId: event.eventId)));

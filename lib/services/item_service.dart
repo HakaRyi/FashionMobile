@@ -5,6 +5,10 @@ import '../constants/api_constants.dart';
 import '../models/public_item_detail_model.dart';
 
 class ItemService {
+  Future<String?> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
   Future<Map<String, String>> _buildHeaders({bool withAuth = false}) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -180,5 +184,16 @@ class ItemService {
       print("Lỗi getSmartRecommendations: $e");
     }
     return [];
+  }
+  Future<int?> sendConsultRequest(int itemId) async {
+    final token = await _getToken();
+    final response = await http.post(
+      Uri.parse("${ApiConstants.baseUrl}/Chat/consult/$itemId"),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['groupId'];
+    }
+    return null;
   }
 }
