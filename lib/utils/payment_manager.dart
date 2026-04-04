@@ -13,16 +13,18 @@ class PaymentManager {
     if (url != null) {
       final Uri uri = Uri.parse(url);
 
-      if (await canLaunchUrl(uri)) {
+      bool canLaunch = await canLaunchUrl(uri);
+
+      if (canLaunch) {
         await launchUrl(
           uri,
-          mode: LaunchMode.inAppBrowserView,
+          mode: LaunchMode.externalApplication,
         );
       } else {
-        throw Exception("Không thể mở trang thanh toán");
+        throw Exception("Không thể tìm thấy trình duyệt để mở cổng thanh toán");
       }
     } else {
-      throw Exception("Không tạo được đơn hàng ZaloPay");
+      throw Exception("Không tạo được đơn hàng VNPay");
     }
   }
 }

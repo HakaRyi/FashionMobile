@@ -13,7 +13,7 @@ class GoogleAuthManager {
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      return googleAuth.idToken; // Nhờ có serverClientId, idToken mới không bị null
+      return googleAuth.idToken;
     } catch (e) {
       throw Exception("Lỗi khi kết nối với Google: $e");
     }
