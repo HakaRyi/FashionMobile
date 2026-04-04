@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "88037132429",
+    "project_id": "fashionapp-b7a94",
+    "storage_bucket": "fashionapp-b7a94.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:88037132429:android:2ba029cfce302d1d483ac4",
+        "android_client_info": {
+          "package_name": "com.example.fashion_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "88037132429-e6etu50ujimt63aso06985ein5plm7n6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fashion_mobile",
+            "certificate_hash": "c5213311e35428d2482b59ddca2de664bd33bdcd"
+          }
+        },
+        {
+          "client_id": "88037132429-8c3queosoolkqi16fis4td1ig4mt2ijf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxSkv8mRql8BEo8fYnj8Ut6Ilz-FI_nuM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "88037132429-8c3queosoolkqi16fis4td1ig4mt2ijf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
