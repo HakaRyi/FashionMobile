@@ -6,6 +6,7 @@ import '../constants/app_colors.dart';
 import '../models/public_item_detail_model.dart';
 import '../services/item_service.dart';
 import '../models/try_on_source_item.dart';
+import '../utils/route_transitions.dart';
 import 'chat_screen.dart';
 import 'try_on_screen.dart';
 
@@ -108,8 +109,8 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                     _removeToast();
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
+                      SlideRoute(
+                        page: ChatScreen(
                           groupId: groupId,
                           userName: ownerName,
                           avatarUrl: avatarUrl,

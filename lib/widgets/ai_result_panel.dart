@@ -159,7 +159,20 @@ class _AIResultPanelState extends State<AIResultPanel> {
 
   Widget _buildFieldWrapper(String key) {
     if (!_controllers.containsKey(key)) return const SizedBox.shrink();
+    List<String> currentOptions = FashionConstants.categories[key] ?? [];
 
+    if (key == 'size') {
+      String currentCategory = _controllers['category']?.text ?? "";
+      String currentItem = _controllers['itemType']?.text ?? "";
+
+      if (currentCategory == 'footwear') {
+        currentOptions = FashionConstants.categories['footwearSize'] ?? [];
+      } else if (currentCategory == 'lower_body' && (currentItem.contains('jeans') || currentItem.contains('pants'))) {
+        currentOptions = FashionConstants.categories['pantsSize'] ?? [];
+      }else {
+        currentOptions = FashionConstants.categories['size'] ?? [];
+      }
+    }
     return Padding(
       padding: const EdgeInsets.all(4.0), // Padding nhỏ để các ô sát nhau hơn khi chia 2
       child: Column(
@@ -169,7 +182,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
           const SizedBox(height: 6),
           FashionAutocompleteField(
             label: "Nhập ${key}",
-            options: FashionConstants.categories[key] ?? [],
+            options: currentOptions,
             controller: _controllers[key]!,
             enabled: true,
             icon: _getIconForField(key),

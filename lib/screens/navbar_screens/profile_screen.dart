@@ -177,11 +177,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icons.more_horiz,
                             color: Colors.white,
                           ),
-                          onPressed: () {
-                            Navigator.push(
+                          onPressed: () async {
+                            final result = await Navigator.push(
                               context,
                               SlideRoute(page: const SettingsScreen()),
                             );
+                            if (result == true) {
+                              _refreshData();
+                            }
                           },
                         ),
                       ],

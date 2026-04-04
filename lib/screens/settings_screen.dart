@@ -1,6 +1,9 @@
 // lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../services/account_service.dart';
+import '../utils/route_transitions.dart';
+import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 import 'expense_management_screen.dart';
 
@@ -31,7 +34,20 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           _buildSectionTitle("Cách bạn sử dụng Fashion AI"),
-          _buildSettingItem(Icons.person_outline, "Chỉnh sửa hồ sơ", () {}),
+          _buildSettingItem(Icons.person_outline, "Chỉnh sửa hồ sơ", () async {
+            final profile = await AccountService().getMyProfile();
+            if (profile != null && context.mounted) {
+              final updated = await Navigator.push(
+                  context,
+                  SlideRoute(
+                    page: EditProfileScreen(currentProfile: profile),
+                  ),
+              );
+              if (updated == true && context.mounted) {
+                Navigator.pop(context, true);
+              }
+            }
+          }),
           _buildSettingItem(Icons.notifications_none, "Thông báo", () {}),
           _buildSettingItem(Icons.lock_outline, "Quyền riêng tư", () {}),
 

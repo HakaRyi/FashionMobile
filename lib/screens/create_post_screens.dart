@@ -13,6 +13,8 @@ class CreatePostScreen extends StatefulWidget {
   final int? eventId;     // Thêm
   final String? eventName;
   final Map<String, dynamic>? postToEdit;
+  final String? username;
+  final String? avatarUrl;
 
   const CreatePostScreen({
     super.key,
@@ -20,6 +22,8 @@ class CreatePostScreen extends StatefulWidget {
     this.eventId,
     this.eventName,
     this.postToEdit,
+    this.username,
+    this.avatarUrl,
   });
 
   @override
@@ -45,7 +49,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void initState() {
     super.initState();
     _selectedImageBytes = widget.imageBytes;
-    _loadUserInfo();
+    if (widget.username != null) {
+      _username = widget.username!;
+      _avatarUrl = widget.avatarUrl ?? "";
+    } else {
+      _loadUserInfo();
+    }
 
     if (_isEditMode) {
       _contentController.text = widget.postToEdit!['content'] ?? '';

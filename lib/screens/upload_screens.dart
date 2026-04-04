@@ -65,8 +65,17 @@ class _UploadScreenState extends State<UploadScreen> {
         setState(() {
           _aiResult = {'processed_url': remoteUrl, 'data': {}};
         });
-          final classifyUrl = Uri.parse("${ApiConstants.baseAIUrl}/analyze-fashion?image_url=$remoteUrl");
-          final resAI = await http.get(classifyUrl);
+          final classifyUrl = Uri.parse("${ApiConstants.baseAIUrl}/analyze-fashion");
+        final resAI = await http.post(
+          classifyUrl,
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "69420",
+          },
+          body: jsonEncode({
+            "image_url": remoteUrl,
+          }),
+        );
 
           if (resAI.statusCode == 200) {
             var jsonAI = jsonDecode(resAI.body);

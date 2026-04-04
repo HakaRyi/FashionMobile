@@ -5,6 +5,8 @@ class FashionConstants {
     "category": ["upper_body", "lower_body", "full_body", "footwear", "accessory"],
     "subCategory": ["top", "bottom", "shoe", "outerwear", "headwear"],
     "size": ["S", "M", "L","XL","2XL","3XL","4XL"],
+    "footwearSize": ["36", "37", "38", "39", "40", "41", "42", "43", "44"],
+    "pantsSize": ["28", "29", "30", "31", "32", "33", "34", "36"],
     "gender": ["men", "women", "unisex"],
     "mainColor": ["black", "white", "navy blue", "yellow", "red", "green", "beige"],
     "subColor": ["none", "white", "black", "gold", "silver"],

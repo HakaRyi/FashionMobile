@@ -1,23 +1,23 @@
 class ApiConstants {
-  // static const String baseUrl = "http://10.0.2.2:5196/api";
-  static const String baseUrl = "http://192.168.1.15:5196/api";
+  static const String baseUrl = "http://10.0.2.2:5196/api";
+  //static const String baseUrl = "http://192.168.1.15:5196/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
   static const String baseSignalRUrl = "http://10.0.2.2:5196";
-  static const String refreshTokenEndpoint = "/Auth/refresh-token";
+  static const String refreshTokenEndpoint = "/auth/refresh-token";
   static const String chatEndpoint = "/Chat";
   static const String groupEndpoint = "/Group";
 
-  static const String loginEndpoint = "/Auth/login";
-  static const String registerEndpoint = "/Auth/register";
+  static const String loginEndpoint = "/auth/login";
+  static const String registerEndpoint = "/auth/register";
 
   static const String tryOnEndpoint = "/TryOn/try-on";
   static const String createPostEndpoint = "/Post";
 
-  static const String feedEndpoint = "/Post/feed";
-  static const String getMyPostEndpoint = "/Post/me";
-  static const String getAllPostEndpoint = "/Post";
+  static const String feedEndpoint = "/post/feed";
+  static const String getMyPostEndpoint = "/post/me";
+  static const String getAllPostEndpoint = "/post";
 
 
   static const String getMyProfile = "/Account/{id}";
@@ -66,7 +66,7 @@ class ApiConstants {
 
   static const String publicEventsEndpoint = "/events/public/all";
 
-  static const String googleLoginEndpoint = "/Auth/google-login";
+  static const String googleLoginEndpoint = "/auth/google-login";
 
   static const String followEndpoint = "/Follow";
   static const String getFollowersEndpoint = "/Post";

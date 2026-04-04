@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../screens/create_post_screens.dart';
-
+import '../services/account_service.dart';
 class CreatePostHeader extends StatefulWidget {
   const CreatePostHeader({super.key});
 
@@ -13,23 +13,44 @@ class CreatePostHeader extends StatefulWidget {
 class _CreatePostHeaderState extends State<CreatePostHeader> {
   String _username = "Đang tải...";
   String _avatar = "";
-
+  bool _isLoading = true; // Thêm biến loading để xử lý UI nếu cần
+  final AccountService _accountService = AccountService();
   @override
   void initState() {
     super.initState();
-    _loadUserInfo();
+    _fetchUserData();
   }
 
-  // Hàm lấy dữ liệu từ SharedPreferences đã được AuthService lưu
-  Future<void> _loadUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      // Lấy theo key bạn đã đặt trong AuthService: 'username' và 'avatar'
-      _username = prefs.getString('username') ?? "Người dùng";
-      _avatar = prefs.getString('avatar') ?? "";
-    });
-  }
+  // // Hàm lấy dữ liệu từ SharedPreferences đã được AuthService lưu
+  // Future<void> _loadUserInfo() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   setState(() {
+  //     // Lấy theo key bạn đã đặt trong AuthService: 'username' và 'avatar'
+  //     _username = prefs.getString('username') ?? "Người dùng";
+  //     _avatar = prefs.getString('avatar') ?? "";
+  //   });
+  // }
+  Future<void> _fetchUserData() async {
+    try {
+      final profileData = await _accountService.getMyProfile();
 
+      if (profileData != null && mounted) {
+        setState(() {
+          _username = profileData['username'] ?? "Người dùng";
+          _avatar = profileData['avatar'] ?? "";
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _username = "Người dùng";
+          _isLoading = false;
+        });
+      }
+      debugPrint("Lỗi khi load header: $e");
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -58,7 +79,6 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Hiển thị Username từ Token đã giải mã
                     Text(
                       _username,
                       style: const TextStyle(
@@ -74,7 +94,9 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const CreatePostScreen()),
+                            MaterialPageRoute(builder: (context) => CreatePostScreen(
+                              username: _username,
+                              avatarUrl: _avatar,)),
                           );
                         },
                         borderRadius: BorderRadius.circular(15),

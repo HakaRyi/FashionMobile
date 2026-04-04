@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
@@ -68,6 +69,48 @@ class AccountService {
       return false;
     } catch (e) {
       return false;
+    }
+  }
+  Future<int> updateProfile({
+    required String username,
+    required String email,
+    required String description,
+    File? avatarFile,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final url = Uri.parse("${ApiConstants.baseUrl}/Account/update-profile");
+
+    var request = http.MultipartRequest('PUT', url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields['Username'] = username;
+    request.fields['Email'] = email;
+    request.fields['Description'] = description;
+
+    if (avatarFile != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'Avatar',
+        avatarFile.path,
+      ));
+    }
+
+    try {
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) return 1;
+      if (response.statusCode == 409) {
+        final msg = jsonDecode(response.body)['message'];
+        if (msg.contains("Email")) return -2;
+        return -3;
+      }
+      if (response.statusCode == 401) return -1;
+      return 0;
+    } catch (e) {
+      print("Lỗi Update Profile: $e");
+      return 0;
     }
   }
 }
