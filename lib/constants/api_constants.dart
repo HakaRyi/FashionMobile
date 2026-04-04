@@ -1,7 +1,7 @@
 // lib/constants/api_constants.dart
 class ApiConstants {
   // static const String baseUrl = "http://10.0.2.2:5196/api";
-  static const String baseUrl = "http://192.168.102.24:5196/api";
+  static const String baseUrl = "http://10.152.39.180:5196/api";
 
   static const String baseAIUrl = "http://10.0.2.2:8000";
   static const String baseSignalRUrl = "http://10.0.2.2:5196";
@@ -35,7 +35,7 @@ class ApiConstants {
 
   static const String toggleSavePost = "/post/{postId}/save";
   static const String getSavedPosts = "/post/saved";
-  static const String sharePost = '/api/post/{postId}/share';
+  static const String sharePost = "/post/{postId}/share";
 
   static const String getComments = "/post/{postId}/comment";
   static const String createComment = "/post/{postId}/comment";
@@ -50,7 +50,9 @@ class ApiConstants {
   static const String getPendingAdminPosts = "/admin/post/pending-admin";
   static const String getRejectedPosts = "/admin/post/rejected";
   static const String updateAdminPostStatus = "/admin/post/{postId}/status";
-  static const String topUpWallet = "/payment/create-order-vnpay";
+
+  static const String topUpWallet = "/payment/topup/vnpay";
+  static const String topUpWalletZaloPay = "/payment/topup/zalopay";
 
   static const String publicWardrobes = "/public-wardrobes";
   static const String publicProfileEndpoint = "/wardrobes/public/{accountId}/profile";

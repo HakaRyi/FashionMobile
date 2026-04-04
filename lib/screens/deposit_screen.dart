@@ -1,9 +1,12 @@
 // lib/screens/deposit_screen.dart
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:app_links/app_links.dart';
+
 import '../../constants/app_colors.dart';
-import '../utils/payment_manager.dart';
+import '../managers/payment_manager.dart';
 
 class DepositScreen extends StatefulWidget {
   const DepositScreen({super.key});
@@ -16,12 +19,22 @@ class _DepositScreenState extends State<DepositScreen> {
   final TextEditingController _amountController = TextEditingController();
   final NumberFormat _currencyFormat = NumberFormat.decimalPattern('vi_VN');
 
-  final List<double> _quickAmounts = [10000, 20000, 50000, 100000, 200000, 500000];
-  double _selectedAmount = 0.0;
-  bool _isLoading = false;
+  final List<double> _quickAmounts = <double>[
+    10000,
+    20000,
+    50000,
+    100000,
+    200000,
+    500000,
+  ];
 
   final PaymentManager _paymentManager = PaymentManager();
-  late AppLinks _appLinks;
+
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  double _selectedAmount = 0.0;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -31,88 +44,58 @@ class _DepositScreenState extends State<DepositScreen> {
 
   void _initDeepLinks() {
     _appLinks = AppLinks();
-    _appLinks.uriLinkStream.listen((uri) {
-      if (uri.scheme == 'fashionmobile' && uri.host == 'payment-result') {
-        final status = uri.queryParameters['status'];
-        if (status == "00") {
-          _showSuccessDialog();
-        } else {
-          _showErrorDialog();
+
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+          (Uri uri) {
+        if (!mounted) return;
+
+        if (uri.scheme == 'fashionmobile' && uri.host == 'payment-result') {
+          final String? status = uri.queryParameters['status'];
+
+          if (status == '00') {
+            _showSuccessDialog();
+          } else {
+            _showErrorDialog();
+          }
         }
-      }
-    });
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Icon(Icons.check_circle, color: Colors.green, size: 64),
-        content: const Text(
-          "Thanh toán thành công! Số dư của bạn sẽ được cập nhật trong giây lát.",
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text("Xác nhận", style: TextStyle(color: Colors.pink)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Icon(Icons.error, color: Colors.red, size: 64),
-        content: const Text(
-          "Giao dịch thất bại hoặc đã bị hủy. Vui lòng thử lại.",
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Đóng", style: TextStyle(color: Colors.pink)),
-          ),
-        ],
-      ),
+      },
+      onError: (_) {
+        if (!mounted) return;
+        _showErrorDialog();
+      },
     );
   }
 
   Future<void> _processPayment() async {
     if (_selectedAmount < 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Số tiền nạp tối thiểu là 10.000đ')),
+        const SnackBar(
+          content: Text('Số tiền nạp tối thiểu là 10.000đ'),
+        ),
       );
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       await _paymentManager.processPayment(_selectedAmount);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: $e'),
+        ),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -124,17 +107,103 @@ class _DepositScreenState extends State<DepositScreen> {
   }
 
   void _onAmountChanged(String value) {
-    final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (cleanValue.isNotEmpty) {
-      final amount = double.parse(cleanValue);
-      setState(() {
-        _selectedAmount = amount;
-      });
-    } else {
+    final String cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cleanValue.isEmpty) {
       setState(() {
         _selectedAmount = 0.0;
       });
+      return;
     }
+
+    final double amount = double.tryParse(cleanValue) ?? 0.0;
+
+    setState(() {
+      _selectedAmount = amount;
+    });
+  }
+
+  void _showSuccessDialog() {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 64,
+          ),
+          content: const Text(
+            'Thanh toán thành công! Số dư của bạn sẽ được cập nhật trong giây lát.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                if (mounted) {
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text(
+                'Xác nhận',
+                style: TextStyle(color: Colors.pink),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog() {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Icon(
+            Icons.error,
+            color: Colors.red,
+            size: 64,
+          ),
+          content: const Text(
+            'Giao dịch thất bại hoặc đã bị hủy. Vui lòng thử lại.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Đóng',
+                style: TextStyle(color: Colors.pink),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _amountController.dispose();
+    super.dispose();
   }
 
   @override
@@ -151,10 +220,13 @@ class _DepositScreenState extends State<DepositScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+          children: <Widget>[
             const Text(
-              "Nhập số tiền cần nạp",
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              'Nhập số tiền cần nạp',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -169,7 +241,7 @@ class _DepositScreenState extends State<DepositScreen> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.05),
-                suffixText: "đ",
+                suffixText: 'đ',
                 suffixStyle: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -179,31 +251,44 @@ class _DepositScreenState extends State<DepositScreen> {
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
               ),
             ),
             const SizedBox(height: 24),
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: _quickAmounts.map((amount) {
-                final isSelected = _selectedAmount == amount;
+              children: _quickAmounts.map((double amount) {
+                final bool isSelected = _selectedAmount == amount;
+
                 return GestureDetector(
                   onTap: () => _onQuickAmountSelected(amount),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.pink : Colors.white.withOpacity(0.05),
+                      color: isSelected
+                          ? Colors.pink
+                          : Colors.white.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected ? Colors.pinkAccent : Colors.white10,
+                        color: isSelected
+                            ? Colors.pinkAccent
+                            : Colors.white10,
                       ),
                     ),
                     child: Text(
-                      "${_currencyFormat.format(amount)}đ",
+                      '${_currencyFormat.format(amount)}đ',
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.white70,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -212,8 +297,11 @@ class _DepositScreenState extends State<DepositScreen> {
             ),
             const SizedBox(height: 40),
             const Text(
-              "Phương thức thanh toán",
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              'Phương thức thanh toán',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -221,10 +309,12 @@ class _DepositScreenState extends State<DepositScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blueAccent.withOpacity(0.5)),
+                border: Border.all(
+                  color: Colors.blueAccent.withOpacity(0.5),
+                ),
               ),
               child: Row(
-                children: [
+                children: <Widget>[
                   Container(
                     width: 40,
                     height: 40,
@@ -234,7 +324,7 @@ class _DepositScreenState extends State<DepositScreen> {
                     ),
                     child: const Center(
                       child: Text(
-                        "VNP",
+                        'VNP',
                         style: TextStyle(
                           color: Colors.blueAccent,
                           fontWeight: FontWeight.bold,
@@ -246,9 +336,9 @@ class _DepositScreenState extends State<DepositScreen> {
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                      children: <Widget>[
                         Text(
-                          "VNPay (Sandbox)",
+                          'VNPay (Sandbox)',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -257,13 +347,19 @@ class _DepositScreenState extends State<DepositScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "Thanh toán qua cổng VNPay",
-                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                          'Thanh toán qua cổng VNPay',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.check_circle, color: Colors.blueAccent),
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.blueAccent,
+                  ),
                 ],
               ),
             ),
@@ -281,10 +377,13 @@ class _DepositScreenState extends State<DepositScreen> {
                   ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
               )
                   : Text(
-                "Thanh toán ${_currencyFormat.format(_selectedAmount)}đ",
+                'Thanh toán ${_currencyFormat.format(_selectedAmount)}đ',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
