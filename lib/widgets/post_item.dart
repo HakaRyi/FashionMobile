@@ -6,7 +6,7 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:intl/intl.dart';
 import '../constants/app_colors.dart';
 import '../constants/post_status_values.dart';
 import '../managers/post_manager.dart';
@@ -669,14 +669,22 @@ class _PostItemState extends State<PostItem> {
   String _timeAgo(DateTime? date) {
     if (date == null) return '';
 
-    final diff = DateTime.now().difference(date);
+    // Chuyển đổi sang giờ Local (nếu server trả về UTC)
+    final localDate = date.toLocal();
+    final now = DateTime.now();
+    final diff = now.difference(localDate);
 
-    if (diff.inMinutes < 1) return 'Vừa xong';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} phút';
-    if (diff.inHours < 24) return '${diff.inHours} giờ';
-    if (diff.inDays < 7) return '${diff.inDays} ngày';
+    // Trường hợp thời gian bị lệch nhẹ do đồng hồ hệ thống
+    if (diff.isNegative || diff.inSeconds < 30) return 'Vừa xong';
 
-    return '${date.day}/${date.month}/${date.year}';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+
+    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+
+    if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+
+    // Nếu quá 7 ngày thì hiện ngày tháng cụ thể
+    return DateFormat('dd/MM/yyyy').format(localDate);
   }
 
   void _showPostOptions(BuildContext context, String? status) {
