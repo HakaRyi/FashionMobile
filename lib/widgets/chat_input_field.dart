@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Thêm để dùng Clipboard mặc định
 import 'package:image_picker/image_picker.dart';
-import 'package:super_clipboard/super_clipboard.dart'; // Thư viện mới xịn hơn
+import 'package:pasteboard/pasteboard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import '../constants/app_colors.dart';
@@ -24,31 +24,26 @@ class _ChatInputFieldState extends State<ChatInputField> {
 
   // Hàm dán ảnh "vạn năng"
   Future<void> _handlePaste() async {
-    final clipboard = SystemClipboard.instance;
-    if (clipboard == null) return;
+    final imageBytes = await Pasteboard.image;
 
-    final reader = await clipboard.read();
+    if (imageBytes != null) {
+      _showProcessingSnackBar("Đang dán hình ảnh...");
 
-    if (reader.canProvide(Formats.png) || reader.canProvide(Formats.jpeg)) {
-      final isPng = reader.canProvide(Formats.png);
-      final format = isPng ? Formats.png : Formats.jpeg;
-      final extension = isPng ? 'png' : 'jpg';
-
-      reader.getFile(format, (file) async {
-        final bytes = await file.readAll();
+      try {
         final tempDir = await getTemporaryDirectory();
-        final fileName = 'pasted_${DateTime.now().millisecondsSinceEpoch}.$extension';
+        final fileName = 'pasted_${DateTime.now().millisecondsSinceEpoch}.png';
         final savedFile = File('${tempDir.path}/$fileName');
-        await savedFile.writeAsBytes(bytes);
+        await savedFile.writeAsBytes(imageBytes);
 
         setState(() {
           _selectedImages.add(savedFile);
         });
-      });
+      } catch (e) {
+        print("Lỗi khi lưu ảnh từ bộ nhớ tạm: $e");
+      }
       return;
     }
 
-    // 2. GIẢI PHÁP DỰ PHÒNG: Kiểm tra xem có phải link ảnh không (dành cho copy image address)
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     if (data?.text != null) {
       String text = data!.text!.trim();
