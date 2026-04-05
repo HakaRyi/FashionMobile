@@ -72,17 +72,17 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       final groupId = await ChatService().createOrGet1v1Room(widget.userId);
       Navigator.pop(context);
       if (groupId != null) {
-        Navigator.push(
-          context,
-          SlideRoute(
-            page: ChatScreen(
-              groupId: groupId,
-              userName: name,
-              avatarUrl: avatar,
-              isOnline: true,
-            ),
-          ),
-        );
+        // Navigator.push(
+        //   context,
+        //   // SlideRoute(
+        //   //   // page: ChatScreen(
+        //   //   //   groupId: groupId,
+        //   //   //   userName: name,
+        //   //   //   avatarUrl: avatar,
+        //   //   //   isOnline: true,
+        //   //   // ),
+        //   // ),
+        // );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Không thể kết nối phòng chat!')),

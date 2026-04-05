@@ -106,18 +106,18 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 ),
                 TextButton(
                   onPressed: () {
-                    _removeToast();
-                    Navigator.push(
-                      context,
-                      SlideRoute(
-                        page: ChatScreen(
-                          groupId: groupId,
-                          userName: ownerName,
-                          avatarUrl: avatarUrl,
-                          isOnline: true,
-                        ),
-                      ),
-                    );
+                    // _removeToast();
+                    // Navigator.push(
+                    //   context,
+                    //   SlideRoute(
+                    //     page: ChatScreen(
+                    //       groupId: groupId,
+                    //       userName: ownerName,
+                    //       avatarUrl: avatarUrl,
+                    //       isOnline: true,
+                    //     ),
+                    //   ),
+                    // );
                   },
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
