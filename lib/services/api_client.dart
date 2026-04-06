@@ -1,15 +1,16 @@
-// lib/services/api_client.dart
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:flutter/material.dart';
+
 import '../constants/api_constants.dart';
 import '../main.dart';
 import '../screens/login_screen.dart';
 
 class ApiClient {
   static const Duration timeout = Duration(seconds: 10);
+  static Completer<bool>? _refreshTokenCompleter;
 
   static Future<Map<String, String>> _headers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -30,7 +31,6 @@ class ApiClient {
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-
     return _execute((headers) => http.post(
       url,
       headers: headers,
@@ -42,7 +42,6 @@ class ApiClient {
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-
     return _execute((headers) => http.put(
       url,
       headers: headers,
@@ -54,7 +53,6 @@ class ApiClient {
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-
     return _execute((headers) => http.patch(
       url,
       headers: headers,
@@ -78,10 +76,20 @@ class ApiClient {
   }
 
   static Future<bool> _refreshToken() async {
+    if (_refreshTokenCompleter != null) {
+      return _refreshTokenCompleter!.future;
+    }
+
+    _refreshTokenCompleter = Completer<bool>();
+
     final prefs = await SharedPreferences.getInstance();
     final refreshToken = prefs.getString('refreshToken');
 
-    if (refreshToken == null) return false;
+    if (refreshToken == null) {
+      _refreshTokenCompleter!.complete(false);
+      _refreshTokenCompleter = null;
+      return false;
+    }
 
     try {
       final url = Uri.parse("${ApiConstants.baseUrl}/Auth/refresh");
@@ -100,15 +108,26 @@ class ApiClient {
         final data = jsonDecode(response.body);
         await prefs.setString('token', data['accessToken']);
         await prefs.setString('refreshToken', data['refreshToken']);
+
+        _refreshTokenCompleter!.complete(true);
+        _refreshTokenCompleter = null;
         return true;
       }
+
+      _refreshTokenCompleter!.complete(false);
+      _refreshTokenCompleter = null;
       return false;
     } catch (e) {
+      if (!_refreshTokenCompleter!.isCompleted) {
+        _refreshTokenCompleter!.complete(false);
+      }
+      _refreshTokenCompleter = null;
       return false;
     }
   }
 
-  static Future<http.Response> _execute(Future<http.Response> Function(Map<String, String>) request) async {
+  static Future<http.Response> _execute(
+      Future<http.Response> Function(Map<String, String>) request) async {
     Map<String, String> headers = await _headers();
     http.Response response = await request(headers).timeout(timeout);
 

@@ -22,6 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.fashion_mobile"
+//        minSdk = flutter.minSdkVersion
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

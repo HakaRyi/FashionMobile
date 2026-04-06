@@ -167,9 +167,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ],
         );
-      } else if (status == 'PAID') {
+      } else if (status == 'PAID' || status == 'CONFIRMED') {
         return ElevatedButton(
-          onPressed: () => _updateOrderStatus('PREPARED'),
+          onPressed: () => _updateOrderStatus('PROCESSING'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orangeAccent,
             padding: const EdgeInsets.symmetric(vertical: 16),
