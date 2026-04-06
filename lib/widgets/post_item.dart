@@ -1,8 +1,5 @@
-// Thay thế TOÀN BỘ file lib/widgets/post_item.dart bằng đoạn code sau:
-
-import 'dart:ui';
-
 // lib/widgets/post_item.dart
+import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +14,7 @@ import '../screens/other_profile_screen.dart';
 import '../screens/public_wardrobe_screen.dart';
 import 'comments/comment_sheet.dart';
 import 'package:share_plus/share_plus.dart';
+import 'report_post_sheet.dart';
 
 class PostItem extends StatefulWidget {
   final PostFeedModel post;
@@ -117,6 +115,21 @@ class _PostItemState extends State<PostItem> {
         ),
       );
     }
+  }
+
+  Future<void> _openReportSheet() async {
+    final message = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReportPostSheet(postId: postId),
+    );
+
+    if (!mounted || message == null || message.trim().isEmpty) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -542,28 +555,28 @@ class _PostItemState extends State<PostItem> {
                 icon: Icons.mode_comment_outlined,
                 color: AppColors.textPrimary,
               ),
-              const SizedBox(width: 14),
-              _buildActionIcon(
-                onTap: () async {
-                  try {
-                    final currentPost =
-                        postManager.getPostAnywhereOrNull(postId) ?? widget.post;
-
-                    await postManager.sharePost(currentPost);
-
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Chia sẻ bài viết thành công'),
-                      ),
-                    );
-                  } catch (e) {
-                    _showError('Chia sẻ bài viết thất bại: $e');
-                  }
-                },
-                icon: Icons.send_outlined,
-                color: AppColors.textPrimary,
-              ),
+              // const SizedBox(width: 14),
+              // _buildActionIcon(
+              //   onTap: () async {
+              //     try {
+              //       final currentPost =
+              //           postManager.getPostAnywhereOrNull(postId) ?? widget.post;
+              //
+              //       await postManager.sharePost(currentPost);
+              //
+              //       if (!mounted) return;
+              //       ScaffoldMessenger.of(context).showSnackBar(
+              //         const SnackBar(
+              //           content: Text('Chia sẻ bài viết thành công'),
+              //         ),
+              //       );
+              //     } catch (e) {
+              //       _showError('Chia sẻ bài viết thất bại: $e');
+              //     }
+              //   },
+              //   icon: Icons.send_outlined,
+              //   color: AppColors.textPrimary,
+              // ),
               const Spacer(),
               _buildActionIcon(
                 onTap: () async {
@@ -602,16 +615,16 @@ class _PostItemState extends State<PostItem> {
               ),
             ),
           ],
-          if (shareCount > 0) ...[
-            const SizedBox(height: 4),
-            Text(
-              '$shareCount lượt chia sẻ',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          ],
+          // if (shareCount > 0) ...[
+          //   const SizedBox(height: 4),
+          //   Text(
+          //     '$shareCount lượt chia sẻ',
+          //     style: const TextStyle(
+          //       color: AppColors.textSecondary,
+          //       fontSize: 13,
+          //     ),
+          //   ),
+          // ],
         ],
       ),
     );
@@ -793,11 +806,9 @@ class _PostItemState extends State<PostItem> {
                       fontSize: 12,
                     ),
                   ),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Đã gửi báo cáo")),
-                    );
+                    await _openReportSheet();
                   },
                 ),
                 const Divider(

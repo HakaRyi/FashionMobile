@@ -1,6 +1,6 @@
 class ApiConstants {
-  static const String baseUrl = "http://10.0.2.2:5196/api";
-  //static const String baseUrl = "http://192.168.1.15:5196/api";
+  // static const String baseUrl = "http://10.0.2.2:5196/api";
+  static const String baseUrl = "http://192.168.102.24:5196/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
@@ -72,4 +72,7 @@ class ApiConstants {
 
   static const String followEndpoint = "/Follow";
   static const String getFollowersEndpoint = "/Post";
+
+  static const String reportTypes = "/reports/types";
+  static const String reportPost = "/reports/posts/{postId}";
 }
