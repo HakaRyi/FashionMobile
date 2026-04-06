@@ -61,17 +61,29 @@ class WardrobeService {
       Uri.parse(
         '${ApiConstants.baseUrl}/wardrobes/public/$accountId/items?page=$page&pageSize=$pageSize',
       ),
-      headers: await _buildHeaders(),
+      headers: await _buildHeaders(withAuth: true),
     );
-
     if (response.statusCode == 200) {
       final Map<String, dynamic> body = jsonDecode(response.body);
-      final Map<String, dynamic> data = body['data'] ?? {};
-      final Map<String, dynamic> itemsWrapper = data['items'] ?? {};
-      final List<dynamic> items = itemsWrapper['items'] ?? [];
-
-      return items.map((json) => WardrobeItemModel.fromJson(json)).toList();
+      print("DEBUG: Response Body Keys: ${body.keys.toList()}");
+      try{
+        final Map<String, dynamic> data = body['data'] ?? {};
+        print("DEBUG: Data Keys: ${data.keys.toList()}");
+        final Map<String, dynamic> itemsWrapper = data['items'] ?? {};
+        print("DEBUG: ItemsWrapper Keys: ${itemsWrapper.keys.toList()}");
+        final List<dynamic> items = itemsWrapper['items'] ?? [];
+        print("DEBUG: Danh sách items có ${items.length} phần tử.");
+        if (items.isNotEmpty) {
+          print("DEBUG: Thử parse phần tử đầu tiên: ${items[0]}");
+        }
+        return items.map((json) => WardrobeItemModel.fromJson(json)).toList();
+      }catch(e, stacktrace){
+        print("❌ LỖI PARSE JSON: $e");
+        print("Stacktrace: $stacktrace");
+        throw Exception('Lỗi xử lý dữ liệu từ server: $e');
+      }
     } else {
+      print("❌ LỖI SERVER: ${response.statusCode} - ${response.body}");
       throw Exception('Lỗi tải danh sách tủ đồ công khai');
     }
   }

@@ -29,6 +29,10 @@ class ApiConstants {
   static const String deleteItemEndpoint = "/items/{itemId}";
   static const String smartMatchEndpoint = "/items/smart-match";
 
+  static const String SaveItemEnpoint = "/items/{itemId}/saved";
+  static const String DeleteItemEnpoint = "/items/{itemId}/saved";
+  static const String getMySaveItemEnpoint = "/items/saved";
+
   static const String createPost = "/post";
   static const String feed = "/post/feed";
   static const String trendingPosts = "/post/trending";

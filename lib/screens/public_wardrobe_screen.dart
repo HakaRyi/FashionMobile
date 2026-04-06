@@ -3,9 +3,10 @@ import 'package:fashion_mobile/screens/public_item_detail_screen.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/wardrobe_item_model.dart';
+import '../services/item_service.dart';
 import '../services/wardrobe_service.dart';
 import '../widgets/public_clothing_item.dart';
-
+import '../utils/app_toast.dart';
 class PublicWardrobeScreen extends StatefulWidget {
   final int accountId;
 
@@ -26,7 +27,6 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
   Map<String, dynamic>? _profile;
   List<WardrobeItemModel> _items = [];
-
   @override
   void initState() {
     super.initState();
@@ -239,8 +239,11 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                         (context, index) {
                       final item = _items[index];
                       return PublicClothingItem(
+                        itemId: item.itemId,
                         title: item.itemName,
                         imageUrl: item.imageUrl ?? '',
+                        isSaved: item.isSaved,
+                        showSaveButton: !item.isOwner,
                         likes: 0,
                         onTap: () {
                           Navigator.push(
@@ -249,6 +252,24 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                               builder: (_) => PublicItemDetailScreen(itemId: item.itemId),
                             ),
                           );
+                        },
+                        onSave: () async {
+                          bool success = false;
+                          bool currentStatus = item.isSaved;
+                          // Dùng service để save/unsave dựa vào trạng thái hiện tại
+                          if (item.isSaved) {
+                            success = await ItemService().unsaveItem(item.itemId);
+                          } else {
+                            success = await ItemService().saveItem(item.itemId);
+                          }
+
+                          if (success && mounted) {
+                            setState(() {
+                              // Cập nhật state local để tim đổi màu ngay lập tức
+                              _items[index] = item.copyWith(isSaved: !item.isSaved);
+                            });
+                            AppToast.show(context, item.isSaved ? "Đã bỏ lưu!" : "Đã lưu vào yêu thích!");
+                          }
                         },
                       );
                     },
