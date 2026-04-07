@@ -6,6 +6,7 @@ import '../services/signalr_service.dart';
 import '../services/order_service.dart';
 import 'order_detail_screen.dart';
 import 'create_order_screen.dart';
+import 'refund_history_screen.dart';
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -341,27 +342,68 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
   }
 
   Widget _buildPurchasesTab() {
-    return _isLoadingPurchases
-        ? ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (_, __) => const OrderSkeleton(),
-    )
-        : _purchasesOrders.isEmpty
-        ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.white54)))
-        : ListView.builder(
-      controller: _purchasesScrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _purchasesOrders.length + (_isLoadingMorePurchases ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _purchasesOrders.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator(color: Colors.pink)),
-          );
-        }
-        return _buildOrderCard(_purchasesOrders[index], false);
-      },
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RefundHistoryScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.history, color: Colors.pinkAccent, size: 20),
+                label: const Text(
+                  'Lịch sử trả hàng',
+                  style: TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.w600),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.pinkAccent),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _isLoadingPurchases
+              ? ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 5,
+            itemBuilder: (_, __) => const OrderSkeleton(),
+          )
+              : _purchasesOrders.isEmpty
+              ? const Center(
+            child: Text(
+              'Chưa có đơn hàng nào',
+              style: TextStyle(color: Colors.white54, fontSize: 16),
+            ),
+          )
+              : ListView.builder(
+            controller: _purchasesScrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: _purchasesOrders.length + (_isLoadingMorePurchases ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == _purchasesOrders.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator(color: Colors.pink)),
+                );
+              }
+              return _buildOrderCard(_purchasesOrders[index], false);
+            },
+          ),
+        ),
+      ],
     );
   }
 

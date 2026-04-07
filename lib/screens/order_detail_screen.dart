@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/screens/refund_request_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/order_model.dart';
@@ -115,18 +116,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  void _navigateToRefund() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RefundRequestScreen(orderId: _order!.orderId),
+      ),
+    );
+  }
+
   String _getDisplayStatus(String status) {
     switch (status) {
       case 'PENDING':
         return 'Chờ xác nhận';
       case 'CONFIRMED':
-        return 'Đã xác nhận';
-      case 'PREPARED':
-        return 'Đã chuẩn bị';
-      case 'PAID':
-        return 'Đã thanh toán';
+        return 'Chờ thanh toán';
+      case 'PROCESSING':
+        return 'Đang chuẩn bị hàng';
+      case 'SHIPPING':
+        return 'Đang giao hàng';
+      case 'COMPLETED':
+        return 'Đã giao hàng';
       case 'CANCELLED':
         return 'Đã hủy';
+      case 'REFUNDED':
+        return 'Đã hoàn tiền';
+      case 'DONE':
+        return 'Hoàn thành';
       default:
         return status;
     }
@@ -138,87 +154,121 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final String status = _order!.status;
 
     if (widget.isSeller) {
-      if (status == 'PENDING') {
-        return Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => _updateOrderStatus('CANCELLED'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      switch (status) {
+        case 'PENDING':
+          return Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _updateOrderStatus('CANCELLED'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Hủy đơn', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('Hủy đơn', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => {}, //thay bằng hàm cập nhật đơn hàng ở đây
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.blueAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _updateOrderStatus('CONFIRMED'),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.blueAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cập Nhật', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('Cập Nhật', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-            ),
-          ],
-        );
-      } else if (status == 'PAID' || status == 'CONFIRMED') {
-        return ElevatedButton(
-          onPressed: () => _updateOrderStatus('PROCESSING'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orangeAccent,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text('Đã chuẩn bị hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-        );
-      }
-    } else {
-      if (status == 'PENDING') {
-        return Row(
-
-          children: [
-            Expanded(
-              child: OutlinedButton(
-              onPressed: () => _updateOrderStatus('CANCELLED'),
-              style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.redAccent,
-              side: const BorderSide(color: Colors.redAccent),
+            ],
+          );
+        case 'PROCESSING':
+          return ElevatedButton(
+            onPressed: () => _updateOrderStatus('SHIPPING'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orangeAccent,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Hủy đơn', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
             ),
-            const SizedBox(width: 10,),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => _updateOrderStatus('CONFIRMED'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: const Text('Đã chuẩn bị hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          );
+        default:
+          break;
+      }
+    } else {
+      switch (status) {
+        case 'PENDING':
+          return Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _updateOrderStatus('CANCELLED'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Hủy đơn', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('Xác nhận', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _updateOrderStatus('CONFIRMED'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Xác nhận', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+            ],
+          );
+        case 'CONFIRMED':
+          return ElevatedButton(
+            onPressed: _navigateToPayment,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pink,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-          ],
-        );
-      } else if (status == 'CONFIRMED') {
-        return ElevatedButton(
-          onPressed: _navigateToPayment,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.pink,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text('Thanh toán ngay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-        );
+            child: const Text('Thanh toán ngay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          );
+        case 'COMPLETED':
+          return Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _navigateToRefund,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                    side: const BorderSide(color: Colors.orange),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Trả hàng', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _updateOrderStatus('DONE'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Đã nhận hàng', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+            ],
+          );
+        default:
+          break;
       }
     }
 

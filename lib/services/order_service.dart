@@ -81,4 +81,29 @@ class OrderService {
       throw Exception('Lỗi thanh toán: ${jsonDecode(response.body)['message'] ?? response.statusCode}');
     }
   }
+
+  Future<bool> createRefundRequest(int orderId, String reason, String proof1, String proof2) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/refund-request'),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+        "ngrok-skip-browser-warning": "69420",
+      },
+      body: jsonEncode({
+        "Reason": reason,
+        "ProofImage1": proof1,
+        "ProofImage2": proof2,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception('Lỗi: ${response.statusCode} - ${response.body}');
+    }
+  }
 }
