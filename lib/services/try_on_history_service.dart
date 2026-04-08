@@ -35,7 +35,8 @@ class TryOnHistoryService {
       final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> data = jsonResponse['data'] ?? [];
         return data.cast<Map<String, dynamic>>();
       }
     } catch (e) {
