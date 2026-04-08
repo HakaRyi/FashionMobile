@@ -1,27 +1,23 @@
 // lib/services/try_on_service.dart
-import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
-
+import 'package:flutter/services.dart' show rootBundle;
 import '../constants/api_constants.dart';
-import '../core/api_exception.dart';
-import 'api_client.dart';
 
 class TryOnService {
-  Future<Uint8List> processTryOn({
+  Future<Uint8List?> processTryOn({
     String? modelAssetPath,
     String? modelImageUrl,
     required String clothImagePath,
+    int? category
   }) async {
     final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.tryOnEndpoint}");
 
     try {
-      final headers = await ApiClient.getHeaders();
-
       final request = http.MultipartRequest('POST', url);
-      request.headers.addAll(headers);
-
+      if (category != null) {
+        request.fields['category'] = category.toString();
+      }
       Uint8List? modelBytes;
 
       if (modelAssetPath != null && modelAssetPath.trim().isNotEmpty) {
@@ -31,16 +27,11 @@ class TryOnService {
         final modelResponse = await http.get(Uri.parse(modelImageUrl));
         if (modelResponse.statusCode == 200) {
           modelBytes = modelResponse.bodyBytes;
-        } else {
-          throw ApiException(
-            "Không tải được ảnh model.",
-            statusCode: modelResponse.statusCode,
-          );
         }
       }
 
       if (modelBytes == null) {
-        throw ApiException("Không tìm thấy ảnh model để thử đồ.");
+        return null;
       }
 
       request.files.add(
@@ -63,22 +54,11 @@ class TryOnService {
 
       if (response.statusCode == 200) {
         return responseData.bodyBytes;
+      } else {
+        return null;
       }
-
-      String message = "Có lỗi xảy ra khi thử đồ.";
-
-      try {
-        final decoded = jsonDecode(responseData.body);
-        if (decoded is Map<String, dynamic>) {
-          message = (decoded["message"] ?? decoded["error"] ?? message).toString();
-        }
-      } catch (_) {}
-
-      throw ApiException(message, statusCode: response.statusCode);
-    } on ApiException {
-      rethrow;
     } catch (e) {
-      throw ApiException("Lỗi kết nối hoặc xử lý ảnh: $e");
+      return null;
     }
   }
 }

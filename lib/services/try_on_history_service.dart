@@ -1,67 +1,46 @@
-// lib/services/try_on_history_service.dart
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-
 import '../constants/api_constants.dart';
-import '../core/api_exception.dart';
-import '../models/try_on_history_model.dart';
 import 'api_client.dart';
 
 class TryOnHistoryService {
-  Future<List<TryOnHistoryModel>> getMyHistory() async {
-    final url = Uri.parse(
-      "${ApiConstants.baseUrl}${ApiConstants.tryOnHistoryEndpoint}",
-    );
+  Future<bool> saveHistory(Uint8List imageBytes) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/TryOnHistory/save");
 
     try {
-      final http.Response response = await ApiClient.get(url);
+      final headers = await ApiClient.getHeaders();
 
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List<dynamic> data = body["data"] ?? [];
+      var request = http.MultipartRequest('POST', url);
+      request.headers.addAll(headers);
 
-        return data
-            .map((e) => TryOnHistoryModel.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
+      request.files.add(http.MultipartFile.fromBytes(
+        'Image',
+        imageBytes,
+        filename: 'try_on_result.jpg',
+      ));
 
-      String message = "Không lấy được lịch sử thử đồ.";
-      try {
-        final body = jsonDecode(response.body);
-        message = (body["message"] ?? message).toString();
-      } catch (_) {}
-
-      throw ApiException(message, statusCode: response.statusCode);
-    } on ApiException {
-      rethrow;
+      final streamedResponse = await request.send();
+      return streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201;
     } catch (e) {
-      throw ApiException("Lỗi tải lịch sử thử đồ: $e");
+      print("Lỗi saveHistory: $e");
+      return false;
     }
   }
 
-  Future<void> deleteHistory(int id) async {
-    final url = Uri.parse(
-      "${ApiConstants.baseUrl}${ApiConstants.tryOnHistoryDeleteEndpoint}/$id",
-    );
+  Future<List<Map<String, dynamic>>> getMyHistory() async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/TryOnHistory/my-history");
 
     try {
-      final http.Response response = await ApiClient.delete(url);
+      final response = await ApiClient.get(url);
 
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return;
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.cast<Map<String, dynamic>>();
       }
-
-      String message = "Không thể xóa lịch sử thử đồ.";
-      try {
-        final body = jsonDecode(response.body);
-        message = (body["message"] ?? message).toString();
-      } catch (_) {}
-
-      throw ApiException(message, statusCode: response.statusCode);
-    } on ApiException {
-      rethrow;
     } catch (e) {
-      throw ApiException("Lỗi xóa lịch sử thử đồ: $e");
+      print("Lỗi getMyHistory: $e");
     }
+    return [];
   }
 }
