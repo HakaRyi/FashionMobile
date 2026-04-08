@@ -158,7 +158,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
               _buildInputField("Email", _emailController, Icons.email_outlined, isEmail: true),
               const SizedBox(height: 20),
-              _buildInputField("Tiểu sử", _bioController, Icons.notes_rounded, maxLines: 3),
+              _buildInputField("Tiểu sử", _bioController, Icons.notes_rounded, maxLines: 3,isRequired: false),
             ],
           ),
         ),
@@ -195,7 +195,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildInputField(String label, TextEditingController controller, IconData icon, {bool isEmail = false, int maxLines = 1}) {
+  Widget _buildInputField(String label, TextEditingController controller, IconData icon, {bool isEmail = false, int maxLines = 1, bool isRequired = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -212,7 +212,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
-          validator: (val) => val == null || val.isEmpty ? "Không được để trống" : null,
+          validator: (val) {
+            if (!isRequired) return null;
+            if (val == null || val.isEmpty) return "Không được để trống";
+            return null;
+          },
         ),
       ],
     );

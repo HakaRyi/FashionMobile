@@ -3,9 +3,10 @@ import '../constants/app_colors.dart';
 import '../widgets/clothing_item.dart';
 import '../widgets/ai_range_selector.dart';
 import 'ai_result_screen.dart';
-
+import '../models/wardrobe_item_model.dart';
 class AISuggestionScreen extends StatefulWidget {
-  final Map<String, dynamic> selectedItem;
+  final dynamic selectedItem;
+  //final Map<String, dynamic> selectedItem;
 
   const AISuggestionScreen({super.key, required this.selectedItem});
 
@@ -18,6 +19,19 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
   List<String> _selectedRanges = ['My Wardrobe'];
   final TextEditingController _promptController = TextEditingController();
 
+  String get _itemName {
+    if (widget.selectedItem is WardrobeItemModel) {
+      return (widget.selectedItem as WardrobeItemModel).itemName;
+    }
+    return widget.selectedItem['itemName'] ?? "Item";
+  }
+
+  String? get _imageUrl {
+    if (widget.selectedItem is WardrobeItemModel) {
+      return (widget.selectedItem as WardrobeItemModel).imageUrl;
+    }
+    return widget.selectedItem['primaryImageUrl'] ?? widget.selectedItem['imageUrl'];
+  }
   void _toggleRange(String rangeId) {
     setState(() {
       if (_selectedRanges.contains(rangeId)) {
@@ -55,8 +69,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                       width: 160,
                       height: 200,
                       child: ClothingItem(
-                        title: widget.selectedItem['itemName'] ?? "Item",
-                        imageUrl: widget.selectedItem['primaryImageUrl'],
+                        title: _itemName,
+                        imageUrl: _imageUrl,
                       ),
                     ),
                   ),
