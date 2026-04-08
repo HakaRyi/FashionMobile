@@ -196,4 +196,40 @@ class ItemService {
     }
     return null;
   }
+  Future<bool> saveItem(int itemId) async {
+    final token = await _getToken();
+    final url = Uri.parse("${ApiConstants.baseUrl}/items/$itemId/save");
+    try {
+      final response = await http.post(url, headers: {'Authorization': 'Bearer $token'});
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> unsaveItem(int itemId) async {
+    final token = await _getToken();
+    final url = Uri.parse("${ApiConstants.baseUrl}/items/$itemId/save");
+    try {
+      final response = await http.delete(url, headers: {'Authorization': 'Bearer $token'});
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getSavedItems() async {
+    final token = await _getToken();
+    final url = Uri.parse("${ApiConstants.baseUrl}/items/saved");
+    try {
+      final response = await http.get(url, headers: {'Authorization': 'Bearer $token'});
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List;
+      }
+    } catch (e) {
+      print("Lỗi getSavedItems: $e");
+    }
+    return [];
+  }
+
 }

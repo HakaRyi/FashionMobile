@@ -7,6 +7,8 @@ class WardrobeItemModel {
   final String? brand;
   final String? status;
   final String? imageUrl;
+  final bool isSaved;
+  final bool isOwner;
 
   WardrobeItemModel({
     required this.itemId,
@@ -16,17 +18,35 @@ class WardrobeItemModel {
     this.brand,
     this.status,
     this.imageUrl,
+    this.isSaved = false,
+    this.isOwner = false,
   });
 
   factory WardrobeItemModel.fromJson(Map<String, dynamic> json) {
+    try {
+      return WardrobeItemModel(
+        itemId: json['itemId'] ?? 0,
+        itemName: json['itemName'] ?? '',
+        description: json['description'],
+        mainColor: json['mainColor'],
+        brand: json['brand'],
+        status: json['status']?.toString(),
+        imageUrl: json['thumbnailUrl'] ?? json['imageUrl'],
+        isSaved: json['isSaved'] ?? false,
+        isOwner: json['isOwner'] ?? false,
+      );
+    } catch (e) {
+      print("❌ LỖI TẠI WardrobeItemModel: $e | Dữ liệu gây lỗi: $json");
+      rethrow;
+    }
+  }
+  WardrobeItemModel copyWith({bool? isSaved}) {
     return WardrobeItemModel(
-      itemId: json['itemId'] ?? 0,
-      itemName: json['itemName'] ?? '',
-      description: json['description'],
-      mainColor: json['mainColor'],
-      brand: json['brand'],
-      status: json['status']?.toString(),
-      imageUrl: json['imageUrl'] ?? json['thumbnailUrl'],
+      itemId: this.itemId,
+      itemName: this.itemName,
+      imageUrl: this.imageUrl,
+      isSaved: isSaved ?? this.isSaved,
+      isOwner: this.isOwner,
     );
   }
 }

@@ -48,7 +48,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         IconButton(
           onPressed: () {
-            // Navigator.push(context, SlideRoute(page: const ChatListScreen()));
+             Navigator.push(context, SlideRoute(page: const ChatListScreen()));
           },
           icon: Icon(PhosphorIcons.chatsCircle(), color: AppColors.textPrimary)
         )

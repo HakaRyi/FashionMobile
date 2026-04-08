@@ -1,11 +1,13 @@
 class ApiConstants {
   // static const String baseUrl = "http://10.0.2.2:5196/api";
+  // static const String baseUrl = "http://192.168.1.15:5196/api";
   static const String baseUrl = "http://192.168.102.24:5196/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
 
   // static const String baseSignalRUrl = "http://10.0.2.2:5196";
-  static const String baseSignalRUrl = "http://192.168.1.15:5196";
+  // static const String baseSignalRUrl = "http://192.168.1.15:5196";
+  static const String baseSignalRUrl = "http://192.168.102.24:5196";
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
 
   static const String refreshTokenEndpoint = "/auth/refresh-token";
@@ -34,6 +36,10 @@ class ApiConstants {
   static const String updateItemEndpoint = "/items/{itemId}";
   static const String deleteItemEndpoint = "/items/{itemId}";
   static const String smartMatchEndpoint = "/items/smart-match";
+
+  static const String SaveItemEnpoint = "/items/{itemId}/saved";
+  static const String DeleteItemEnpoint = "/items/{itemId}/saved";
+  static const String getMySaveItemEnpoint = "/items/saved";
 
   static const String createPost = "/post";
   static const String feed = "/post/feed";
