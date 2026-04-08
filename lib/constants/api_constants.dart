@@ -1,11 +1,15 @@
 class ApiConstants {
-  static const String baseUrl = "http://10.0.2.2:5196/api";
-  //static const String baseUrl = "http://192.168.1.15:5196/api";
+  // static const String baseUrl = "http://10.0.2.2:5196/api";
+  // static const String baseUrl = "http://192.168.1.15:5196/api";
+  static const String baseUrl = "http://192.168.102.24:5196/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
-  static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
-  static const String baseSignalRUrl = "http://10.0.2.2:5196";
+
+  // static const String baseSignalRUrl = "http://10.0.2.2:5196";
   // static const String baseSignalRUrl = "http://192.168.1.15:5196";
+  static const String baseSignalRUrl = "http://192.168.102.24:5196";
+  static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
+
   static const String refreshTokenEndpoint = "/auth/refresh-token";
   static const String chatEndpoint = "/Chat";
   static const String groupEndpoint = "/Group";
@@ -14,12 +18,15 @@ class ApiConstants {
   static const String registerEndpoint = "/auth/register";
 
   static const String tryOnEndpoint = "/TryOn/try-on";
+  static const String tryOnInfoEndpoint = "/TryOn/info";
+  static const String tryOnHistoryEndpoint = "/TryOnHistory/my-history";
+  static const String tryOnHistoryDeleteEndpoint = "/TryOnHistory";
+
   static const String createPostEndpoint = "/Post";
 
   static const String feedEndpoint = "/post/feed";
   static const String getMyPostEndpoint = "/post/me";
   static const String getAllPostEndpoint = "/post";
-
 
   static const String getMyProfile = "/Account/{id}";
 
