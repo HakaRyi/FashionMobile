@@ -143,6 +143,7 @@ class ApiClient {
           MaterialPageRoute(builder: (context) => const LoginScreen()),
               (route) => false,
         );
+        throw Exception('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
       }
     }
     return response;

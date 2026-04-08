@@ -1,11 +1,13 @@
-// lib/screens/try_on_screen.dart
 import 'dart:io';
+import 'dart:convert';
 import 'package:fashion_mobile/screens/try_on_history_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
+import '../constants/api_constants.dart';
 import 'dart:typed_data';
 import '../utils/model_manager.dart';
 import '../widgets/add_clothing_card.dart';
@@ -42,10 +44,119 @@ class _TryOnScreenState extends State<TryOnScreen> {
   String? _selectedClothName;
   bool _isPreparingNetworkCloth = false;
   bool _isLoadingModels = true;
+
+// ---> BẮT ĐẦU SỬA
+  int? _selectedCategoryId;
+// <--- KẾT THÚC SỬA
+
+  List<dynamic> _myWardrobeItems = [];
+  bool _isLoadingWardrobe = true;
+
+  List<dynamic> _myOutfits = [];
+  bool _isLoadingOutfits = true;
+
   TryOnModelSource _selectedModel = const TryOnModelSource(
     assetPath: "assets/images/human1.jpg",
     displayName: "Model mặc định",
   );
+
+  @override
+  void initState() {
+    super.initState();
+    modelManager.fetchMyModels();
+    tryOnManager.fetchHistory();
+    _fetchWardrobeItems();
+    _fetchMyOutfits();
+
+    if (widget.sourceItem != null) {
+      _selectedNetworkClothUrl = widget.sourceItem!.imageUrl;
+      _selectedClothName = widget.sourceItem!.itemName;
+// ---> BẮT ĐẦU SỬA
+      _selectedCategoryId = _mapCategoryToInt(widget.sourceItem!.category ?? '');
+// <--- KẾT THÚC SỬA
+    }
+  }
+
+// ---> BẮT ĐẦU SỬA
+  int _mapCategoryToInt(String category) {
+    final lowerCat = category.toLowerCase();
+    if (lowerCat.contains('lower')
+        || lowerCat.contains('pants')
+        || lowerCat.contains('shorts')
+        || lowerCat.contains('skirt')
+        || lowerCat.contains('lower_body')) {
+      return 1;
+    }
+    if (lowerCat.contains('full')
+        || lowerCat.contains('dress')
+        || lowerCat.contains('full_body')) {
+      return 2;
+    }
+    return 0;
+  }
+// <--- KẾT THÚC SỬA
+
+  Future<void> _fetchMyOutfits() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/Outfit/my-outfits'),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+          "ngrok-skip-browser-warning": "69420",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _myOutfits = data['data'] ?? [];
+            _isLoadingOutfits = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingOutfits = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching outfits: $e');
+      if (mounted) setState(() => _isLoadingOutfits = false);
+    }
+  }
+
+  Future<void> _fetchWardrobeItems() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}'),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+          "ngrok-skip-browser-warning": "69420",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _myWardrobeItems = data['data'] ?? [];
+            _isLoadingWardrobe = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingWardrobe = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching wardrobe: $e');
+      if (mounted) setState(() => _isLoadingWardrobe = false);
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -59,6 +170,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
           selectedClothFile = File(pickedFile.path);
           _selectedNetworkClothUrl = null;
           _selectedClothName = null;
+// ---> BẮT ĐẦU SỬA
+          _selectedCategoryId = null;
+// <--- KẾT THÚC SỬA
         });
       }
     } catch (e) {
@@ -133,10 +247,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
       modelAssetPath: _selectedModel.isAsset ? _selectedModel.assetPath : null,
       modelImageUrl: _selectedModel.isNetwork ? _selectedModel.imageUrl : null,
       clothFilePath: clothPath,
+      category: _selectedCategoryId,
     );
   }
 
-  void _showModelSelectionBottomSheet() {
+  void _showFullWardrobeBottomSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -144,177 +259,369 @@ class _TryOnScreenState extends State<TryOnScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext context) {
-        return ListenableBuilder(
-          listenable: modelManager,
-          builder: (context, child) {
-            final models = modelManager.userModels;
-            final isLoading = modelManager.isLoading;
-
-            return Container(
-              padding: const EdgeInsets.all(16),
-              height: MediaQuery.of(context).size.height * 0.5,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Center(
-                    child: Text(
-                        "Chọn Model",
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: isLoading
-                        ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
-                        : models.isEmpty
-                        ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.person_off_outlined, color: Colors.white54, size: 60),
-                          const SizedBox(height: 16),
-                          const Text("Chưa có model, thêm ngay đi!", style: TextStyle(color: Colors.white, fontSize: 16)),
-                          const SizedBox(height: 20),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateModelScreen()));
-                            },
-                            icon: const Icon(Icons.add_photo_alternate_outlined),
-                            label: const Text("Thêm model mới", style: TextStyle(fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.textPink,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          )
-                        ],
-                      ),
-                    )
-                        : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1,
-                      ),
-                      itemCount: models.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateModelScreen()));
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.textPink.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.textPink, width: 2),
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add, color: AppColors.textPink, size: 40),
-                                  SizedBox(height: 8),
-                                  Text("Thêm mới", style: TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        final modelData = models[index - 1];
-                        final String status = modelData['status']?.toString() ?? "Active";
-                        final bool isReady = status == "Active";
-
-                        return GestureDetector(
-                          onTap: isReady ? () {
-                            setState(() {
-                              _selectedModel = TryOnModelSource(
-                                imageUrl: modelData['imageUrl'],
-                                displayName: modelData['name']?.toString() ?? "Model của tôi",
-                              );
-                            });
-
-                            Navigator.pop(context);
-
-                            ScaffoldMessenger.of(this.context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Đã chọn ${_selectedModel.displayName ?? 'model'}",
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          } : null,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white24, width: 1),
-                                  image: DecorationImage(
-                                    image: NetworkImage(modelData['imageUrl'] ?? 'https://via.placeholder.com/150'),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              if (!isReady)
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          status == "Rejected" ? Icons.error_outline : Icons.hourglass_empty,
-                                          color: status == "Rejected" ? Colors.redAccent : Colors.orangeAccent,
-                                          size: 32,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          status == "Rejected" ? "Từ chối" : "Đang xử lý",
-                                          style: TextStyle(
-                                            color: status == "Rejected" ? Colors.redAccent : Colors.orangeAccent,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Text(
+                  "Tủ đồ của bạn",
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
-            );
-          },
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: _myWardrobeItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _myWardrobeItems[index];
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedClothFile = null;
+                          _selectedNetworkClothUrl = item['primaryImageUrl'];
+                          _selectedClothName = item['itemName'];
+// ---> BẮT ĐẦU SỬA
+                          _selectedCategoryId = _mapCategoryToInt(item['category']?.toString() ?? '');
+// <--- KẾT THÚC SỬA
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white24),
+                          image: DecorationImage(
+                            image: NetworkImage(item['primaryImageUrl'] ?? ''),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    modelManager.fetchMyModels();
-    tryOnManager.fetchHistory();
+  void _showModelSelectionBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return DefaultTabController(
+          length: 2,
+          child: Container(
+            padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
+            height: MediaQuery.of(context).size.height * 0.65,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: Text(
+                      "Đổi Model / Outfit",
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const TabBar(
+                  indicatorColor: AppColors.textPink,
+                  labelColor: AppColors.textPink,
+                  unselectedLabelColor: Colors.white54,
+                  dividerColor: Colors.white10,
+                  tabs: [
+                    Tab(text: "Model của tôi"),
+                    Tab(text: "Outfit của tôi"),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      ListenableBuilder(
+                        listenable: modelManager,
+                        builder: (context, child) {
+                          final models = modelManager.userModels;
+                          final isLoading = modelManager.isLoading;
 
-    if (widget.sourceItem != null) {
-      _selectedNetworkClothUrl = widget.sourceItem!.imageUrl;
-      _selectedClothName = widget.sourceItem!.itemName;
-    }
+                          if (isLoading) {
+                            return const Center(child: CircularProgressIndicator(color: AppColors.textPink));
+                          }
+
+                          if (models.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.person_off_outlined, color: Colors.white54, size: 60),
+                                  const SizedBox(height: 16),
+                                  const Text("Chưa có model, thêm ngay đi!", style: TextStyle(color: Colors.white, fontSize: 16)),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateModelScreen()));
+                                    },
+                                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                                    label: const Text("Thêm model mới", style: TextStyle(fontWeight: FontWeight.bold)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.textPink,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            );
+                          }
+
+                          return GridView.builder(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1,
+                            ),
+                            itemCount: models.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateModelScreen()));
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.textPink.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.textPink, width: 2),
+                                    ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.add, color: AppColors.textPink, size: 40),
+                                        SizedBox(height: 8),
+                                        Text("Thêm mới", style: TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final modelData = models[index - 1];
+                              final String status = modelData['status']?.toString() ?? "Active";
+                              final bool isReady = status == "Active";
+
+                              return GestureDetector(
+                                onTap: isReady ? () {
+                                  setState(() {
+                                    _selectedModel = TryOnModelSource(
+                                      imageUrl: modelData['imageUrl'],
+                                      displayName: modelData['name']?.toString() ?? "Model của tôi",
+                                    );
+                                  });
+
+                                  Navigator.pop(context);
+
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Đã chọn ${_selectedModel.displayName ?? 'model'}",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } : null,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.white24, width: 1),
+                                        image: DecorationImage(
+                                          image: NetworkImage(modelData['imageUrl'] ?? 'https://via.placeholder.com/150'),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isReady)
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                status == "Rejected" ? Icons.error_outline : Icons.hourglass_empty,
+                                                color: status == "Rejected" ? Colors.redAccent : Colors.orangeAccent,
+                                                size: 32,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                status == "Rejected" ? "Từ chối" : "Đang xử lý",
+                                                style: TextStyle(
+                                                  color: status == "Rejected" ? Colors.redAccent : Colors.orangeAccent,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+
+                      _isLoadingOutfits
+                          ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
+                          : _myOutfits.isEmpty
+                          ? const Center(child: Text("Chưa có outfit nào", style: TextStyle(color: Colors.white54, fontSize: 16)))
+                          : GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1,
+                        ),
+                        itemCount: _myOutfits.length,
+                        itemBuilder: (context, index) {
+                          final outfit = _myOutfits[index];
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedModel = TryOnModelSource(
+                                  imageUrl: outfit['imageUrl'],
+                                  displayName: outfit['outfitName'] ?? "Outfit",
+                                );
+                              });
+
+                              Navigator.pop(context);
+
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Đã chọn outfit: ${_selectedModel.displayName}",
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white24, width: 1),
+                                image: DecorationImage(
+                                  image: NetworkImage(outfit['imageUrl'] ?? 'https://via.placeholder.com/150'),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.6),
+                                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                                  ),
+                                  child: Text(
+                                    outfit['outfitName'] ?? "Outfit",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWardrobeItem(dynamic item, {bool isOverlay = false, int remainingCount = 0}) {
+    return GestureDetector(
+      onTap: () {
+        if (isOverlay) {
+          _showFullWardrobeBottomSheet();
+        } else {
+          setState(() {
+            selectedClothFile = null;
+            _selectedNetworkClothUrl = item['primaryImageUrl'];
+            _selectedClothName = item['itemName'];
+// ---> BẮT ĐẦU SỬA
+            _selectedCategoryId = _mapCategoryToInt(item['category']?.toString() ?? '');
+// <--- KẾT THÚC SỬA
+          });
+        }
+      },
+      child: Container(
+        width: 75,
+        height: 75,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24, width: 1.5),
+          image: DecorationImage(
+            image: NetworkImage(item['primaryImageUrl'] ?? ''),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: isOverlay
+            ? Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: Colors.black.withOpacity(0.6),
+          ),
+          child: Center(
+            child: Text(
+              "+$remainingCount",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        )
+            : null,
+      ),
+    );
   }
 
   @override
@@ -354,7 +661,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // BỎ flex ở đây để nó tự động chiếm hết không gian trống
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -396,6 +702,68 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           ),
                         ),
                       ),
+
+                      if (hasSelectedCloth && resultBytes == null && !isProcessing)
+                        Positioned(
+                          bottom: 15,
+                          left: 15,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 65,
+                                height: 65,
+                                decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.textPink, width: 2),
+                                    color: Colors.black,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.5),
+                                        blurRadius: 5,
+                                        offset: const Offset(2, 2),
+                                      )
+                                    ]
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: selectedClothFile != null
+                                      ? Image.file(selectedClothFile!, fit: BoxFit.cover)
+                                      : Image.network(
+                                    _selectedNetworkClothUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_,__,___) => const Icon(Icons.broken_image, color: Colors.white54),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: -8,
+                                right: -8,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedClothFile = null;
+                                      _selectedNetworkClothUrl = null;
+                                      _selectedClothName = null;
+// ---> BẮT ĐẦU SỬA
+                                      _selectedCategoryId = null;
+// <--- KẾT THÚC SỬA
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.redAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       if (resultBytes == null && !isProcessing)
                         Positioned(
                           bottom: 15,
@@ -425,7 +793,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     children: [
                       _actionButton(Icons.delete_outline, "Xóa", Colors.redAccent, () {
                         tryOnManager.resetResult();
-                        setState(() => selectedClothFile = null);
+                        setState(() {
+                          selectedClothFile = null;
+                          _selectedNetworkClothUrl = null;
+// ---> BẮT ĐẦU SỬA
+                          _selectedClothName = null;
+                          _selectedCategoryId = null;
+// <--- KẾT THÚC SỬA
+                        });
                       }),
                       _actionButton(Icons.file_download_outlined, "Tải về", Colors.blueAccent, () async {
                         await _saveImageToGallery(resultBytes);
@@ -492,110 +867,46 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-                SizedBox(
-                  height: 90,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+
+                Container(
+                  height: 75,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _isLoadingWardrobe
+                      ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
+                      : Row(
                     children: [
-                      SizedBox(
-                        width: 80,
-                        child: GestureDetector(
-                          onTap: _pickImage,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white24, width: 1.5),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 28),
-                            ),
+                      if (_myWardrobeItems.isNotEmpty)
+                        _buildWardrobeItem(_myWardrobeItems[0]),
+
+                      if (_myWardrobeItems.length > 1)
+                        _buildWardrobeItem(_myWardrobeItems[1]),
+
+                      if (_myWardrobeItems.length > 2)
+                        _buildWardrobeItem(
+                          _myWardrobeItems[2],
+                          isOverlay: _myWardrobeItems.length > 3,
+                          remainingCount: _myWardrobeItems.length - 2,
+                        ),
+
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          width: 75,
+                          height: 75,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white24, width: 1.5),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 28),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-
-                      if (selectedClothFile != null)
-                        Container(
-                          width: 80,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.textPink, width: 2),
-                            image: DecorationImage(
-                              image: FileImage(selectedClothFile!),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                right: 4,
-                                top: 4,
-                                child: GestureDetector(
-                                  onTap: () => setState(() => selectedClothFile = null),
-                                  child: const Icon(Icons.cancel, color: Colors.white, size: 20),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-
-                      if (selectedClothFile == null &&
-                          _selectedNetworkClothUrl != null &&
-                          _selectedNetworkClothUrl!.trim().isNotEmpty)
-                        Container(
-                          width: 80,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.textPink, width: 2),
-                          ),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  _selectedNetworkClothUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: Colors.white10,
-                                    child: const Icon(Icons.broken_image, color: Colors.white54),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                right: 4,
-                                top: 4,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedNetworkClothUrl = null;
-                                      _selectedClothName = null;
-                                    });
-                                  },
-                                  child: const Icon(Icons.cancel, color: Colors.white, size: 20),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
                     ],
                   ),
                 ),
-                if (_selectedClothName != null && _selectedClothName!.trim().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Text(
-                      'Đang chọn: $_selectedClothName',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
@@ -604,7 +915,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   ),
                 ),
 
-                // Thay Expanded bằng SizedBox cố định chiều cao (khoảng 140) để không lấn át Model
                 SizedBox(
                   height: 140,
                   child: tryOnManager.isLoadingHistory

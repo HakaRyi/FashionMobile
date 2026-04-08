@@ -20,6 +20,7 @@ class TryOnManager extends ChangeNotifier {
         String? modelAssetPath,
         String? modelImageUrl,
         required String clothFilePath,
+        int? category
       }) async {
     if (isProcessing) return;
 
@@ -31,6 +32,7 @@ class TryOnManager extends ChangeNotifier {
       modelAssetPath: modelAssetPath,
       modelImageUrl: modelImageUrl,
       clothImagePath: clothFilePath,
+      category: category,
     );
 
     isProcessing = false;

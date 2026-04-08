@@ -9,12 +9,15 @@ class TryOnService {
     String? modelAssetPath,
     String? modelImageUrl,
     required String clothImagePath,
+    int? category
   }) async {
     final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.tryOnEndpoint}");
 
     try {
       final request = http.MultipartRequest('POST', url);
-
+      if (category != null) {
+        request.fields['category'] = category.toString();
+      }
       Uint8List? modelBytes;
 
       if (modelAssetPath != null && modelAssetPath.trim().isNotEmpty) {
