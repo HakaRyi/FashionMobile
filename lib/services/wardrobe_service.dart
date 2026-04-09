@@ -104,4 +104,16 @@ class WardrobeService {
       throw Exception('Lỗi tải số lượng món đồ công khai');
     }
   }
+  Future<List<dynamic>> searchWardrobeByUsername(String username) async {
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.searchWardrobeByUsernameEndpoint}?username=$username'),
+      headers: await _buildHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      return body['data'] ?? [];
+    }
+    return [];
+  }
 }

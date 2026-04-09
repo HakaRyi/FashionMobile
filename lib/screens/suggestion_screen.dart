@@ -1,90 +1,150 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../constants/app_colors.dart';
+import '../services/recommendation_service.dart'; // Giả sử service của ní tên này
+import '../models/recommendation_history_model.dart';
+import 'history_detail_screen.dart'; // Model của ní
 
-class SuggestionScreen extends StatelessWidget {
+class SuggestionScreen extends StatefulWidget {
   const SuggestionScreen({super.key});
+
+  @override
+  State<SuggestionScreen> createState() => _SuggestionScreenState();
+}
+
+class _SuggestionScreenState extends State<SuggestionScreen> {
+  // Thay thế bằng hàm gọi API thực tế của Đăng
+  late Future<List<RecommendationHistoryModel>> _historyFuture;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _historyFuture = RecommendationService().getMyHistory();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "Gợi ý phối đồ",
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          "LỊCH SỬ GỢI Ý",
+          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- PHẦN 1: OUTFIT CỦA NGÀY (AI SUGGESTION) ---
-            const Text(
-              "Outfit dành cho hôm nay",
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+      body: FutureBuilder<List<dynamic>>(
+        future: _historyFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.textPink));
+          }
+
+          final historyList = snapshot.data ?? [];
+
+          if (historyList.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            physics: const BouncingScrollPhysics(),
+            itemCount: historyList.length,
+            itemBuilder: (context, index) {
+              final history = snapshot.data![index];
+              return _buildHistoryCard(history);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(RecommendationHistoryModel history) { // Ép kiểu rõ ràng ở đây
+    // Dùng dấu CHẤM (.) thay vì ngoặc vuông ([])
+    final DateTime date = history.createdAt;
+    final String prompt = history.prompt.isEmpty ? "Gợi ý tự động" : history.prompt;
+    final String? refImage = history.referenceItemImage;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HistoryDetailScreen(
+              historyId: history.id,
+              title: history.referenceItemName ?? "Gợi ý phối đồ",
+              refImage: history.referenceItemImage,
             ),
-            const SizedBox(height: 15),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              width: 70,
+              height: 85,
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.textPink.withOpacity(0.5)),
-                gradient: LinearGradient(
-                  colors: [AppColors.surface, AppColors.textPink.withOpacity(0.1)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                image: refImage != null
+                    ? DecorationImage(image: NetworkImage(refImage), fit: BoxFit.cover)
+                    : null,
               ),
+              child: refImage == null ? const Icon(Icons.inventory_2_outlined, color: Colors.white24) : null,
+            ),
+            const SizedBox(width: 16),
+
+            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildMiniItem("Áo Polo", Icons.checkroom),
-                      const Icon(Icons.add, color: Colors.white24),
-                      _buildMiniItem("Quần Jean", Icons.checkroom),
+                      Text(
+                        DateFormat('dd/MM • HH:mm').format(date),
+                        style: const TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
                     ],
                   ),
-                  const SizedBox(height: 15),
-                  const Text(
-                    "Phù hợp với thời tiết 25°C - Năng động",
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  const SizedBox(height: 4),
+                  Text(
+                    prompt,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, color: Colors.amber, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        history.referenceItemName ?? "Gợi ý phối đồ",
+                        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // --- PHẦN 2: DANH SÁCH GỢI Ý KHÁC ---
-            const Text(
-              "Phong cách khác",
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 15),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 4,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.75,
-              ),
-              itemBuilder: (context, index) {
-                return _buildStyleCard(index);
-              },
             ),
           ],
         ),
@@ -92,53 +152,15 @@ class SuggestionScreen extends StatelessWidget {
     );
   }
 
-  // Widget con cho món đồ nhỏ trong Outfit đề xuất
-  Widget _buildMiniItem(String label, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          height: 80,
-          width: 80,
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Icon(icon, color: Colors.white, size: 40),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      ],
-    );
-  }
-
-  // Widget con cho thẻ phong cách gợi ý
-  Widget _buildStyleCard(int index) {
-    List<String> styles = ["Minimalist", "Streetwear", "Vintage", "Office"];
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(15),
-        image: const DecorationImage(
-          image: NetworkImage("https://via.placeholder.com/150"), // Thay bằng ảnh phối đồ mẫu
-          fit: BoxFit.cover,
-          opacity: 0.5,
-        ),
-      ),
-      child: Container(
-        alignment: Alignment.bottomCenter,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          gradient: LinearGradient(
-            colors: [Colors.transparent, Colors.black87],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Text(
-          styles[index % 4],
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.history_toggle_off, size: 64, color: Colors.white.withOpacity(0.1)),
+          const SizedBox(height: 16),
+          const Text("Chưa có lịch sử phối đồ", style: TextStyle(color: Colors.white38)),
+        ],
       ),
     );
   }

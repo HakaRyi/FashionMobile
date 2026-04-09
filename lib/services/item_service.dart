@@ -151,7 +151,8 @@ class ItemService {
     required int? referenceItemId,
     required String prompt,
     required bool useMyWardrobe,
-    required bool useCommunityItems,
+    required bool useSavedItems,
+    required List<int> targetWardrobeIds,
     int limit = 10,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -165,13 +166,14 @@ class ItemService {
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': '69420',
         },
         body: jsonEncode({
           "prompt": prompt,
           "referenceItemId": referenceItemId,
+          "targetWardrobeIds": targetWardrobeIds,
           "useMyWardrobe": useMyWardrobe,
-          "useCommunityItems": useCommunityItems,
-          "useSavedItems": false,
+          "useSavedItems": useSavedItems,
           "limit": limit,
         }),
       );

@@ -9,14 +9,16 @@ class AIResultScreen extends StatefulWidget {
   final dynamic baseItem;
   final String prompt;
   final bool useMyWardrobe;
-  final bool useCommunityItems;
+  final bool includeSavedItems;
+  final List<int> targetWardrobeIds;
 
   const AIResultScreen({
     super.key,
     required this.baseItem,
     required this.prompt,
     required this.useMyWardrobe,
-    required this.useCommunityItems,
+    required this.includeSavedItems,
+    required this.targetWardrobeIds,
   });
 
   @override
@@ -48,7 +50,9 @@ class _AIResultScreenState extends State<AIResultScreen> {
       referenceItemId: _baseItemId,
       prompt: widget.prompt,
       useMyWardrobe: widget.useMyWardrobe,
-      useCommunityItems: widget.useCommunityItems,
+      useSavedItems: widget.includeSavedItems,
+      targetWardrobeIds: widget.targetWardrobeIds,
+      limit: 15,
     );
   }
 
