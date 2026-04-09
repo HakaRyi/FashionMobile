@@ -172,8 +172,8 @@ class ItemService {
           "prompt": prompt,
           "referenceItemId": referenceItemId,
           "targetWardrobeIds": targetWardrobeIds,
-          "useMyWardrobe": useMyWardrobe,
-          "useSavedItems": useSavedItems,
+          "includeMyWardrobe": useMyWardrobe,
+          "includeSavedItems": useSavedItems,
           "limit": limit,
         }),
       );
