@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
+import '../services/notification_service.dart';
+import '../utils/global_event_bus.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input_field.dart';
 import '../screens/chat_settings_screen.dart';
@@ -30,13 +34,70 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   List<dynamic> _messages = [];
   bool _isLoading = true;
-
+  StreamSubscription? _msgSub;
+  StreamSubscription? _recallSub;
+  StreamSubscription? _reactSub;
   @override
   void initState() {
     super.initState();
+    ChatService.currentGroupId = widget.groupId;
+    NotificationService().clearAllNotifications();
     _loadMyId();
     _loadHistory();
-    _initRealtime();
+    _msgSub = GlobalEventBus().onMessageReceived.listen((event) {
+      _handleIncomingMessage(event.message);
+    });
+    _recallSub = GlobalEventBus().onMessageRecalled.listen((event) {
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m['messageId'] == event.messageId);
+          if (index != -1) {
+            _messages[index]['content'] = "Tin nhắn đã bị thu hồi";
+            _messages[index]['isRecalled'] = true;
+          }
+        });
+      }
+    });
+
+    // 3. LẮNG NGHE THẢ REACT (Đây là cái ní đang thiếu nè)
+    _reactSub = GlobalEventBus().onMessageReaction.listen((event) {
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m['messageId'] == event.messageId);
+          if (index != -1) {
+            // Cập nhật reaction ngay lập tức trên UI
+            _messages[index]['reactions'] = [{'reactionType': event.type}];
+          }
+        });
+      }
+    });
+  }
+  void _handleIncomingMessage(dynamic msg) {
+    if (!mounted) return;
+
+    final int incomingGroupId = msg['groupId'] ?? msg['GroupId'] ?? 0;
+    if (incomingGroupId != widget.groupId) return;
+
+    setState(() {
+      final avatar = msg['senderAvatar'] ?? msg['SenderAvatar'];
+      final incomingContent = (msg['content'] ?? msg['Content'] ?? "").toString().trim();
+      final incomingPhotos = msg['photos'] ?? msg['Photos'] ?? [];
+
+      _messages.removeWhere((m) {
+        bool isTemp = m['messageId'] == -1;
+        return isTemp && (m['content'] ?? "").toString().trim() == incomingContent;
+      });
+
+      final normalizedMsg = {
+        ...msg,
+        'content': incomingContent,
+        'photos': incomingPhotos,
+        'senderName': msg['senderName'] ?? msg['SenderName'] ?? "Unknown",
+        'senderAvatar': avatar,
+        'sentAt': msg['sentAt'] ?? msg['SentAt'] ?? DateTime.now().toIso8601String(),
+      };
+      _messages.insert(0, normalizedMsg);
+    });
   }
   void _loadMyId() async {
     final prefs = await SharedPreferences.getInstance();
@@ -356,8 +417,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    ChatService.currentGroupId = null;
     _chatService.stopConnection();
     _controller.dispose();
+    _msgSub?.cancel();
+    _recallSub?.cancel();
+    _reactSub?.cancel();
     super.dispose();
   }
 }

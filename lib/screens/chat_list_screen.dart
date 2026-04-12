@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/chat_item.dart';
+import '../utils/global_event_bus.dart';
 import 'chat_screen.dart';
 import '../../utils/route_transitions.dart';
 import '../../widgets/active_user_avatar.dart';
@@ -16,21 +19,49 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final ChatService _chatService = ChatService();
   late Future<List<dynamic>> _groupsFuture;
-
+  bool _isLoading = true;
+  List<dynamic> _groups = [];
+  StreamSubscription? _msgSub;
   @override
   void initState() {
     super.initState();
-    // Gọi API lấy danh sách nhóm chat thực tế từ BE
-    _groupsFuture = _chatService.getMyGroups();
-  }
+    _loadInitialGroups();
 
-  // Hàm để refresh danh sách khi kéo xuống
+    // 2. Lắng nghe EventBus khi có tin nhắn mới tới
+    _msgSub = GlobalEventBus().onMessageReceived.listen((event) {
+      _handleNewMessageRealtime(event.message);
+    });
+  }
+  Future<void> _loadInitialGroups() async {
+    if (_groups.isEmpty) setState(() => _isLoading = true);
+    final data = await _chatService.getMyGroups();
+    setState(() {
+      _groups = data;
+      _isLoading = false;
+    });
+  }
   Future<void> _refreshGroups() async {
     setState(() {
       _groupsFuture = _chatService.getMyGroups();
     });
   }
+  void _handleNewMessageRealtime(dynamic msg) {
+    final int incomingGroupId = msg['groupId'] ?? msg['GroupId'] ?? 0;
 
+    setState(() {
+      int index = _groups.indexWhere((g) => g['groupId'] == incomingGroupId);
+
+      if (index != -1) {
+        var updatedGroup = _groups.removeAt(index);
+        updatedGroup['lastMessage'] = msg['content'];
+        updatedGroup['lastMessageAt'] = DateTime.now().toIso8601String();
+        updatedGroup['unreadCount'] = (updatedGroup['unreadCount'] ?? 0) + 1;
+        _groups.insert(0, updatedGroup);
+      } else {
+        _loadInitialGroups();
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,87 +86,47 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _refreshGroups,
+        onRefresh: _loadInitialGroups,
         color: AppColors.textPink,
-        child: FutureBuilder<List<dynamic>>(
-          future: _groupsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child: CircularProgressIndicator(color: AppColors.textPink));
-            }
-
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            final groups = snapshot.data!;
-
-            return Column(
-              children: [
-                // 1. THANH TÌM KIẾM
-                _buildSearchField(),
-
-                // 2. DANH SÁCH NGƯỜI ĐANG HOẠT ĐỘNG (Dựa trên data thật)
-                SizedBox(
-                  height: 105,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(left: 16, top: 5),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: groups.length,
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      // Chỉ hiện ở phần "Đang hoạt động" nếu là Online
-                      if (group['isOnline'] != "Online") return const SizedBox.shrink();
-
-                      return ActiveUserAvatar(
-                        avatarUrl: group['avatar'] ?? "https://cdn-icons-png.flaticon.com/512/8377/8377384.png",
-                        name: group['name'],
-                        isOnline: true,
-                        onTap: () => _navigateToChat(group),
-                      );
-                    },
-                  ),
-                ),
-
-                // 3. DANH SÁCH CHAT CHÍNH
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.only(top: 10, bottom: 20),
-                        itemCount: groups.length,
-                        separatorBuilder: (context, index) =>
-                        const Divider(color: Colors.white10, indent: 85),
-                        itemBuilder: (context, index) {
-                          final group = groups[index];
-                          return ChatItem(
-                            name: group['name'],
-                            lastMessage: group['isGroup'] ? "Tin nhắn nhóm" : "Bấm để trò chuyện",
-                            time: "", // Có thể bổ sung trường LastMessageAt từ BE
-                            avatarUrl: group['avatar'] ?? "https://cdn-icons-png.flaticon.com/512/8377/8377384.png",
-                            isOnline: group['isOnline'] == "Online",
-                            onTap: () => _navigateToChat(group),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
+            : _groups.isEmpty
+            ? _buildEmptyState()
+            : Column(
+          children: [
+            _buildSearchField(),
+            // 1. Dòng avatar Online
+            _buildActiveUsersList(),
+            // 2. Danh sách chat chính
+            Expanded(
+              child: ListView.separated(
+                itemCount: _groups.length,
+                separatorBuilder: (context, index) => const Divider(color: Colors.white10, indent: 85),
+                itemBuilder: (context, index) {
+                  final group = _groups[index];
+                  return ChatItem(
+                    name: group['name'],
+                    lastMessage: group['lastMessage'] ?? "Bấm để trò chuyện",
+                    avatarUrl: group['avatar'] ?? "...",
+                    isOnline: group['isOnline'] == "Online",
+                    time: group['lastMessageAt'] ?? "",
+                    isUnread: (group['unreadCount'] ?? 0) > 0,
+                    onTap: () => _navigateToChat(group),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
+
     );
   }
 
   void _navigateToChat(dynamic group) {
+    setState(() {
+      group['unreadCount'] = 0;
+    });
     Navigator.push(
       context,
       SlideRoute(
@@ -146,9 +137,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
           isOnline: group['isOnline'] == "Online",
         ),
       ),
-    ).then((_) => _refreshGroups());
+    ).then((_) => _loadInitialGroups());
   }
+  Widget _buildActiveUsersList() {
+    return SizedBox(
+      height: 105,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(left: 16, top: 5),
+        scrollDirection: Axis.horizontal,
+        itemCount: _groups.length,
+        itemBuilder: (context, index) {
+          final group = _groups[index];
+          if (group['isOnline'] != "Online") return const SizedBox.shrink();
 
+          return ActiveUserAvatar(
+            avatarUrl: group['avatar'] ?? "https://cdn-icons-png.flaticon.com/512/8377/8377384.png",
+            name: group['name'],
+            isOnline: true,
+            onTap: () => _navigateToChat(group),
+          );
+        },
+      ),
+    );
+  }
   Widget _buildSearchField() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -183,5 +194,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ],
       ),
     );
+  }
+  @override
+  void dispose() {
+    _msgSub?.cancel();
+    super.dispose();
   }
 }

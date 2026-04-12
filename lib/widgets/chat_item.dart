@@ -7,7 +7,9 @@ class ChatItem extends StatelessWidget {
   final String time;
   final String avatarUrl;
   final bool isOnline; // Thêm thuộc tính này
+  final bool isUnread;
   final VoidCallback onTap;
+
 
   const ChatItem({
     super.key,
@@ -17,8 +19,31 @@ class ChatItem extends StatelessWidget {
     required this.avatarUrl,
     required this.onTap,
     this.isOnline = false,
+    this.isUnread = false,
   });
+  String _formatTime(String rawTime) {
+    if (rawTime.isEmpty) return "";
+    try {
+      DateTime dt = DateTime.parse(rawTime).toLocal();
+      DateTime now = DateTime.now();
 
+      // Nếu là hôm nay: Chỉ hiện Giờ:Phút
+      if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
+        return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+      }
+
+      // Nếu là hôm qua: Hiện "Hôm qua"
+      DateTime yesterday = now.subtract(const Duration(days: 1));
+      if (dt.day == yesterday.day && dt.month == yesterday.month && dt.year == yesterday.year) {
+        return "Hôm qua";
+      }
+
+      // Còn lại hiện Ngày/Tháng
+      return "${dt.day}/${dt.month}";
+    } catch (e) {
+      return "";
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -51,18 +76,38 @@ class ChatItem extends StatelessWidget {
         name,
         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
       ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          lastMessage,
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+      subtitle: Text(
+        lastMessage,
+        style: TextStyle(
+          color: isUnread ? Colors.white : Colors.white70,
+          fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+          fontSize: 13,
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
-      trailing: Text(
-        time,
-        style: const TextStyle(color: Colors.white30, fontSize: 11),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            _formatTime(time), // GỌI HÀM FORMAT Ở ĐÂY
+            style: TextStyle(
+                color: isUnread ? AppColors.textPink : Colors.white30,
+                fontSize: 11
+            ),
+          ),
+          const SizedBox(height: 5),
+          if (isUnread)
+            Container(
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(color: AppColors.textPink, shape: BoxShape.circle),
+              child: const Center(
+                  child: Text("!", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))
+              ),
+            ),
+        ],
       ),
     );
   }

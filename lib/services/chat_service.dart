@@ -4,9 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../constants/api_constants.dart';
 import 'package:http_parser/http_parser.dart';
-class ChatService {
-  HubConnection? _hubConnection;
 
+import 'notification_service.dart';
+class ChatService {
+  static final ChatService _instance = ChatService._internal();
+  factory ChatService() => _instance;
+  ChatService._internal();
+  HubConnection? _hubConnection;
+  static int? currentGroupId;
   // Lấy token từ SharedPreferences
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -31,7 +36,7 @@ class ChatService {
         .build();
 
     // Lắng nghe các sự kiện từ Back-end
-    _hubConnection!.on("ReceiveMessage", (arguments) => onMessageReceived(arguments![0]));
+  //  _hubConnection!.on("ReceiveMessage", (arguments) => onMessageReceived(arguments![0]));
     _hubConnection!.on("MessageRecalled", (arguments) => onMessageRecalled(arguments![0] as int));
     _hubConnection!.on("ReactionUpdated", (arguments) {
       onReactionAdded(arguments![0] as int, arguments![1] as String);
@@ -40,6 +45,31 @@ class ChatService {
       onReactionAdded(arguments![0] as int, arguments![2].toString());
     });
 
+    _hubConnection!.on("ReceiveMessage", (arguments) async {
+      if (arguments != null && arguments.isNotEmpty) {
+        final Map<String, dynamic> msg = arguments[0] as Map<String, dynamic>;
+
+        final prefs = await SharedPreferences.getInstance();
+        final myId = prefs.getString('userId') ?? "";
+
+        final int incomingGroupId = msg['groupId'] ?? msg['GroupId'] ?? 0;
+
+        if (msg['senderId'].toString() != myId && incomingGroupId != ChatService.currentGroupId) {
+          NotificationService().showChatNotification(
+            groupId: incomingGroupId,
+            senderId: msg['senderId'] ?? 0,
+            senderName: msg['senderName'] ?? "Người dùng",
+            senderAvatar: msg['senderAvatar'],
+            content: msg['content'] ?? "",
+            photos: List<String>.from(msg['photos'] ?? []),
+            isGroup: msg['groupName'] != "Private Chat",
+            groupName: msg['groupName']?? msg['GroupName'],
+          );
+        }
+
+        onMessageReceived(msg);
+      }
+    });
     await _hubConnection!.start();
   }
 
@@ -137,6 +167,6 @@ class ChatService {
   }
 
   void stopConnection() {
-    _hubConnection?.stop();
+    //_hubConnection?.stop();
   }
 }
