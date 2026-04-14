@@ -139,8 +139,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return 'Đã giao hàng';
       case 'CANCELLED':
         return 'Đã hủy';
+      case 'REFUNDING':
+        return 'Đang hoàn đơn';
       case 'REFUNDED':
-        return 'Đã hoàn tiền';
+        return 'Đã hoàn đơn';
       case 'DONE':
         return 'Hoàn thành';
       default:
@@ -193,6 +195,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text('Đã chuẩn bị hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          );
+        case 'REFUNDED':
+          return ElevatedButton(
+            onPressed: () => _updateOrderStatus('DONE'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.greenAccent,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Đã nhận lại hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
           );
         default:
           break;
@@ -266,6 +278,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
             ],
+          );
+        case 'REFUNDED':
+          return ElevatedButton(
+            onPressed: () => {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white70,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Đã được duyệt trả hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
           );
         default:
           break;
