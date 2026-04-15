@@ -38,6 +38,13 @@ class ChatService {
     // Lắng nghe các sự kiện từ Back-end
   //  _hubConnection!.on("ReceiveMessage", (arguments) => onMessageReceived(arguments![0]));
     _hubConnection!.on("MessageRecalled", (arguments) => onMessageRecalled(arguments![0] as int));
+    _hubConnection!.on("NewGroupCreated", (arguments) async {
+      if (arguments != null && arguments.isNotEmpty) {
+        int newGroupId = arguments[0] as int;
+        print("DEBUG: Nhận được lệnh Join Group mới: $newGroupId");
+        await _hubConnection!.invoke("JoinGroup", args: [newGroupId]);
+      }
+    });
     _hubConnection!.on("ReactionUpdated", (arguments) {
       onReactionAdded(arguments![0] as int, arguments![1] as String);
     });
@@ -72,7 +79,32 @@ class ChatService {
     });
     await _hubConnection!.start();
   }
+  Future<void> joinGroupManual(int groupId) async {
+    if (_hubConnection?.state == HubConnectionState.Connected) {
+      await _hubConnection!.invoke("JoinGroup", args: [groupId]);
+      print("DEBUG: Chủ động Join vào Group mới: $groupId");
+    }
+  }
+  Future<bool> createGroup({
+    required String name,
+    required List<int> memberIds,
+    String? avatarPath,
+  }) async {
+    final token = await _getToken();
+    var request = http.MultipartRequest('POST', Uri.parse("${ApiConstants.baseUrl}${ApiConstants.groupEndpoint}/create-group"));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['Name'] = name;
 
+    for (int i = 0; i < memberIds.length; i++) {
+      request.fields['MemberIds[$i]'] = memberIds[i].toString();
+    }
+    if (avatarPath != null) {
+      request.files.add(await http.MultipartFile.fromPath('Avatar', avatarPath));
+    }
+
+    var response = await request.send();
+    return response.statusCode == 200;
+  }
   // --- API CALLS ---
   Future<List<dynamic>> getMyGroups() async {
     final token = await _getToken();
@@ -165,7 +197,54 @@ class ChatService {
     }
     return null;
   }
+  Future<List<dynamic>> getUsersInGroup(int groupId) async {
+    final token = await _getToken();
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}${ApiConstants.groupEndpoint}/get-users-in-group/$groupId"),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print("Lỗi lấy thành viên nhóm: $e");
+    }
+    return [];
+  }
+  Future<bool> addMemberToGroup(int groupId, int targetUserId) async {
+    final token = await _getToken();
+    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.groupEndpoint}/add-member-to-group/$groupId/$targetUserId");
 
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'accept': '*/*'
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Lỗi addMemberToGroup: $e");
+      return false;
+    }
+  }
+  Future<List<dynamic>> getPhotosInGroup(int groupId) async {
+    final token = await _getToken();
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}${ApiConstants.groupEndpoint}/get-photos-in-group/$groupId"),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print("Lỗi lấy ảnh trong nhóm: $e");
+    }
+    return [];
+  }
   void stopConnection() {
     //_hubConnection?.stop();
   }
