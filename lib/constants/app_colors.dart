@@ -10,4 +10,13 @@ class AppColors {
   static const Color divider = Color(0xFF262626);
 
   static const Color primary = Color(0xFFFC00A6);
+  // static const Color background = Colors.white;
+  // static const Color surface = Color(0xFF1C1C1E);
+  // static const Color textPrimary = Colors.black;
+  // static const Color textSecondary = Colors.grey;
+  // static const Color textPink = Color(0xFFFC00A6);
+  // static const Color accent = Colors.deepPurple;
+  // static const Color divider = Color(0xFF262626);
+  //
+  // static const Color primary = Color(0xFFFC00A6);
 }
