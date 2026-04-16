@@ -132,6 +132,42 @@ class _PostItemState extends State<PostItem> {
     );
   }
 
+  Widget _buildInfoBadge({
+    required String label,
+    required IconData icon,
+    required Color textColor,
+    required Color bgColor,
+    required Color borderColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 12,
+            color: textColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -170,6 +206,8 @@ class _PostItemState extends State<PostItem> {
                 status: post.status,
                 hideMenu: hideMenu,
                 postUserId: postUserId,
+                isExpertPost: post.isExpertPost,
+                isLikedByExpert: post.isLikedByExpert,
               ),
 
               if (title.isNotEmpty || content.isNotEmpty)
@@ -250,6 +288,8 @@ class _PostItemState extends State<PostItem> {
     required String avatarUrl,
     required String createdAt,
     required int postUserId,
+    required bool isExpertPost,
+    required bool isLikedByExpert,
     String? status,
     required bool hideMenu,
   }) {
@@ -312,13 +352,34 @@ class _PostItemState extends State<PostItem> {
                             decorationColor: Colors.white38,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          createdAt,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              createdAt,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (isExpertPost) _buildInfoBadge(
+                              label: 'Expert',
+                              icon: Icons.workspace_premium_rounded,
+                              textColor: const Color(0xFFB388FF),
+                              bgColor: const Color(0xFFB388FF).withOpacity(0.12),
+                              borderColor: const Color(0xFFB388FF).withOpacity(0.28),
+                            ),
+                            if (isLikedByExpert) _buildInfoBadge(
+                              label: 'Expert liked',
+                              icon: Icons.favorite_rounded,
+                              textColor: const Color(0xFFFF8A65),
+                              bgColor: const Color(0xFFFF8A65).withOpacity(0.12),
+                              borderColor: const Color(0xFFFF8A65).withOpacity(0.28),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -17,6 +17,8 @@ class PostFeedModel {
   final String? visibility;
   final bool isEvent;
   final String? eventName;
+  final bool isExpertPost;
+  final bool isLikedByExpert;
 
   List<String> get imageUrls => images;
 
@@ -38,6 +40,8 @@ class PostFeedModel {
     this.visibility,
     required this.isEvent,
     this.eventName,
+    required this.isExpertPost,
+    required this.isLikedByExpert,
   });
 
   factory PostFeedModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +63,8 @@ class PostFeedModel {
       visibility: json['visibility'],
       isEvent: json['isEvent'] ?? false,
       eventName: json['eventName'],
+      isExpertPost: json['isExpertPost'] ?? false,
+      isLikedByExpert: json['isLikedByExpert'] ?? false,
     );
   }
 
@@ -81,6 +87,8 @@ class PostFeedModel {
       'visibility': visibility,
       'isEvent': isEvent,
       'eventName': eventName,
+      'isExpertPost': isExpertPost,
+      'isLikedByExpert': isLikedByExpert,
     };
   }
 
@@ -102,6 +110,8 @@ class PostFeedModel {
     String? visibility,
     bool? isEvent,
     String? eventName,
+    bool? isExpertPost,
+    bool? isLikedByExpert,
   }) {
     return PostFeedModel(
       postId: postId ?? this.postId,
@@ -121,6 +131,8 @@ class PostFeedModel {
       visibility: visibility ?? this.visibility,
       isEvent: isEvent ?? this.isEvent,
       eventName: eventName ?? this.eventName,
+      isExpertPost: isExpertPost ?? this.isExpertPost,
+      isLikedByExpert: isLikedByExpert ?? this.isLikedByExpert,
     );
   }
 }

@@ -1,19 +1,13 @@
 // lib/services/post_service.dart
 import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../constants/api_constants.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_share_result.dart';
 import 'api_client.dart';
-  import '../constants/api_constants.dart';
-  import '../models/my_post_model.dart';
-  import '../models/post_feed_model.dart';
-  import 'api_client.dart';
 
 class PostService {
   Future<List<PostFeedModel>> fetchFeed({
