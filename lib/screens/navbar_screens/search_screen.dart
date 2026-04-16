@@ -247,7 +247,7 @@ class _SearchScreenState extends State<SearchScreen> {
           textInputAction: TextInputAction.search,
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: "Tìm kiếm người dùng hoặc xu hướng...",
+            hintText: "Tìm kiếm người dùng ...",
             hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             prefixIcon: const Icon(Icons.search, color: Colors.pinkAccent),
             suffixIcon: _searchQuery.isNotEmpty
@@ -358,7 +358,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildProfileCard({required UserSuggestionModel user}) {
     final avatarUrl = user.avatarUrl.isNotEmpty
         ? user.avatarUrl
-        : 'https://i.pravatar.cc/150?u=${user.accountId}';
+        : 'package:fashion_mobile/assets/images/default_avatar.png';
 
     return InkWell(
       onTap: () => _navigateToProfile(user.accountId),

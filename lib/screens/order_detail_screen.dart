@@ -1,7 +1,9 @@
 import 'package:fashion_mobile/screens/refund_request_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../constants/notification_type.dart';
 import '../models/order_model.dart';
+import '../utils/app_notification.dart';
 import '../services/order_service.dart';
 import '../widgets/order_skeleton.dart';
 import 'wallet_payment_screen.dart';
@@ -45,8 +47,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        NotificationService.show(
+          context,
+          title: "Lỗi!",
+          message: "Không lấy được thông tin đơn hàng",
+          type: NotificationType.error,
         );
       }
     }
@@ -62,16 +67,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     try {
       final updatedOrder = await _orderService.updateOrderStatus(widget.orderId, newStatus);
       if (!mounted) return;
+      NotificationService.show(
+        context,
+        title: "Thành công",
+        message: "Đơn hàng ở trạng thái $newStatus",
+        type: NotificationType.info,
+      );
       Navigator.pop(context);
       setState(() {
         _order = updatedOrder;
       });
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      NotificationService.show(
+        context,
+        title: "Lỗi!",
+        message: "Cập nhật đơn hàng thất bại",
+        type: NotificationType.error,
       );
+      Navigator.pop(context);
     }
   }
 

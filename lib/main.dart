@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:fashion_mobile/constants/app_colors.dart';
 import 'screens/splash_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -13,8 +14,9 @@ class MyHttpOverrides extends HttpOverrides {
       ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
   }
 }
-void main() {
+Future<void> main() async {
   HttpOverrides.global = MyHttpOverrides();
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 

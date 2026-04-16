@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class LocationService {
-  final String _apiKey = 'YOUR_API_KEY';
+  final String _apiKey = dotenv.env['GOONG_API_KEY'] ?? '';
 
   Future<List<String>> searchAddress(String query) async {
     if (query.isEmpty) return [];

@@ -5,10 +5,13 @@ import '../../services/order_service.dart';
 import '../../services/wardrobe_service.dart';
 import '../../models/wardrobe_item_model.dart';
 import '../../services/follow_service.dart';
+import '../constants/notification_type.dart';
 import '../models/search_model.dart';
-
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import '../services/location_service.dart';
 import '../widgets/create_order/item_selection_sheet.dart';
 import '../widgets/create_order/buyer_selection_sheet.dart';
+import '../utils/app_notification.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key});
@@ -27,7 +30,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isLoading = false;
   final OrderService _orderService = OrderService();
   final WardrobeService _wardrobeService = WardrobeService();
+  final LocationService _locationService = LocationService();
   final NumberFormat _formatter = NumberFormat.decimalPattern('vi_VN');
+  final NotificationService _notificationService = NotificationService();
+
 
   List<WardrobeItemModel> _selectedItems = [];
   UserSuggestionModel? _selectedBuyer;
@@ -81,15 +87,21 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       await _orderService.createOrder(requestBody);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tạo đơn hàng thành công!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
+        NotificationService.show(
+          context,
+          title: "Thành công!",
+          message: "Tạo đơn hàng thành công.",
+          type: NotificationType.success,
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        NotificationService.show(
+          context,
+          title: "Đã xảy ra lỗi",
+          message: "Tạo đơn thất bại",
+          type: NotificationType.error,
         );
       }
     } finally {
@@ -300,7 +312,57 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             const SizedBox(height: 16),
             _buildTextField(_receiverPhoneController, 'Số điện thoại', TextInputType.phone),
             const SizedBox(height: 16),
-            _buildTextField(_shippingAddressController, 'Địa chỉ giao hàng', TextInputType.streetAddress),
+            TypeAheadField<String>(
+              controller: _shippingAddressController,
+              debounceDuration: const Duration(milliseconds: 500),
+              suggestionsCallback: (pattern) async {
+                return await _locationService.searchAddress(pattern);
+              },
+              itemBuilder: (context, String suggestion) {
+                return ListTile(
+                  tileColor: const Color(0xFF1E1E1E),
+                  leading: const Icon(Icons.location_on_outlined, color: Colors.pinkAccent),
+                  title: Text(
+                    suggestion,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                );
+              },
+              onSelected: (String selection) {
+                _shippingAddressController.text = selection;
+              },
+              loadingBuilder: (context) => const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator(color: Colors.pinkAccent)),
+              ),
+              emptyBuilder: (context) => const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Không tìm thấy địa chỉ này', style: TextStyle(color: Colors.white54)),
+              ),
+              builder: (context, controller, focusNode) {
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Địa chỉ giao hàng',
+                    labelStyle: const TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    prefixIcon: const Icon(Icons.map_outlined, color: Colors.white54),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.pinkAccent, width: 1.5),
+                    ),
+                  ),
+                  validator: (value) => value!.isEmpty ? 'Vui lòng nhập Địa chỉ giao hàng' : null,
+                );
+              },
+            ),
 
             const SizedBox(height: 40),
             ElevatedButton(
