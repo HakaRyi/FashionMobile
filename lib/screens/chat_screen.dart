@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
+import '../services/notification_service.dart';
+import '../utils/global_event_bus.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input_field.dart';
 import '../screens/chat_settings_screen.dart';
@@ -11,6 +15,9 @@ class ChatScreen extends StatefulWidget {
   final String userName;
   final String avatarUrl;
   final bool isOnline; // Thêm vào constructor
+  final bool isGroup;
+  final int? otherUserId;
+  final List<dynamic> allGroups;
 
   const ChatScreen({
     super.key,
@@ -18,6 +25,9 @@ class ChatScreen extends StatefulWidget {
     required this.userName,
     required this.avatarUrl,
     this.isOnline = false,
+    this.isGroup = false,
+    this.otherUserId,
+    this.allGroups = const [],
   });
 
   @override
@@ -30,13 +40,95 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   List<dynamic> _messages = [];
   bool _isLoading = true;
-
+  StreamSubscription? _msgSub;
+  StreamSubscription? _recallSub;
+  StreamSubscription? _reactSub;
+  bool _isSearching = false;
+  final TextEditingController _searchControllerLocal = TextEditingController();
+  String _searchQuery = "";
+  List<dynamic> _searchResults = [];
   @override
   void initState() {
     super.initState();
+    ChatService.currentGroupId = widget.groupId;
+    NotificationService().clearAllNotifications();
     _loadMyId();
     _loadHistory();
-    _initRealtime();
+    _msgSub = GlobalEventBus().onMessageReceived.listen((event) {
+      _handleIncomingMessage(event.message);
+    });
+    _recallSub = GlobalEventBus().onMessageRecalled.listen((event) {
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m['messageId'] == event.messageId);
+          if (index != -1) {
+            _messages[index]['content'] = "Tin nhắn đã bị thu hồi";
+            _messages[index]['isRecalled'] = true;
+          }
+        });
+      }
+    });
+    void _onSearchMessage(String query) {
+      if (query.isEmpty) {
+        setState(() {
+          _searchResults = [];
+        });
+        return;
+      }
+      setState(() {
+        _searchResults = _messages.where((m) {
+          final content = (m['content'] ?? "").toString().toLowerCase();
+          return content.contains(query.toLowerCase());
+        }).toList();
+      });
+    }
+    // 3. LẮNG NGHE THẢ REACT (Đây là cái ní đang thiếu nè)
+    _reactSub = GlobalEventBus().onMessageReaction.listen((event) {
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m['messageId'] == event.messageId);
+          if (index != -1) {
+            // Cập nhật reaction ngay lập tức trên UI
+            _messages[index]['reactions'] = [{'reactionType': event.type}];
+          }
+        });
+      }
+    });
+  }
+  void _handleIncomingMessage(dynamic msg) {
+    if (!mounted) return;
+
+    final int incomingGroupId = msg['groupId'] ?? msg['GroupId'] ?? 0;
+    if (incomingGroupId != widget.groupId) return;
+    print("DEBUG SIGNALR: Nhận 1 tin mới ID=${msg['messageId']}. Nội dung=${msg['content']}");
+    setState(() {
+      final avatar = msg['senderAvatar'] ?? msg['SenderAvatar'];
+      final incomingContent = (msg['content'] ?? msg['Content'] ?? "").toString().trim();
+      final incomingPhotos = msg['photos'] ?? msg['Photos'] ?? [];
+      int removedCount = 0;
+      _messages.removeWhere((m) {
+        bool isTemp = m['messageId'] == -1;
+        bool match = isTemp && (m['content'] ?? "").toString().trim() == incomingContent;
+        if (match) removedCount++;
+        return match;
+      });
+      print("DEBUG SIGNALR: Đã xóa $removedCount tin nhắn ảo khớp nội dung.");
+      final normalizedMsg = {
+        ...msg,
+        'content': incomingContent,
+        'photos': incomingPhotos,
+        'senderName': msg['senderName'] ?? msg['SenderName'] ?? "Unknown",
+        'senderAvatar': avatar,
+        'sentAt': msg['sentAt'] ?? msg['SentAt'] ?? DateTime.now().toIso8601String(),
+      };
+      bool alreadyExists = _messages.any((m) => m['messageId'] == normalizedMsg['messageId']);
+      if (!alreadyExists) {
+        _messages.insert(0, normalizedMsg);
+        print("DEBUG SIGNALR: Đã chèn tin nhắn thật vào danh sách.");
+      } else {
+        print("DEBUG SIGNALR: Tin nhắn này đã tồn tại, bỏ qua insert.");
+      }
+    });
   }
   void _loadMyId() async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,73 +136,11 @@ class _ChatScreenState extends State<ChatScreen> {
       myId = prefs.getString('userId') ?? "";
     });
   }
-  void _initRealtime() {
-    _chatService.initSignalR(
-      onMessageReceived: (msg) {
-        print("FULL SIGNALR MSG: $msg"); // Dòng này sẽ cho bạn biết chính xác key là gì
-        print("CHECK SENDER AVATAR: ${msg['senderAvatar'] ?? msg['SenderAvatar']}");
-        if (mounted){
-            setState(() {
-              final avatar = msg['senderAvatar'] ?? msg['SenderAvatar'];
-              final incomingContent = (msg['content'] ?? msg['Content'] ?? "").toString().trim();
-              final incomingPhotos = msg['photos'] ?? msg['Photos'] ?? [];
-              _messages.removeWhere((m) {
-                bool isTemp = m['messageId'] == -1;
-                String localContent = (m['content'] ?? "").toString().trim();
-                bool contentMatch = localContent == incomingContent;
-
-                bool photoMatch = true;
-                if (m['photos'] != null) {
-                  photoMatch = (m['photos'] as List).length == (incomingPhotos as List).length;
-                }
-                return isTemp && contentMatch && photoMatch;
-              });
-              final normalizedMsg = {
-                ...msg,
-                'content': incomingContent,
-                'photos': incomingPhotos,
-                'senderName': msg['senderName'] ?? msg['SenderName'] ?? "Unknown",
-                'senderAvatar': avatar,
-                'sentAt': msg['sentAt'] ?? msg['SentAt'] ?? DateTime.now().toIso8601String(),
-              };
-            _messages.insert(0, normalizedMsg);
-          });
-        }
-        print("Tin nhắn ảo đang có: ${_messages.where((m) => m['messageId'] == -1).map((m) => m['content'])}");
-        print("Tin nhắn SignalR về: ${msg['content']}");
-        print("avatar user: ${msg['senderAvatar']}");
-        print("Nội dung nhận được: ${msg['content'] ?? msg['Content']}");
-      },
-      onMessageRecalled: (id) {
-        if (mounted) {
-          setState(() {
-            final index = _messages.indexWhere((m) => m['messageId'] == id);
-            if (index != -1) {
-              _messages[index]['content'] = "Tin nhắn đã bị thu hồi";
-              _messages[index]['isRecalled'] = true;
-            }
-          });
-        }
-      },
-      onReactionAdded: (messageId, type) {
-        if (mounted) {
-          setState(() {
-            final index = _messages.indexWhere((m) => m['messageId'] == messageId);
-            if (index != -1) {
-              // Khởi tạo list nếu null, sau đó gán reaction mới
-              _messages[index]['reactions'] = [{'reactionType': type}];
-            }
-          });
-        }
-      },
-    );
-  }
 
   void _loadHistory() async {
     final history = await _chatService.getChatHistory(widget.groupId);
     if (mounted) {
       setState(() {
-        // reversed vì ListView dùng reverse: true
         _messages = history.map((m) {
           return {
             ...m,
@@ -149,25 +179,73 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onRecall(int messageId) async {
     await _chatService.recallMessage(messageId);
   }
-
+  void _navigateToSettings() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => ChatSettingsScreen(
+              targetUserId: widget.otherUserId ?? 0,
+              userName: widget.userName,
+              avatarUrl: widget.avatarUrl,
+              isGroup: widget.isGroup,
+              groupId: widget.groupId,
+              allGroups: widget.allGroups,
+            )
+        )
+    );
+    if (result == "OPEN_SEARCH") {
+      setState(() {
+        _isSearching = true;
+      });
+    }
+  }
   @override
   Widget build(BuildContext context) {
+    // 1. Logic lọc tin nhắn theo Search Query
+    final filteredMessages = _messages.where((m) {
+      if (_searchQuery.isEmpty) return true;
+      final content = (m['content'] ?? "").toString().toLowerCase();
+      return content.contains(_searchQuery.toLowerCase());
+    }).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
+          icon: Icon(_isSearching ? Icons.close : Icons.arrow_back_ios, color: Colors.white, size: 20),
+          onPressed: () {
+            if (_isSearching) {
+              setState(() {
+                _isSearching = false;
+                _searchQuery = "";
+                _searchControllerLocal.clear();
+              });
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
-        title: InkWell(
-          onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (context) => ChatSettingsScreen(
-                  userName: widget.userName,
-                  avatarUrl: widget.avatarUrl
-              )
-          )),
+        // 2. AppBar biến hình: Nếu đang search thì hiện TextField, không thì hiện Profile
+        title: _isSearching
+            ? TextField(
+          controller: _searchControllerLocal,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+          decoration: const InputDecoration(
+            hintText: "Tìm tin nhắn...",
+            hintStyle: TextStyle(color: Colors.white38),
+            border: InputBorder.none,
+          ),
+          onChanged: (val) {
+            setState(() {
+              _searchQuery = val;
+            });
+          },
+        )
+            : InkWell(
+          onTap: _navigateToSettings, // Gọi hàm điều hướng có hứng kết quả tag
           child: Row(
             children: [
               Stack(
@@ -214,18 +292,32 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
+          // 3. Thanh hiển thị số kết quả tìm thấy (Chỉ hiện khi đang search)
+          if (_isSearching && _searchQuery.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              color: Colors.white.withOpacity(0.05),
+              child: Row(
+                children: [
+                  const Icon(Icons.search, size: 14, color: Colors.white38),
+                  const SizedBox(width: 8),
+                  Text("Tìm thấy ${filteredMessages.length} kết quả", style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ),
+            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
                 : ListView.builder(
               padding: const EdgeInsets.all(16),
               reverse: true,
-              itemCount: _messages.length,
+              // 4. Dùng filteredMessages thay vì _messages
+              itemCount: filteredMessages.length,
               itemBuilder: (context, index) {
-                final m = _messages[index];
+                final m = filteredMessages[index];
                 final bool isTemp = m['isTemp'] == true;
                 final bool isMe = isTemp||m['isOwner'] == true ||
-                                  m['senderId']?.toString() == myId.toString();
+                    m['senderId']?.toString() == myId.toString();
 
                 final DateTime sentTime = m['sentAt'] != null
                     ? DateTime.parse(m['sentAt'].toString()).toLocal()
@@ -236,20 +328,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
-                      // Nếu là mình thì đẩy sang phải, người khác thì bên trái
                       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.end, // Avatar nằm dưới cùng nếu tin nhắn dài
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // HIỂN THỊ AVATAR NGƯỜI KHÁC
                         if (!isMe) ...[
                           CircleAvatar(
                             radius: 14,
-                            backgroundImage: NetworkImage(m['senderAvatar'] ?? "https://i.pravatar.cc/150?img=11"), // Lấy avatar từ widget truyền vào
+                            backgroundImage: NetworkImage(m['senderAvatar'] ?? "https://cdn-icons-png.flaticon.com/512/8377/8377384.png"),
                           ),
                           const SizedBox(width: 8),
                         ],
-
-                        // NỘI DUNG TIN NHẮN VÀ GIỜ
                         Flexible(
                           child: Column(
                             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -272,7 +360,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                 reactions: m['reactions'],
                                 isMe: isMe,
                               ),
-                              // Hiển thị giờ
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                 child: Text(
@@ -283,10 +370,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                         ),
-
-                        // Khoảng trống bên phải nếu là người khác gửi (để không bị tràn)
                         if (!isMe) const SizedBox(width: 40),
-                        // Khoảng trống bên trái nếu là mình gửi
                         if (isMe) const SizedBox(width: 8),
                       ],
                     ),
@@ -295,7 +379,8 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          ChatInputField(controller: _controller, onSend: _handleSend),
+          // 5. Ẩn thanh nhập tin nhắn khi đang search để tập trung tìm kiếm
+          if (!_isSearching) ChatInputField(controller: _controller, onSend: _handleSend),
         ],
       ),
     );
@@ -356,8 +441,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    ChatService.currentGroupId = null;
     _chatService.stopConnection();
     _controller.dispose();
+    _msgSub?.cancel();
+    _recallSub?.cancel();
+    _reactSub?.cancel();
     super.dispose();
   }
 }
