@@ -107,7 +107,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
                   CircularProgressIndicator(color: AppColors.textPink),
                   SizedBox(height: 16),
                   Text("AI đang tìm đồ phù hợp...",
-                      style: TextStyle(color: Colors.white70)),
+                      style: TextStyle(color: AppColors.textPrimary)),
                 ],
               ),
             );
@@ -123,7 +123,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
           if (results.isEmpty) {
             return const Center(
                 child: Text("Không tìm thấy món đồ phù hợp.",
-                    style: TextStyle(color: Colors.white54)));
+                    style: TextStyle(color: AppColors.textPrimary)));
           }
 
           final groupedData = _groupItems(results);

@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/notification_type.dart';
@@ -18,7 +19,7 @@ class NotificationService {
         top: MediaQuery.of(context).padding.top + 10,
         right: 0,
         child: Material(
-          color: Colors.transparent,
+          color: AppColors.backgroundSecondary,
           child: AnimatedToastWidget(
             title: title,
             message: message,

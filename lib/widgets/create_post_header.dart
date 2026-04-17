@@ -20,16 +20,6 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
     super.initState();
     _fetchUserData();
   }
-
-  // // Hàm lấy dữ liệu từ SharedPreferences đã được AuthService lưu
-  // Future<void> _loadUserInfo() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   setState(() {
-  //     // Lấy theo key bạn đã đặt trong AuthService: 'username' và 'avatar'
-  //     _username = prefs.getString('username') ?? "Người dùng";
-  //     _avatar = prefs.getString('avatar') ?? "";
-  //   });
-  // }
   Future<void> _fetchUserData() async {
     try {
       final profileData = await _accountService.getMyProfile();
@@ -57,18 +47,18 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderPrimary),
       ),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Hiển thị Avatar từ URL đã lưu
               CircleAvatar(
                 radius: 28,
-                backgroundColor: AppColors.divider,
+                backgroundColor: AppColors.backgroundTertiary,
                 backgroundImage: _avatar.isNotEmpty
                     ? NetworkImage(_avatar)
                     : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
@@ -82,7 +72,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                     Text(
                       _username,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -104,13 +94,14 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                            //Dùng text primary ở đây vì tạo màu xám nhạt
+                            color: AppColors.textPrimary.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            border: Border.all(color: AppColors.surface.withOpacity(0.1)),
                           ),
                           child: const Text(
                             "Hôm nay bạn mặc gì?",
-                            style: TextStyle(color: Colors.white54, fontSize: 14),
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                           ),
                         ),
                       ),

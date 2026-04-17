@@ -20,17 +20,17 @@ class CustomTextField extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: AppColors.divider),
       ),
       child: TextField(
         controller: controller,
         obscureText: isPassword,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+          hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           prefixIcon: Icon(icon, color: AppColors.textPink, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 15),

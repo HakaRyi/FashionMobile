@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_colors.dart';
+
 class GoogleLoginButton extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -14,7 +16,7 @@ class GoogleLoginButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.backgroundSecondary,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(

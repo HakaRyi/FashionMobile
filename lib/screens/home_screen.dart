@@ -30,8 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
         postManager.loadMore();
       }
     });
-
-    // postManager.fetchPosts();
     notificationManager.initialize();
     notificationManager.fetchNotificationHistory();
 
