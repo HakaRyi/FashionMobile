@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:fashion_mobile/constants/app_colors.dart';
 import 'screens/splash_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -13,18 +14,19 @@ class MyHttpOverrides extends HttpOverrides {
       ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
   }
 }
-void main() {
+Future<void> main() async {
   HttpOverrides.global = MyHttpOverrides();
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: ThemeData.dark().copyWith(

@@ -4,9 +4,14 @@ import '../../constants/app_colors.dart';
 import '../../services/order_service.dart';
 import '../../services/wardrobe_service.dart';
 import '../../models/wardrobe_item_model.dart';
-
 import '../../services/follow_service.dart';
+import '../constants/notification_type.dart';
 import '../models/search_model.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import '../services/location_service.dart';
+import '../widgets/create_order/item_selection_sheet.dart';
+import '../widgets/create_order/buyer_selection_sheet.dart';
+import '../utils/app_notification.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key});
@@ -25,7 +30,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isLoading = false;
   final OrderService _orderService = OrderService();
   final WardrobeService _wardrobeService = WardrobeService();
+  final LocationService _locationService = LocationService();
   final NumberFormat _formatter = NumberFormat.decimalPattern('vi_VN');
+  final NotificationService _notificationService = NotificationService();
+
 
   List<WardrobeItemModel> _selectedItems = [];
   UserSuggestionModel? _selectedBuyer;
@@ -58,7 +66,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
     try {
       final subTotal = double.parse(_priceController.text.replaceAll('.', ''));
-      // ---> BẮT ĐẦU SỬA
       final unitPricePerItem = subTotal / _selectedItems.length;
 
       final requestBody = {
@@ -76,20 +83,25 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           "itemName": item.itemName
         }).toList()
       };
-      // <--- KẾT THÚC SỬA
 
       await _orderService.createOrder(requestBody);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tạo đơn hàng thành công!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
+        NotificationService.show(
+          context,
+          title: "Thành công!",
+          message: "Tạo đơn hàng thành công.",
+          type: NotificationType.success,
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        NotificationService.show(
+          context,
+          title: "Đã xảy ra lỗi",
+          message: "Tạo đơn thất bại",
+          type: NotificationType.error,
         );
       }
     } finally {
@@ -105,9 +117,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return _ItemSelectionSheet(
+        return ItemSelectionSheet(
           wardrobeService: _wardrobeService,
-          // ---> BẮT ĐẦU SỬA
           initialSelectedItems: _selectedItems,
           onSelectionConfirmed: (List<WardrobeItemModel> items) {
             setState(() {
@@ -115,7 +126,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             });
             Navigator.pop(context);
           },
-          // <--- KẾT THÚC SỬA
         );
       },
     );
@@ -127,11 +137,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return _BuyerSelectionSheet(
+        return BuyerSelectionSheet(
           followService: _followService,
           onBuyerSelected: (UserSuggestionModel buyer) {
             setState(() {
               _selectedBuyer = buyer;
+              _receiverNameController.text = buyer.fullName;
             });
             Navigator.pop(context);
           },
@@ -140,13 +151,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  // ---> BẮT ĐẦU SỬA
   void _removeItem(int index) {
     setState(() {
       _selectedItems.removeAt(index);
     });
   }
-  // <--- KẾT THÚC SỬA
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +173,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             _buildSectionTitle("Sản phẩm giao dịch"),
-            // ---> BẮT ĐẦU SỬA
             if (_selectedItems.isNotEmpty)
               ..._selectedItems.asMap().entries.map((entry) {
                 int idx = entry.key;
@@ -240,7 +248,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
               ),
             ),
-            // <--- KẾT THÚC SỬA
             const SizedBox(height: 24),
 
             _buildSectionTitle("Thông tin giao dịch"),
@@ -305,7 +312,57 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             const SizedBox(height: 16),
             _buildTextField(_receiverPhoneController, 'Số điện thoại', TextInputType.phone),
             const SizedBox(height: 16),
-            _buildTextField(_shippingAddressController, 'Địa chỉ giao hàng', TextInputType.streetAddress),
+            TypeAheadField<String>(
+              controller: _shippingAddressController,
+              debounceDuration: const Duration(milliseconds: 500),
+              suggestionsCallback: (pattern) async {
+                return await _locationService.searchAddress(pattern);
+              },
+              itemBuilder: (context, String suggestion) {
+                return ListTile(
+                  tileColor: const Color(0xFF1E1E1E),
+                  leading: const Icon(Icons.location_on_outlined, color: Colors.pinkAccent),
+                  title: Text(
+                    suggestion,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                );
+              },
+              onSelected: (String selection) {
+                _shippingAddressController.text = selection;
+              },
+              loadingBuilder: (context) => const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator(color: Colors.pinkAccent)),
+              ),
+              emptyBuilder: (context) => const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Không tìm thấy địa chỉ này', style: TextStyle(color: Colors.white54)),
+              ),
+              builder: (context, controller, focusNode) {
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Địa chỉ giao hàng',
+                    labelStyle: const TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    prefixIcon: const Icon(Icons.map_outlined, color: Colors.white54),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.pinkAccent, width: 1.5),
+                    ),
+                  ),
+                  validator: (value) => value!.isEmpty ? 'Vui lòng nhập Địa chỉ giao hàng' : null,
+                );
+              },
+            ),
 
             const SizedBox(height: 40),
             ElevatedButton(
@@ -361,379 +418,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         ),
       ),
       validator: (value) => value!.isEmpty ? 'Vui lòng nhập $label' : null,
-    );
-  }
-}
-
-class _ItemSelectionSheet extends StatefulWidget {
-  final WardrobeService wardrobeService;
-  // ---> BẮT ĐẦU SỬA
-  final List<WardrobeItemModel> initialSelectedItems;
-  final Function(List<WardrobeItemModel>) onSelectionConfirmed;
-
-  const _ItemSelectionSheet({
-    required this.wardrobeService,
-    required this.initialSelectedItems,
-    required this.onSelectionConfirmed,
-  });
-  // <--- KẾT THÚC SỬA
-
-  @override
-  State<_ItemSelectionSheet> createState() => _ItemSelectionSheetState();
-}
-
-class _ItemSelectionSheetState extends State<_ItemSelectionSheet> {
-  List<WardrobeItemModel> _allItems = [];
-  List<WardrobeItemModel> _filteredItems = [];
-  // ---> BẮT ĐẦU SỬA
-  List<WardrobeItemModel> _currentSelected = [];
-  // <--- KẾT THÚC SỬA
-  bool _isLoading = true;
-  String _errorMessage = '';
-
-  @override
-  void initState() {
-    super.initState();
-    // ---> BẮT ĐẦU SỬA
-    _currentSelected = List.from(widget.initialSelectedItems);
-    // <--- KẾT THÚC SỬA
-    _fetchItems();
-  }
-
-  Future<void> _fetchItems() async {
-    try {
-      final items = await widget.wardrobeService.getMyWardrobeItems();
-      if (mounted) {
-        setState(() {
-          _allItems = items;
-          _filteredItems = items;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _filterItems(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredItems = _allItems;
-      } else {
-        _filteredItems = _allItems.where((item) {
-          return item.itemName.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-      }
-    });
-  }
-
-  // ---> BẮT ĐẦU SỬA
-  void _toggleSelection(WardrobeItemModel item) {
-    setState(() {
-      final isSelected = _currentSelected.any((element) => element.itemId == item.itemId);
-      if (isSelected) {
-        _currentSelected.removeWhere((element) => element.itemId == item.itemId);
-      } else {
-        _currentSelected.add(item);
-      }
-    });
-  }
-  // <--- KẾT THÚC SỬA
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.8,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (_, controller) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                // ---> BẮT ĐẦU SỬA
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Chọn sản phẩm",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => widget.onSelectionConfirmed(_currentSelected),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pink,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: Text("Xác nhận (${_currentSelected.length})", style: const TextStyle(color: Colors.white)),
-                    )
-                  ],
-                ),
-                // <--- KẾT THÚC SỬA
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: _filterItems,
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm tên sản phẩm...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
-                    : _errorMessage.isNotEmpty
-                    ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)))
-                    : _filteredItems.isEmpty
-                    ? const Center(child: Text("Không tìm thấy sản phẩm nào.", style: TextStyle(color: Colors.white54)))
-                    : ListView.separated(
-                  controller: controller,
-                  padding: const EdgeInsets.all(20),
-                  itemCount: _filteredItems.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final item = _filteredItems[index];
-                    // ---> BẮT ĐẦU SỬA
-                    final isSelected = _currentSelected.any((element) => element.itemId == item.itemId);
-
-                    return GestureDetector(
-                      onTap: () => _toggleSelection(item),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.pink.withOpacity(0.2) : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isSelected ? Colors.pinkAccent : Colors.white10),
-                        ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                item.imageUrl != null && item.imageUrl!.isNotEmpty
-                                    ? item.imageUrl!
-                                    : 'https://via.placeholder.com/150',
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 50, height: 50, color: Colors.grey[800],
-                                  child: const Icon(Icons.image, color: Colors.white54),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.itemName,
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.brand ?? 'Không có thương hiệu',
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              isSelected ? Icons.check_circle : Icons.circle_outlined,
-                              color: isSelected ? Colors.pinkAccent : Colors.white54,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _BuyerSelectionSheet extends StatefulWidget {
-  final FollowService followService;
-  final Function(UserSuggestionModel) onBuyerSelected;
-
-  const _BuyerSelectionSheet({
-    required this.followService,
-    required this.onBuyerSelected,
-  });
-
-  @override
-  State<_BuyerSelectionSheet> createState() => _BuyerSelectionSheetState();
-}
-
-class _BuyerSelectionSheetState extends State<_BuyerSelectionSheet> {
-  List<UserSuggestionModel> _allFollowers = [];
-  List<UserSuggestionModel> _filteredFollowers = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchFollowers();
-  }
-
-  Future<void> _fetchFollowers() async {
-    try {
-      final followers = await widget.followService.getFollowers();
-      if (mounted) {
-        setState(() {
-          _allFollowers = followers;
-          _filteredFollowers = followers;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  void _filterFollowers(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredFollowers = _allFollowers;
-      } else {
-        _filteredFollowers = _allFollowers.where((user) {
-          return user.fullName.toLowerCase().contains(query.toLowerCase()) ||
-              user.username.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      builder: (_, controller) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Chọn người mua",
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: _filterFollowers,
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm theo tên hoặc username...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
-                    : _filteredFollowers.isEmpty
-                    ? const Center(child: Text("Không có ai theo dõi bạn.", style: TextStyle(color: Colors.white54)))
-                    : ListView.separated(
-                  controller: controller,
-                  padding: const EdgeInsets.all(20),
-                  itemCount: _filteredFollowers.length,
-                  separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 24),
-                  itemBuilder: (context, index) {
-                    final user = _filteredFollowers[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      onTap: () => widget.onBuyerSelected(user),
-                      leading: CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.white10,
-                        backgroundImage: NetworkImage(
-                            user.avatarUrl.isNotEmpty
-                                ? user.avatarUrl
-                                : 'https://i.pravatar.cc/150?u=${user.accountId}'
-                        ),
-                      ),
-                      title: Text(
-                        user.fullName.isNotEmpty ? user.fullName : user.username,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        '@${user.username}',
-                        style: const TextStyle(color: Colors.pinkAccent, fontSize: 13),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

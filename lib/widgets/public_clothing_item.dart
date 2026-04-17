@@ -11,7 +11,7 @@ class PublicClothingItem extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onSave;
   final bool showSaveButton; // Dùng để ẩn nút tim nếu là đồ của chính mình
-
+  final VoidCallback? onLongPress;
   const PublicClothingItem({
     super.key,
     required this.itemId,
@@ -22,6 +22,7 @@ class PublicClothingItem extends StatelessWidget {
     this.onTap,
     this.onSave,
     this.showSaveButton = true, // Mặc định là hiện
+    this.onLongPress,
   });
 
   bool get _isNetworkImage {
@@ -30,8 +31,9 @@ class PublicClothingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,

@@ -4,7 +4,8 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../constants/notification_type.dart';
+import '../utils/app_notification.dart';
 import '../../constants/app_colors.dart';
 import '../managers/payment_manager.dart';
 
@@ -68,10 +69,11 @@ class _DepositScreenState extends State<DepositScreen> {
 
   Future<void> _processPayment() async {
     if (_selectedAmount < 10000) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Số tiền nạp tối thiểu là 10.000đ'),
-        ),
+      NotificationService.show(
+        context,
+        title: "Thất bại",
+        message: "Số tiền nạp tối thiểu là 10.000đ",
+        type: NotificationType.error,
       );
       return;
     }
@@ -85,10 +87,11 @@ class _DepositScreenState extends State<DepositScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi: $e'),
-        ),
+      NotificationService.show(
+        context,
+        title: "Thất bại",
+        message: "Lỗi hệ thống",
+        type: NotificationType.error,
       );
     } finally {
       if (!mounted) return;

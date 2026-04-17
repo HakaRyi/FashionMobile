@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../models/wardrobe_item_model.dart';
 import '../widgets/clothing_item.dart';
 import '../services/item_service.dart';
 import 'clothing_detail_screen.dart'; // Đảm bảo đã import trang chi tiết
 
 class AIResultScreen extends StatefulWidget {
-  final Map<String, dynamic> baseItem;
+  final dynamic baseItem;
   final String prompt;
   final bool useMyWardrobe;
-  final bool useCommunityItems;
+  final bool includeSavedItems;
+  final List<int> targetWardrobeIds;
 
   const AIResultScreen({
     super.key,
     required this.baseItem,
     required this.prompt,
     required this.useMyWardrobe,
-    required this.useCommunityItems,
+    required this.includeSavedItems,
+    required this.targetWardrobeIds,
   });
 
   @override
@@ -24,15 +27,32 @@ class AIResultScreen extends StatefulWidget {
 
 class _AIResultScreenState extends State<AIResultScreen> {
   late Future<List<dynamic>> _recommendationsFuture;
+  int get _baseItemId {
+    if (widget.baseItem is WardrobeItemModel) return widget.baseItem.itemId;
+    return widget.baseItem['itemId'] ?? 0;
+  }
 
+  // Hàm lấy tên an toàn
+  String get _baseItemName {
+    if (widget.baseItem is WardrobeItemModel) return widget.baseItem.itemName;
+    return widget.baseItem['itemName'] ?? "Item";
+  }
+
+  // Hàm lấy ảnh an toàn (Fix luôn vụ lệch key primaryImageUrl/imageUrl)
+  String? get _baseItemImage {
+    if (widget.baseItem is WardrobeItemModel) return widget.baseItem.imageUrl;
+    return widget.baseItem['primaryImageUrl'] ?? widget.baseItem['imageUrl'];
+  }
   @override
   void initState() {
     super.initState();
     _recommendationsFuture = ItemService().getSmartRecommendations(
-      referenceItemId: widget.baseItem['itemId'],
+      referenceItemId: _baseItemId,
       prompt: widget.prompt,
       useMyWardrobe: widget.useMyWardrobe,
-      useCommunityItems: widget.useCommunityItems,
+      useSavedItems: widget.includeSavedItems,
+      targetWardrobeIds: widget.targetWardrobeIds,
+      limit: 15,
     );
   }
 
@@ -135,7 +155,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
       child: Row(
         children: [
           Hero(
-            tag: 'item_${widget.baseItem['itemId']}',
+            tag: 'item_$_baseItemId',
             child: Container(
               width: 60,
               height: 70,
@@ -144,8 +164,8 @@ class _AIResultScreenState extends State<AIResultScreen> {
                   borderRadius: BorderRadius.circular(8)),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: widget.baseItem['primaryImageUrl'] != null
-                    ? Image.network(widget.baseItem['primaryImageUrl'],
+                child: _baseItemImage != null
+                    ? Image.network(_baseItemImage!,
                     fit: BoxFit.cover)
                     : const Icon(Icons.checkroom, color: Colors.grey),
               ),
@@ -158,7 +178,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
               children: [
                 const Text("Phối đồ cùng:",
                     style: TextStyle(color: Colors.white54, fontSize: 12)),
-                Text(widget.baseItem['itemName'] ?? "Item",
+                Text(_baseItemName,
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

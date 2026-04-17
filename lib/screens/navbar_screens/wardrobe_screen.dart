@@ -219,66 +219,120 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       },
     );
   }
+  // Widget _buildHeader(BuildContext context) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 16.0,horizontal: 16.0),
+  //     child: Column(
+  //       children: [
+  //         const Text("Tủ Đồ", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)),
+  //         const SizedBox(height: 20),
+  //         SizedBox(
+  //           height: 90,
+  //           child: ListView(
+  //             scrollDirection: Axis.horizontal,
+  //             padding: const EdgeInsets.symmetric(horizontal: 16),
+  //             physics: const BouncingScrollPhysics(),
+  //             children: [
+  //               _wrapAction(
+  //                 ActionButton(
+  //                   icon: Icons.add_a_photo,
+  //                   label: "Thêm đồ",
+  //                   color: AppColors.accent,
+  //                   onTap: () async {
+  //                     // Hứng kết quả trả về từ toàn bộ luồng upload
+  //                     final result = await UploadUtils.showUploadMenu(context);
+  //                     if (result == true) {
+  //                       _loadItems(); // Chỉ load lại nếu upload thành công
+  //                     }
+  //                   },
+  //                 ),
+  //               ),
+  //               _wrapAction(
+  //                 ActionButton(
+  //                   icon: Icons.history,
+  //                   label: "Lịch sử gợi ý",
+  //                   color: Colors.orangeAccent,
+  //                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SuggestionScreen())),
+  //                 ),
+  //               ), // Đóng ngoặc của _wrapAction
+  //               _wrapAction(
+  //                 ActionButton(
+  //                   icon: Icons.face,
+  //                   label: "Thử đồ",
+  //                   color: AppColors.textPink,
+  //                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TryOnScreen())),
+  //                 ),
+  //               ), // Đóng ngoặc của _wrapAction
+  //               // _wrapAction(
+  //               //   ActionButton(
+  //               //     icon: Icons.style,
+  //               //     label: "Phong cách",
+  //               //     color: Colors.blueAccent,
+  //               //     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FashionNewsScreen())),
+  //               //   ),
+  //               // ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0), // Thêm padding ngang cho hàng
       child: Column(
         children: [
-          const Text("Tủ Đồ", style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)),
+          const Text(
+              "Tủ Đồ",
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)
+          ),
           const SizedBox(height: 20),
-          SizedBox(
-            height: 90,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _wrapAction(
-                  ActionButton(
-                    icon: Icons.add_a_photo,
-                    label: "Thêm đồ",
-                    color: AppColors.accent,
-                    onTap: () async {
-                      // Hứng kết quả trả về từ toàn bộ luồng upload
-                      final result = await UploadUtils.showUploadMenu(context);
-                      if (result == true) {
-                        _loadItems(); // Chỉ load lại nếu upload thành công
-                      }
-                    },
+          // Thay thế SizedBox + ListView bằng Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Dàn đều khoảng cách giữa các phần tử
+            children: [
+              Expanded(
+                child: ActionButton(
+                  icon: Icons.add_a_photo,
+                  label: "Thêm đồ",
+                  color: AppColors.accent,
+                  onTap: () async {
+                    final result = await UploadUtils.showUploadMenu(context);
+                    if (result == true) _loadItems();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8), // Khoảng cách nhỏ giữa các nút
+              Expanded(
+                child: ActionButton(
+                  icon: Icons.history,
+                  label: "Lịch sử",
+                  color: Colors.orangeAccent,
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SuggestionScreen())
                   ),
                 ),
-                _wrapAction(
-                  ActionButton(
-                    icon: Icons.lightbulb_outline,
-                    label: "Gợi ý",
-                    color: Colors.orangeAccent,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SuggestionScreen())),
-                  ),
-                ), // Đóng ngoặc của _wrapAction
-                _wrapAction(
-                  ActionButton(
-                    icon: Icons.face,
-                    label: "Thử đồ",
-                    color: AppColors.textPink,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TryOnScreen())),
-                  ),
-                ), // Đóng ngoặc của _wrapAction
-                _wrapAction(
-                  ActionButton(
-                    icon: Icons.style,
-                    label: "Phong cách",
-                    color: Colors.blueAccent,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FashionNewsScreen())),
+              ),
+              const SizedBox(width: 8), // Khoảng cách nhỏ giữa các nút
+              Expanded(
+                child: ActionButton(
+                  icon: Icons.face,
+                  label: "Thử đồ",
+                  color: AppColors.textPink,
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TryOnScreen())
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-
   Widget _wrapAction(Widget child) {
     return Padding(padding: const EdgeInsets.only(right: 16.0), child: child);
   }

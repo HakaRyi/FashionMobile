@@ -1,161 +1,101 @@
 // lib/utils/try_on_manager.dart
-// lib/utils/try_on_manager.dart
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-
-import '../core/api_exception.dart';
-import '../models/try_on_history_model.dart';
 import '../services/try_on_history_service.dart';
-import '../services/try_on_info_service.dart';
 import '../services/try_on_service.dart';
 
 final TryOnManager tryOnManager = TryOnManager();
 
 class TryOnManager extends ChangeNotifier {
   bool isProcessing = false;
-  bool isLoadingHistory = false;
-  bool isLoadingInfo = false;
-
   Uint8List? resultImageBytes;
-  String? errorMessage;
-
-  double balance = 0;
-  double locked = 0;
-  double available = 0;
-  double price = 0;
-  bool canTry = false;
-  String infoMessage = "";
-
-  List<TryOnHistoryModel> history = [];
-
   final TryOnService _service = TryOnService();
-  final TryOnHistoryService _historyService = TryOnHistoryService();
-  final TryOnInfoService _infoService = TryOnInfoService();
+  List<Map<String, dynamic>> historyList = [];
+  bool isLoadingHistory = false;
 
-  Future<void> loadInfo() async {
-    isLoadingInfo = true;
+  final TryOnHistoryService _historyService = TryOnHistoryService();
+
+  Future<void> startTryOn(
+      BuildContext globalContext, {
+        String? modelAssetPath,
+        String? modelImageUrl,
+        required String clothFilePath,
+        int? category
+      }) async {
+    if (isProcessing) return;
+
+    isProcessing = true;
+    resultImageBytes = null;
     notifyListeners();
 
-    try {
-      final data = await _infoService.getInfo();
+    final result = await _service.processTryOn(
+      modelAssetPath: modelAssetPath,
+      modelImageUrl: modelImageUrl,
+      clothImagePath: clothFilePath,
+      category: category,
+    );
 
-      balance = _toDouble(data["balance"]);
-      locked = _toDouble(data["lockedBalance"]);
-      available = _toDouble(data["availableBalance"]);
-      price = _toDouble(data["tryOnPrice"]);
-      canTry = data["canTryOn"] == true;
-      infoMessage = (data["message"] ?? "").toString();
-    } catch (e) {
-      debugPrint("TryOnManager.loadInfo error: $e");
-    } finally {
-      isLoadingInfo = false;
-      notifyListeners();
+    isProcessing = false;
+    if (result != null) {
+      resultImageBytes = result;
+      if (resultImageBytes != null) {
+        await _historyService.saveHistory(resultImageBytes!);
+        await fetchHistory();
+      }
+      _showSuccessNotification(globalContext);
+    } else {
+      _showErrorNotification(globalContext);
     }
+
+    notifyListeners();
   }
 
-  Future<void> loadHistory() async {
+  void resetResult() {
+    resultImageBytes = null;
+    notifyListeners();
+  }
+
+  void _showSuccessNotification(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Đã xử lý xong quần áo! Chạm để xem."),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: "XEM",
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  void _showErrorNotification(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Lỗi xử lý quần áo, vui lòng thử lại!"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void setMockResultBytes(Uint8List bytes) {
+    resultImageBytes = bytes;
+    isProcessing = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchHistory() async {
     isLoadingHistory = true;
     notifyListeners();
 
     try {
-      history = await _historyService.getMyHistory();
+      historyList = await _historyService.getMyHistory();
     } catch (e) {
-      debugPrint("TryOnManager.loadHistory error: $e");
+      debugPrint(e.toString());
     } finally {
       isLoadingHistory = false;
       notifyListeners();
     }
-  }
-
-  Future<void> tryOn({
-    required BuildContext context,
-    String? modelAssetPath,
-    String? modelImageUrl,
-    required String clothPath,
-  }) async {
-    if (isProcessing) return;
-
-    isProcessing = true;
-    errorMessage = null;
-    resultImageBytes = null;
-    notifyListeners();
-
-    try {
-      final Uint8List result = await _service.processTryOn(
-        modelAssetPath: modelAssetPath,
-        modelImageUrl: modelImageUrl,
-        clothImagePath: clothPath,
-      );
-
-      resultImageBytes = result;
-
-      await loadInfo();
-      await loadHistory();
-
-      _showSuccess(context);
-    } on ApiException catch (e) {
-      errorMessage = e.message;
-      await loadInfo();
-      _showError(context, e.message);
-    } catch (e) {
-      errorMessage = "Lỗi không xác định: $e";
-      await loadInfo();
-      _showError(context, errorMessage!);
-    } finally {
-      isProcessing = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> deleteHistory(int id) async {
-    final oldHistory = List<TryOnHistoryModel>.from(history);
-
-    history.removeWhere((item) => item.id == id);
-    notifyListeners();
-
-    try {
-      await _historyService.deleteHistory(id);
-    } catch (e) {
-      history = oldHistory;
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  void reset() {
-    resultImageBytes = null;
-    errorMessage = null;
-    notifyListeners();
-  }
-
-  double _toDouble(dynamic value) {
-    if (value == null) return 0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0;
-    return 0;
-  }
-
-  void _showSuccess(BuildContext context) {
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Try-on thành công 🎉"),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _showError(BuildContext context, String message) {
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
   }
 }

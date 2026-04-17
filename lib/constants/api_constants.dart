@@ -1,15 +1,11 @@
 class ApiConstants {
-  // static const String baseUrl = "http://10.0.2.2:5196/api";
-  // static const String baseUrl = "http://192.168.1.15:5196/api";
-  static const String baseUrl = "http://192.168.102.24:5196/api";
+  static const String baseUrl = "http://10.0.2.2:5196/api";
+  //static const String baseUrl = "http://192.168.1.21:5196/api";
 
-  static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
-
-  // static const String baseSignalRUrl = "http://10.0.2.2:5196";
-  // static const String baseSignalRUrl = "http://192.168.1.15:5196";
-  static const String baseSignalRUrl = "http://192.168.102.24:5196";
+  static const String baseAIUrl = "https://retiform-illa-refinedly.ngrok-free.dev";
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
-
+  static const String baseSignalRUrl = "http://10.0.2.2:5196";
+  //static const String baseSignalRUrl = "http://192.168.1.21:5196";
   static const String refreshTokenEndpoint = "/auth/refresh-token";
   static const String chatEndpoint = "/Chat";
   static const String groupEndpoint = "/Group";
@@ -27,6 +23,7 @@ class ApiConstants {
   static const String feedEndpoint = "/post/feed";
   static const String getMyPostEndpoint = "/post/me";
   static const String getAllPostEndpoint = "/post";
+
 
   static const String getMyProfile = "/Account/{id}";
 
@@ -74,6 +71,7 @@ class ApiConstants {
   static const String topUpWalletZaloPay = "/payment/topup/zalopay";
 
   static const String publicWardrobes = "/public-wardrobes";
+  static const String searchWardrobeByUsernameEndpoint = "/wardrobes/search-by-username"; // Tên theo controller ní vừa sửa
   static const String publicProfileEndpoint = "/wardrobes/public/{accountId}/profile";
   static const String publicWardrobeItemsEndpoint = "/wardrobes/public/{accountId}/items";
   static const String publicItemDetailEndpoint = "/items/public/{itemId}";

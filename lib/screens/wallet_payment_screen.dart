@@ -33,7 +33,7 @@ class _WalletPaymentScreenState extends State<WalletPaymentScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text('Thanh toán không thành công, vui lòng kiểm tra số dư'), backgroundColor: Colors.red),
         );
       }
     } finally {

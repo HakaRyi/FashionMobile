@@ -1,12 +1,16 @@
 // lib/screens/public_wardrobe_screen.dart
 import 'package:fashion_mobile/screens/public_item_detail_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 import '../models/wardrobe_item_model.dart';
 import '../services/item_service.dart';
 import '../services/wardrobe_service.dart';
 import '../widgets/public_clothing_item.dart';
 import '../utils/app_toast.dart';
+import '../utils/route_transitions.dart';
+import '../screens/ai_suggestion_screen.dart';
+import '../screens/try_on_screen.dart';
 class PublicWardrobeScreen extends StatefulWidget {
   final int accountId;
 
@@ -32,7 +36,60 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
     super.initState();
     _loadData();
   }
+  void _showActionMenu(BuildContext context, WardrobeItemModel item) {
+    // Rung nhẹ một cái cho cảm giác thật
+    HapticFeedback.mediumImpact();
 
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Tiêu đề nhỏ cho Menu
+              Text(
+                item.itemName,
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+
+              // Option 1: AI Gợi ý phối đồ
+              ListTile(
+                leading: const Icon(Icons.auto_awesome, color: Colors.white),
+                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(
+                      context,
+                      SlideRoute(page: AISuggestionScreen(selectedItem: item))
+                  );
+                },
+              ),
+
+              // Option 2: Thử đồ ảo (Try-on)
+              ListTile(
+                leading: const Icon(Icons.face, color: Colors.white),
+                title: const Text("Thử đồ ảo", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  // Đăng chuyển hướng qua màn hình TryOnScreen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TryOnScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   Future<void> _loadData() async {
     try {
       setState(() {
@@ -271,6 +328,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                             AppToast.show(context, item.isSaved ? "Đã bỏ lưu!" : "Đã lưu vào yêu thích!");
                           }
                         },
+                        onLongPress: () => _showActionMenu(context, item),
                       );
                     },
                     childCount: _items.length,

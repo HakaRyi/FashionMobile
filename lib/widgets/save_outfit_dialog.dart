@@ -12,30 +12,30 @@ class SaveOutfitDialog extends StatefulWidget {
   State<SaveOutfitDialog> createState() => _SaveOutfitDialogState();
 }
 
-class _SaveOutfitDialogState extends State<SaveOutfitDialog> with SingleTickerProviderStateMixin {
+class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
   final TextEditingController _nameController = TextEditingController();
   final OutfitService _outfitService = OutfitService();
   bool _isSaving = false;
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
-  }
 
   @override
   void dispose() {
-    _controller.dispose();
     _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSave() async {
-    if (_nameController.text.isEmpty) return;
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Vui lòng nhập tên cho Outfit"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
-    bool success = await _outfitService.saveOutfit(widget.imageBytes, _nameController.text);
+    bool success = await _outfitService.saveOutfit(widget.imageBytes, _nameController.text.trim());
     setState(() => _isSaving = false);
 
     if (mounted) {
@@ -46,125 +46,165 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
       child: Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Container(
-                  width: 320,
-                  height: 420,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.rectangle,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.textPink.withOpacity(0.4 + (_controller.value * 0.3)),
-                        blurRadius: 30 + (_controller.value * 20),
-                        spreadRadius: 5,
-                      )
-                    ],
-                  ),
-                );
-              },
-            ),
-
-            // Container chính
-            Container(
-              width: 300,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2E1C38), Color(0xFF1A1A2E)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          width: 320,
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          decoration: BoxDecoration(
+            color: AppColors.surface, // Dùng màu nền chuẩn của App
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 40,
+                offset: const Offset(0, 10),
+              )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Tiêu đề
+              const Text(
+                "Lưu Outfit",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: AppColors.textPink.withOpacity(0.5), width: 1.5),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 8),
+              Text(
+                "Thêm bộ trang phục này vào tủ đồ của bạn",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Ảnh preview
+              Container(
+                height: 140,
+                width: 110,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                  image: DecorationImage(
+                    image: MemoryImage(widget.imageBytes),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Input tên
+              TextField(
+                controller: _nameController,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center, // Căn giữa chữ nhập vào
+                textAlignVertical: TextAlignVertical.center, // Căn giữa chữ theo chiều dọc
+                decoration: InputDecoration(
+                  hintText: "Nhập tên outfit...",
+                  hintStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.4),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.textPink, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Nút chức năng (Hủy & Lưu)
+              Row(
                 children: [
-                  const Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 40),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Lưu Bộ Đồ Xinh",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cursive',
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Ảnh preview nhỏ
-                  Container(
-                    height: 120,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.white38),
-                      image: DecorationImage(
-                        image: MemoryImage(widget.imageBytes),
-                        fit: BoxFit.cover,
+                  Expanded(
+                    child: TextButton(
+                      onPressed: _isSaving ? null : () => Navigator.pop(context, false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        "Hủy bỏ",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Input tên
-                  TextField(
-                    controller: _nameController,
-                    style: const TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      hintText: "Đặt tên cho outfit này nhé...",
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.favorite, color: AppColors.textPink, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Nút Lưu
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : _handleSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.textPink,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                        elevation: 8,
-                        shadowColor: AppColors.textPink.withOpacity(0.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: _isSaving
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text("Lưu Ngay", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                          SizedBox(width: 8),
-                          Icon(Icons.stars, color: Colors.amberAccent),
-                        ],
+                          ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                          : const Text(
+                        "Lưu Outfit",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
