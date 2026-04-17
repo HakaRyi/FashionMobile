@@ -77,10 +77,10 @@ class _AIResultScreenState extends State<AIResultScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text("AI Stylist Gợi Ý",
-            style: TextStyle(color: Colors.white, fontSize: 16)),
+            style: TextStyle(color: Colors.black, fontSize: 16)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
 
         actions: [
           TextButton(
@@ -148,9 +148,9 @@ class _AIResultScreenState extends State<AIResultScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.stroke,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.textPink.withOpacity(0.3)),
+       // border: Border.all(color: AppColors.textPink.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -177,10 +177,10 @@ class _AIResultScreenState extends State<AIResultScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text("Phối đồ cùng:",
-                    style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    style: TextStyle(color: Colors.black54, fontSize: 12)),
                 Text(_baseItemName,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontWeight: FontWeight.bold,
                         fontSize: 15)),
                 if (widget.prompt.isNotEmpty)
@@ -205,7 +205,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
           padding: const EdgeInsets.only(top: 20, bottom: 12),
           child: Text(title,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 14)),
         ),

@@ -88,7 +88,7 @@ class PublicClothingItem extends StatelessWidget {
                   Text(
                     title.trim().isEmpty ? 'Chưa đặt tên' : title,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Colors.black,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),

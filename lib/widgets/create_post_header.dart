@@ -57,8 +57,9 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.createHeader,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.surface),
       ),
       child: Column(
         children: [
@@ -82,7 +83,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                     Text(
                       _username,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -106,11 +107,11 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            border: Border.all(color: Colors.black.withOpacity(0.1)),
                           ),
                           child: const Text(
                             "Hôm nay bạn mặc gì?",
-                            style: TextStyle(color: Colors.white54, fontSize: 14),
+                            style: TextStyle(color: Colors.black54, fontSize: 14),
                           ),
                         ),
                       ),

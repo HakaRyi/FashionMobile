@@ -21,13 +21,13 @@ class SettingsScreen extends StatelessWidget {
         title: const Text(
           "Cài đặt và Hoạt động",
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -120,14 +120,14 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildSettingItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: Colors.white, size: 22),
+      leading: Icon(icon, color: Colors.black, size: 22),
       title: Text(
         title,
-        style: const TextStyle(color: Colors.white, fontSize: 15),
+        style: const TextStyle(color: Colors.black, fontSize: 15),
       ),
       trailing: const Icon(
         Icons.arrow_forward_ios,
-        color: Colors.white24,
+        color: Colors.black38,
         size: 14,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -138,15 +138,15 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.menu,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         title: const Text(
           "Đăng xuất?",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.black),
         ),
         content: const Text(
           "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?",
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Colors.black87),
         ),
         actions: [
           TextButton(

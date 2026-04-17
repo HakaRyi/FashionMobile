@@ -40,7 +40,9 @@ class ChatBubble extends StatelessWidget {
                     bottomRight: Radius.circular(isMe ? 0 : 16),
                   ),
                 ),
-                child: Text(message, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                child:  isMe ?
+                Text(message, style: const TextStyle(color: Colors.white, fontSize: 14)) :
+                Text(message, style: const TextStyle(color: Colors.black, fontSize: 14)),
               ),
           ],
         ),
@@ -53,7 +55,7 @@ class ChatBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2C),
+                color: const Color(0xFFE8E8E8),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.background, width: 1),
               ),

@@ -29,18 +29,18 @@ class ActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.divider),
+            // border: Border.all(color: AppColors.divider),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 26), // Giảm size icon tí cho cân đối
+              Icon(icon, color: color, size: 30), // Giảm size icon tí cho cân đối
               const SizedBox(height: 8),
               Text(
                 label,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Colors.black87,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),

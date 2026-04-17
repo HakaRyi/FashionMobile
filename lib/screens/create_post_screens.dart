@@ -364,7 +364,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ),
         decoration: const InputDecoration(
           hintText: "Tiêu đề bài viết (tùy chọn)",
-          hintStyle: TextStyle(color: Colors.white24, fontSize: 20),
+          hintStyle: TextStyle(color: Colors.black26, fontSize: 20),
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
         ),
@@ -382,7 +382,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, height: 1.5),
         decoration: const InputDecoration(
           hintText: "Chia sẻ phong cách của bạn...",
-          hintStyle: TextStyle(color: Colors.white38, fontSize: 18),
+          hintStyle: TextStyle(color: Colors.black38, fontSize: 18),
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
         ),

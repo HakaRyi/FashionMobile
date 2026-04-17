@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Text(
                   'Tải hồ sơ thất bại: ${profileSnapshot.error}',
-                  style: const TextStyle(color: Colors.white70),
+                  style: const TextStyle(color: Colors.black),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -292,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     name,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -300,7 +300,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     email,
                                     style: const TextStyle(
-                                      color: Colors.white54,
+                                      color: Colors.black38,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -308,7 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     bio,
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: Colors.black,
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
@@ -328,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ).then((_) => _refreshData()),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.pink,
+                                            backgroundColor: Colors.pinkAccent,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
@@ -414,8 +414,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           },
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.white,
+                                            backgroundColor: Colors.pinkAccent,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pinkAccent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -488,9 +489,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   ),
                                               style:
                                               OutlinedButton.styleFrom(
+                                                backgroundColor: Colors.pinkAccent,
                                                 foregroundColor: Colors.white,
                                                 side: const BorderSide(
-                                                  color: Colors.white24,
+                                                  color: Colors.pinkAccent,
                                                 ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
@@ -541,9 +543,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           style: OutlinedButton.styleFrom(
+                                            backgroundColor: Colors.pinkAccent,
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pinkAccent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -571,9 +574,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           style: OutlinedButton.styleFrom(
+                                            backgroundColor: Colors.pinkAccent,
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pinkAccent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -611,7 +615,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Padding(
                                 padding: EdgeInsets.all(40),
                                 child: CircularProgressIndicator(
-                                  color: Colors.pink,
+                                  color: Colors.pinkAccent,
                                 ),
                               ),
                             ),

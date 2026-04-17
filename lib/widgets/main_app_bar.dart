@@ -26,7 +26,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           const Text(
             "WAPO",
             style: TextStyle(
-              color: Colors.white,
+              color: Colors.black,
               fontSize: 22,
               fontWeight: FontWeight.w900, // Độ đậm cực cao để tạo phong cách Brand
               letterSpacing: 1.2,          // Khoảng cách chữ rộng ra chút cho sang

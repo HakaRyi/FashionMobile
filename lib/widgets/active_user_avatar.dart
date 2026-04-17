@@ -61,7 +61,7 @@ class ActiveUserAvatar extends StatelessWidget {
             Text(
               name.split(" ")[0], // Chỉ lấy phần tên đầu tiên
               style: const TextStyle(
-                  color: Colors.white70,
+                  color: Colors.black87,
                   fontSize: 11,
                   fontWeight: FontWeight.w500
               ),

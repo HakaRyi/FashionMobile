@@ -43,7 +43,7 @@ class _EventListScreenState extends State<EventListScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = "Không thể tải danh sách sự kiện";
+          _error = "Failed to load event list";
         });
       }
     }
@@ -68,16 +68,16 @@ class _EventListScreenState extends State<EventListScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0A),
+        backgroundColor: const Color(0xFFF8F8F8),
         appBar: AppBar(
           elevation: 0,
-          title: const Text("SỰ KIỆN FASHION",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 2)),
+          title: const Text("FASHION EVENTS",
+              style: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 2)),
           centerTitle: true,
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                  colors: [Color(0xFF1A1A1A), Color(0xFF0A0A0A)],
+                  colors: [Colors.white, Color(0xFFF8F8F8)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter),
             ),
@@ -87,9 +87,9 @@ class _EventListScreenState extends State<EventListScreen> {
             indicatorSize: TabBarIndicatorSize.label,
             indicatorWeight: 4,
             labelColor: Colors.pinkAccent,
-            unselectedLabelColor: Colors.white30,
+            unselectedLabelColor: Colors.black26,
             labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-            tabs: const [Tab(text: "KHÁM PHÁ"), Tab(text: "CỦA TÔI")],
+            tabs: const [Tab(text: "EXPLORE"), Tab(text: "MY EVENTS")],
           ),
         ),
         body: _buildBody(),
@@ -103,8 +103,8 @@ class _EventListScreenState extends State<EventListScreen> {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Icon(Icons.error_outline, color: Colors.white24, size: 60),
         const SizedBox(height: 16),
-        Text(_error!, style: const TextStyle(color: Colors.white54)),
-        TextButton(onPressed: _fetchInitialData, child: const Text("THỬ LẠI", style: TextStyle(color: Colors.pinkAccent)))
+        Text(_error!, style: const TextStyle(color: Colors.black54)),
+        TextButton(onPressed: _fetchInitialData, child: const Text("RETRY", style: TextStyle(color: Colors.pinkAccent)))
       ]));
     }
 
@@ -159,10 +159,10 @@ class EventCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF161616),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))
         ],
       ),
       child: ClipRRect(
@@ -186,26 +186,26 @@ class EventCard extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 16,
-                            backgroundColor: Colors.white10,
+                            backgroundColor: Colors.black.withOpacity(0.05),
                             backgroundImage: event.creatorAvatarUrl != null ? NetworkImage(event.creatorAvatarUrl!) : null,
                             child: event.creatorAvatarUrl == null ? const Icon(Icons.person, color: Colors.white24, size: 16) : null,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(event.creatorName, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: Text(event.creatorName, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                           _buildStatusBadge(event.status, colors.last,event.isJoined),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(event.title,
-                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1.2, letterSpacing: -0.5)),
+                          style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900, height: 1.2, letterSpacing: -0.5)),
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           const Icon(Icons.calendar_today_rounded, color: Colors.pinkAccent, size: 12),
                           const SizedBox(width: 6),
-                          Expanded(child: Text(timeRange, style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.w500))),
+                          Expanded(child: Text(timeRange, style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w500))),
                         ],
                       ),
                     ],
@@ -243,9 +243,9 @@ class EventCard extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            _buildOverlayStat(Icons.group_rounded, "${event.participantCount}", "Tham gia"),
+                            _buildOverlayStat(Icons.group_rounded, "${event.participantCount}", "Participants"),
                             const SizedBox(width: 8),
-                            _buildOverlayStat(Icons.military_tech_rounded, NumberFormat.compact().format(event.totalPrizePool), "Thưởng"),
+                            _buildOverlayStat(Icons.military_tech_rounded, NumberFormat.compact().format(event.totalPrizePool), "Prize pools"),
                           ],
                         ),
                       ),
@@ -304,7 +304,7 @@ class EventCard extends StatelessWidget {
     // 2. Nếu sự kiện đang chạy mà user đã tham gia thì hiện JOINED
     else if (isJoined) {
       displayStatus = "JOINED";
-      displayColor = Colors.tealAccent;
+      displayColor = Colors.lightGreen;
     }
     // 3. Các trường hợp còn lại hiện status mặc định (ACTIVE, INVITING...)
     else {

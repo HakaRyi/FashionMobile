@@ -128,12 +128,16 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.background,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
           centerTitle: true,
-          title: const Text('Nội dung đã lưu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: const Text('Nội dung đã lưu', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
           bottom: const TabBar(
             indicatorColor: Colors.pink,
             labelColor: Colors.pink,
-            unselectedLabelColor: Colors.white54,
+            unselectedLabelColor: Colors.black54,
             tabs: [
               Tab(text: "Bài viết"),
               Tab(text: "Món đồ"),

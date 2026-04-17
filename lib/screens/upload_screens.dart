@@ -202,7 +202,11 @@ class _UploadScreenState extends State<UploadScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("AI CLASSIFICATION", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+        ),
+        title: const Text("AI CLASSIFICATION", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.black)),
         centerTitle: true,
         actions: [
           if (_aiResult != null && !_isAnalyzing)
@@ -289,7 +293,7 @@ class _AnalyzingLoader extends StatelessWidget {
         const CircularProgressIndicator(color: Colors.pinkAccent),
         const SizedBox(height: 16),
         Text("AI is analyzing & removing background...",
-            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+            style: TextStyle(color: Colors.black.withOpacity(0.6), fontSize: 13)),
       ],
     );
   }

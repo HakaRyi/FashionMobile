@@ -62,7 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() {
           final index = _messages.indexWhere((m) => m['messageId'] == event.messageId);
           if (index != -1) {
-            _messages[index]['content'] = "Tin nhắn đã bị thu hồi";
+            _messages[index]['content'] = "Message recalled";
             _messages[index]['isRecalled'] = true;
           }
         });
@@ -214,7 +214,7 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: AppColors.background,
         elevation: 0.5,
         leading: IconButton(
-          icon: Icon(_isSearching ? Icons.close : Icons.arrow_back_ios, color: Colors.white, size: 20),
+          icon: Icon(_isSearching ? Icons.close : Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () {
             if (_isSearching) {
               setState(() {
@@ -232,10 +232,10 @@ class _ChatScreenState extends State<ChatScreen> {
             ? TextField(
           controller: _searchControllerLocal,
           autofocus: true,
-          style: const TextStyle(color: Colors.white, fontSize: 16),
+          style: const TextStyle(color: Colors.black, fontSize: 16),
           decoration: const InputDecoration(
-            hintText: "Tìm tin nhắn...",
-            hintStyle: TextStyle(color: Colors.white38),
+            hintText: "Search messages...",
+            hintStyle: TextStyle(color: Colors.black38),
             border: InputBorder.none,
           ),
           onChanged: (val) {
@@ -262,7 +262,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         height: 10,
                         width: 10,
                         decoration: BoxDecoration(
-                          color: Colors.greenAccent,
+                          color: Colors.green,
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.background, width: 1.5),
                         ),
@@ -275,11 +275,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.userName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(widget.userName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold,color: Colors.black,)),
                     Text(
-                      widget.isOnline ? "Đang hoạt động" : "Ngoại tuyến",
+                      widget.isOnline ? "Active now" : "Offline",
                       style: TextStyle(
-                          color: widget.isOnline ? Colors.greenAccent : Colors.white38,
+                          color: widget.isOnline ? Colors.green : Colors.black45,
                           fontSize: 10
                       ),
                     ),
@@ -301,7 +301,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   const Icon(Icons.search, size: 14, color: Colors.white38),
                   const SizedBox(width: 8),
-                  Text("Tìm thấy ${filteredMessages.length} kết quả", style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  Text("Found ${filteredMessages.length} results", style: const TextStyle(color: Colors.white38, fontSize: 12)),
                 ],
               ),
             ),
@@ -348,7 +348,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   child: Text(
                                     m['senderName'] ?? "Unknown",
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: Colors.black45,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -364,7 +364,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                 child: Text(
                                   "${sentTime.hour}:${sentTime.minute.toString().padLeft(2, '0')}",
-                                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                                  style: const TextStyle(color: Colors.black38, fontSize: 10),
                                 ),
                               ),
                             ],
@@ -389,7 +389,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showExtraMenu(dynamic message) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.menu,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -418,8 +418,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const Divider(color: Colors.white10),
           ListTile(
-            leading: const Icon(Icons.push_pin_outlined, color: Colors.white),
-            title: const Text("Ghim tin nhắn", style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.push_pin_outlined, color: Colors.black87),
+            title: const Text("Pin message", style: TextStyle(color: Colors.black87)),
             onTap: () {
               //_chatService.pinMessage(message['messageId'], widget.groupId);
               Navigator.pop(context);
@@ -428,7 +428,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (message['senderName'] != widget.userName) // Chỉ mình mới thu hồi được tin mình gửi
             ListTile(
               leading: const Icon(Icons.history, color: Colors.redAccent),
-              title: const Text("Thu hồi tin nhắn", style: TextStyle(color: Colors.redAccent)),
+              title: const Text("Recall message", style: TextStyle(color: Colors.redAccent)),
               onTap: () {
                 _onRecall(message['messageId']);
                 Navigator.pop(context);

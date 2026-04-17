@@ -27,16 +27,16 @@ class ChatSettingsScreen extends StatelessWidget {
   void _handleCreateGroup(BuildContext context) async {
     showDialog(context: context, builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.textPink)));
     bool success = await ChatService().createGroup(
-      name: "Nhóm mới với $userName",
+      name: "New group with $userName",
       memberIds: [targetUserId],
     );
     Navigator.pop(context);
     if (success) {
-      NotificationUtils.showTopRight(context, message: "Tạo nhóm thành công!");
+      NotificationUtils.showTopRight(context, message: "Group created successfully!");
       Navigator.of(context).pop();
       Navigator.of(context).pop();
     } else {
-      NotificationUtils.showTopRight(context, message: "Tạo nhóm thất bại!", isError: true);
+      NotificationUtils.showTopRight(context, message: "Failed to create group!", isError: true);
     }
   }
 
@@ -48,7 +48,7 @@ class ChatSettingsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(Icons.close, color: Colors.black45),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -59,7 +59,7 @@ class ChatSettingsScreen extends StatelessWidget {
               children: [
                 CircleAvatar(radius: 50, backgroundImage: NetworkImage(avatarUrl)),
                 const SizedBox(height: 16),
-                Text(userName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(userName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
               ],
             ),
           ),
@@ -67,20 +67,20 @@ class ChatSettingsScreen extends StatelessWidget {
           Expanded(
             child: ListView(
               children: [
-                _buildActionItem(Icons.search, "Tìm kiếm cuộc trò chuyện",
+                _buildActionItem(Icons.search, "Search in conversation",
                     onTap: () {
                       Navigator.pop(context, "OPEN_SEARCH");
                     }),
                 if (!isGroup) ...[
                   _buildActionItem(
                       Icons.groups_outlined,
-                      "Tạo nhóm với $userName",
+                      "Create group with $userName",
                       onTap: () => _handleCreateGroup(context)
                   ),
                 ] else ...[
                   _buildActionItem(
                       Icons.people_outline,
-                      "Xem và quản lý thành viên",
+                      "View and manage members",
                       onTap: () {
                         Navigator.push(
                           context,
@@ -94,7 +94,7 @@ class ChatSettingsScreen extends StatelessWidget {
                       }
                   ),
                 ],
-                _buildActionItem(Icons.image_outlined, "Xem file phương tiện & lịch sử hình ảnh",
+                _buildActionItem(Icons.image_outlined, "Media, files & links",
                     onTap: () {
                       Navigator.push(
                         context,
@@ -117,9 +117,9 @@ class ChatSettingsScreen extends StatelessWidget {
 
   Widget _buildActionItem(IconData icon, String title, {bool isDanger = false, VoidCallback? onTap}) {
     return ListTile(
-      leading: Icon(icon, color: isDanger ? Colors.redAccent : Colors.white),
-      title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : Colors.white, fontSize: 15)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+      leading: Icon(icon, color: isDanger ? Colors.redAccent : Colors.black),
+      title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : Colors.black, fontSize: 15)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.black26, size: 20),
       onTap: onTap,
     );
   }

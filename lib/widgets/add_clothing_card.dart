@@ -25,7 +25,7 @@ class AddClothingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppColors.divider, style: BorderStyle.solid),
+          border: Border.all(color: Colors.white, style: BorderStyle.solid),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

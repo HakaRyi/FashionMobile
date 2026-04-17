@@ -160,7 +160,7 @@ class _ChatInputFieldState extends State<ChatInputField> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.white70),
+                  icon: const Icon(Icons.add_circle_outline, color: AppColors.textPink, size: 30),
                   onPressed: _pickImage,
                 ),
                 Expanded(
@@ -175,19 +175,19 @@ class _ChatInputFieldState extends State<ChatInputField> {
                             controller: widget.controller,
                             focusNode: _focusNode,
                             maxLines: 5, minLines: 1,
-                            style: const TextStyle(color: Colors.white, fontSize: 15),
+                            style: const TextStyle(color: Colors.black, fontSize: 15),
                             decoration: const InputDecoration(
                               hintText: "Nhắn tin...",
-                              hintStyle: TextStyle(color: Colors.white24),
+                              hintStyle: TextStyle(color: Colors.black26),
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(vertical: 10),
                             ),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.content_paste_rounded, color: Colors.white38, size: 20),
-                          onPressed: _handlePaste,
-                        ),
+                        // IconButton(
+                        //   icon: const Icon(Icons.content_paste_rounded, color: Colors.black26, size: 20),
+                        //   onPressed: _handlePaste,
+                        // ),
                       ],
                     ),
                   ),

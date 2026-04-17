@@ -344,7 +344,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           shadows: [
-                            Shadow(color: Colors.black45, blurRadius: 5),
+                            Shadow(color: Colors.white, blurRadius: 5),
                           ],
                         ),
                       ),
@@ -451,7 +451,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                   Text(
                                     name,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -459,7 +459,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                   Text(
                                     email,
                                     style: const TextStyle(
-                                      color: Colors.white54,
+                                      color: Colors.black38,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -467,7 +467,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                   Text(
                                     bio,
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: Colors.black,
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
