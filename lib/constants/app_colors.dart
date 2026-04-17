@@ -5,6 +5,7 @@ class AppColors {
   static const Color surface = Color(0xFFE8E8E8);
   static const Color menu = Colors.white;
   static const Color textPrimary = Colors.black87;
+  static const Color textPrimary2 = Colors.white;
   static const Color textSecondary = Colors.black87;
   static const Color textPink = Color(0xFFFC00A6);
   static const Color accent = Colors.deepPurple;

@@ -27,7 +27,7 @@ class _ChatInputFieldState extends State<ChatInputField> {
     final imageBytes = await Pasteboard.image;
 
     if (imageBytes != null) {
-      _showProcessingSnackBar("Đang dán hình ảnh...");
+      _showProcessingSnackBar("Pasting image...");
 
       try {
         final tempDir = await getTemporaryDirectory();
@@ -39,7 +39,7 @@ class _ChatInputFieldState extends State<ChatInputField> {
           _selectedImages.add(savedFile);
         });
       } catch (e) {
-        print("Lỗi khi lưu ảnh từ bộ nhớ tạm: $e");
+        print("Error saving image from clipboard: $e");
       }
       return;
     }
@@ -52,7 +52,7 @@ class _ChatInputFieldState extends State<ChatInputField> {
               text.toLowerCase().contains('.png') ||
               text.toLowerCase().contains('.jpeg'))) {
 
-        _showProcessingSnackBar("Đang tải ảnh từ liên kết...");
+        _showProcessingSnackBar("Downloading image from link...");
         try {
           final response = await http.get(Uri.parse(text));
           if (response.statusCode == 200) {
@@ -62,11 +62,11 @@ class _ChatInputFieldState extends State<ChatInputField> {
             setState(() => _selectedImages.add(file));
           }
         } catch (e) {
-          print("Lỗi tải ảnh: $e");
+          print("Image download error: $e");
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Bộ nhớ tạm không chứa hình ảnh")),
+          const SnackBar(content: Text("Clipboard does not contain an image")),
         );
       }
     }
@@ -177,7 +177,7 @@ class _ChatInputFieldState extends State<ChatInputField> {
                             maxLines: 5, minLines: 1,
                             style: const TextStyle(color: Colors.black, fontSize: 15),
                             decoration: const InputDecoration(
-                              hintText: "Nhắn tin...",
+                              hintText: "Type a message...",
                               hintStyle: TextStyle(color: Colors.black26),
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(vertical: 10),

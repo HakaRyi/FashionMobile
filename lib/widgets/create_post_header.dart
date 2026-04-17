@@ -95,9 +95,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => CreatePostScreen(
-                              username: _username,
-                              avatarUrl: _avatar,)),
+                            MaterialPageRoute(builder: (context) => CreatePostScreen()),
                           );
                         },
                         borderRadius: BorderRadius.circular(15),
@@ -110,7 +108,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                             border: Border.all(color: Colors.black.withOpacity(0.1)),
                           ),
                           child: const Text(
-                            "Hôm nay bạn mặc gì?",
+                            "What will you wear today?",
                             style: TextStyle(color: Colors.black54, fontSize: 14),
                           ),
                         ),
