@@ -89,12 +89,12 @@ class _AIResultPanelState extends State<AIResultPanel> {
           _buildFieldWrapper('size'),
           _buildFieldWrapper('brand'),
         ]),
-        _buildRow([
-          _buildFieldWrapper('texture'),
-          _buildFieldWrapper('placement'),
-        ]),
+        // _buildRow([
+        //   _buildFieldWrapper('texture'),
+        //   _buildFieldWrapper('placement'),
+        // ]),
 
-        const Divider(color: Colors.white10, height: 40),
+        const Divider(color: Colors.white10, height: 20),
 
         // 3. KẾT QUẢ PHÂN TÍCH AI (Chia 2 cột)
         _buildSectionHeader("AI PHÂN TÍCH CHUYÊN SÂU"),
@@ -149,7 +149,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
     return Text(
       title,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.4),
+        color: Colors.black.withOpacity(0.6),
         fontSize: 11,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.2,
@@ -198,14 +198,14 @@ class _AIResultPanelState extends State<AIResultPanel> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: Colors.pinkAccent),
       ),
       child: TextFormField(
         controller: _controllers['description'],
         maxLines: null,
         minLines: 4,
         keyboardType: TextInputType.multiline,
-        style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+        style: const TextStyle(color: Colors.black, fontSize: 14, height: 1.5),
         decoration: InputDecoration(
           hintText: "Thêm mô tả chi tiết...",
           hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
@@ -225,13 +225,13 @@ class _AIResultPanelState extends State<AIResultPanel> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isTrue ? Colors.pinkAccent.withOpacity(0.3) : Colors.white10),
+        border: Border.all(color: isTrue ? Colors.pinkAccent.withOpacity(0.3) : Colors.black12),
       ),
       child: Row(
         children: [
           Icon(
             isTrue ? Icons.public : Icons.public_off,
-            color: isTrue ? Colors.pinkAccent : Colors.white38,
+            color: isTrue ? Colors.pinkAccent : Colors.black,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -239,10 +239,10 @@ class _AIResultPanelState extends State<AIResultPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text("Public Visibility",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
                 Text(
                   isTrue ? "Anyone can see this item" : "Only you can see this item",
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  style: TextStyle(color: Colors.black38, fontSize: 12),
                 ),
               ],
             ),
@@ -266,13 +266,13 @@ class _AIResultPanelState extends State<AIResultPanel> {
         Icon(
             isAI ? Icons.auto_awesome : Icons.edit_note,
             size: 13,
-            color: isAI ? Colors.pinkAccent : Colors.white38
+            color: isAI ? Colors.pinkAccent : Colors.black45
         ),
         const SizedBox(width: 6),
         Text(
           key.toUpperCase(),
           style: TextStyle(
-              color: isAI ? Colors.pinkAccent : Colors.white38,
+              color: isAI ? Colors.pinkAccent : Colors.black45,
               fontSize: 9,
               fontWeight: FontWeight.bold
           ),

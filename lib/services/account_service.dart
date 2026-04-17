@@ -7,12 +7,12 @@ import 'api_client.dart';
 
 class AccountService {
   Future<Map<String, dynamic>?> getMyProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? userId = prefs.getString('userId');
+    // final prefs = await SharedPreferences.getInstance();
+    // final String? userId = prefs.getString('userId');
 
-    if (userId == null) return null;
+    // if (userId == null) return null;
 
-    final url = Uri.parse("${ApiConstants.baseUrl}/Account/$userId");
+    final url = Uri.parse("${ApiConstants.baseUrl}/Account/me");
 
     try {
       final response = await ApiClient.get(url);

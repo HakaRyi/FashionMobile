@@ -81,21 +81,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0D0D0D),
+        backgroundColor: Color(0xFFF8F8F8),
         body: Center(child: CircularProgressIndicator(color: Colors.pinkAccent)),
       );
     }
 
     if (_event == null) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0D0D0D),
-        body: Center(child: Text("Lỗi tải dữ liệu", style: TextStyle(color: Colors.white))),
+        backgroundColor: Color(0xFFF8F8F8),
+        body: Center(child: Text("Data loading failed", style: TextStyle(color: Color(0xFF1A1A1A)))),
       );
     }
     final bool isPastDeadline = _event!.submissionDeadline != null &&
         DateTime.now().isAfter(_event!.submissionDeadline!);
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0D),
+      backgroundColor: const Color(0xFFF8F8F8),
       body: Stack(
         children: [
           NestedScrollView(
@@ -111,11 +111,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                       indicatorColor: Colors.pinkAccent,
                       indicatorWeight: 3,
                       labelColor: Colors.pinkAccent,
-                      unselectedLabelColor: Colors.white38,
+                      unselectedLabelColor: Colors.black38,
                       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       tabs: const [
-                        Tab(text: "THÔNG TIN"),
-                        Tab(text: "BÀI DỰ THI"),
+                        Tab(text: "DETAILS"),
+                        Tab(text: "SUBMISSIONS"),
                       ],
                     ),
                   ),
@@ -140,10 +140,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     return SliverAppBar(
       expandedHeight: 350,
       pinned: true,
-      backgroundColor: const Color(0xFF0D0D0D),
+      backgroundColor: Colors.white,
       leading: IconButton(
         icon: const CircleAvatar(
-            backgroundColor: Colors.black45,
+            backgroundColor: Colors.black26,
             child: Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white)),
         onPressed: () => Navigator.maybePop(context),
       ),
@@ -157,7 +157,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.1), Colors.black],
+                  colors: [Colors.black.withOpacity(0.1), Colors.black.withOpacity(0.6)],
                 ),
               ),
             ),
@@ -196,25 +196,25 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         children: [
           _buildMainStats(),
           const SizedBox(height: 32),
-          _buildSectionTitle("Giới thiệu sự kiện"),
+          _buildSectionTitle("Event Description"),
           Text(
             _event!.description,
-            style: TextStyle(color: Colors.white.withOpacity(0.7), height: 1.6, fontSize: 15),
+            style: const TextStyle(color: Colors.black87, height: 1.6, fontSize: 15),
           ),
           const SizedBox(height: 32),
-          _buildSectionTitle("Cơ chế tính điểm"),
+          _buildSectionTitle("Scoring Criteria"),
           _buildWeightSection(),
 
           const SizedBox(height: 32),
-          _buildSectionTitle("Lịch trình sự kiện"),
+          _buildSectionTitle("Event Timeline"),
           _buildTimelineSection(),
           const SizedBox(height: 32),
-          _buildSectionTitle("Cơ cấu giải thưởng"),
+          _buildSectionTitle("Prize Structure"),
           _buildFlexiblePrizeUI(_event!.prizes),
 
 
           const SizedBox(height: 32),
-          _buildSectionTitle("Ban giám khảo chuyên gia"),
+          _buildSectionTitle("Expert Judges"),
           _buildExpertGrid(_event!.experts),
           const SizedBox(height: 120),
         ],
@@ -230,7 +230,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
     return RefreshIndicator(
       color: Colors.pinkAccent,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Colors.white,
       onRefresh: _handleRefreshPosts,
       child: _eventPosts.isEmpty
           ? SingleChildScrollView(
@@ -241,10 +241,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.camera_alt_outlined, size: 64, color: Colors.white.withOpacity(0.1)),
+              Icon(Icons.camera_alt_outlined, size: 64, color: Colors.black.withOpacity(0.05)),
               const SizedBox(height: 16),
-              const Text("Chưa có bài dự thi nào", style: TextStyle(color: Colors.white38)),
-              const Text("Kéo xuống để cập nhật bài mới!", style: TextStyle(color: Colors.white24, fontSize: 12)),
+              const Text("No submissions yet", style: TextStyle(color: Colors.black26)),
+              const Text("Pull down to refresh!", style: TextStyle(color: Colors.black12, fontSize: 12)),
             ],
           ),
         ),
@@ -267,9 +267,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildStatItem(Icons.people_alt_outlined, "${_event!.participantCount}", "Tham gia"),
-        _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "Giải thưởng"),
-        _buildStatItem(Icons.verified_user_outlined, "Miễn phí", "Lệ phí"),
+        _buildStatItem(Icons.people_alt_outlined, "${_event!.participantCount}", "Joined"),
+        _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "Prize Pool"),
+        _buildStatItem(Icons.verified_user_outlined, "Free", "Entry Fee"),
       ],
     );
   }
@@ -278,15 +278,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white10),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
       ),
       child: Row(
         children: [
-          _buildWeightItem("Ban giám khảo", _event!.expertWeight, Colors.amberAccent),
-          Container(width: 1, height: 40, color: Colors.white10),
-          _buildWeightItem("Cộng đồng", _event!.userWeight, Colors.cyanAccent),
+          _buildWeightItem("Expert Judges", _event!.expertWeight, Colors.amber),
+          Container(width: 1, height: 40, color: Colors.black.withOpacity(0.05)),
+          _buildWeightItem("Community", _event!.userWeight, Colors.blueAccent),
         ],
       ),
     );
@@ -301,7 +302,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(label, style: const TextStyle(color: Colors.black45, fontSize: 12)),
         ],
       ),
     );
@@ -311,17 +312,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white10),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
       ),
       child: Column(
         children: [
-          _buildTimelineRow("Bắt đầu sự kiện", _event!.startTime, Colors.greenAccent),
+          _buildTimelineRow("Event Starts", _event!.startTime, Colors.green),
           _buildTimelineDivider(),
-          _buildTimelineRow("Hạn nộp bài thi", _event!.submissionDeadline ?? _event!.endTime, Colors.orangeAccent),
+          _buildTimelineRow("Submission Deadline", _event!.submissionDeadline ?? _event!.endTime, Colors.orange),
           _buildTimelineDivider(),
-          _buildTimelineRow("Kết thúc sự kiện", _event!.endTime, Colors.pinkAccent),
+          _buildTimelineRow("Event Ends", _event!.endTime, Colors.pinkAccent),
         ],
       ),
     );
@@ -336,7 +338,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)],
+            boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 8)],
           ),
         ),
         const SizedBox(width: 16),
@@ -344,9 +346,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              Text(label, style: const TextStyle(color: Colors.black45, fontSize: 13)),
               const SizedBox(height: 4),
-              Text(_formatDateTime(time), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+              Text(_formatDateTime(time), style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
         ),
@@ -359,7 +361,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       margin: const EdgeInsets.only(left: 5, top: 4, bottom: 4),
       height: 20,
       width: 2,
-      color: Colors.white10,
+      color: Colors.black.withOpacity(0.05),
     );
   }
 
@@ -368,14 +370,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       children: [
         Icon(icon, color: Colors.pinkAccent, size: 22),
         const SizedBox(height: 6),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+        Text(value, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(color: Colors.black26, fontSize: 10)),
       ],
     );
   }
 
   Widget _buildFlexiblePrizeUI(List<PrizeModel> prizes) {
-    if (prizes.isEmpty) return const Text("Đang cập nhật...", style: TextStyle(color: Colors.white24));
+    if (prizes.isEmpty) return const Text("Updating...", style: TextStyle(color: Colors.black26));
     return Column(children: prizes.map((p) => _buildPrizeCard(p)).toList());
   }
 
@@ -385,15 +387,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     switch (p.ranked) {
       case 1:
         prizeIcon = Icons.emoji_events;
-        prizeColor = const Color(0xFFFFD700);
+        prizeColor = const Color(0xFFFFB300);
         break;
       case 2:
         prizeIcon = Icons.military_tech;
-        prizeColor = const Color(0xFFC0C0C0);
+        prizeColor = const Color(0xFF9E9E9E);
         break;
       case 3:
         prizeIcon = Icons.stars;
-        prizeColor = const Color(0xFFCD7F32);
+        prizeColor = const Color(0xFF8D6E63);
         break;
       default:
         prizeIcon = Icons.card_giftcard;
@@ -403,16 +405,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       margin: const EdgeInsets.only(bottom: 16),
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.white.withOpacity(0.08), Colors.white.withOpacity(0.02)]),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: prizeColor.withOpacity(0.2)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: prizeColor.withOpacity(0.1)),
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: prizeColor.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: prizeColor.withOpacity(0.05), shape: BoxShape.circle),
             child: Icon(prizeIcon, color: prizeColor, size: 32),
           ),
           const SizedBox(width: 20),
@@ -420,11 +423,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("HẠNG ${p.ranked}",
+                Text("RANK ${p.ranked}",
                     style: TextStyle(color: prizeColor, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 13)),
                 const SizedBox(height: 6),
                 Text("${NumberFormat.decimalPattern().format(p.rewardAmount)} VNĐ",
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -434,7 +437,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 
   Widget _buildExpertGrid(List<ExpertModel> experts) {
-    if (experts.isEmpty) return const Text("Đang cập nhật ban giám khảo...", style: TextStyle(color: Colors.white24));
+    if (experts.isEmpty) return const Text("Judges are being updated...", style: TextStyle(color: Colors.black26));
     return GridView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
@@ -452,19 +455,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           children: [
             CircleAvatar(
               radius: 36,
-              backgroundColor: Colors.white10,
+              backgroundColor: Colors.black.withOpacity(0.05),
               backgroundImage: exp.avatarUrl != null ? NetworkImage(exp.avatarUrl!) : null,
-              child: exp.avatarUrl == null ? const Icon(Icons.person, color: Colors.white24) : null,
+              child: exp.avatarUrl == null ? const Icon(Icons.person, color: Colors.black12) : null,
             ),
             const SizedBox(height: 8),
             Text(
               exp.fullName,
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 12, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            Text("Expert", style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10)),
+            const Text("Expert", style: TextStyle(color: Colors.black26, fontSize: 10)),
           ],
         );
       },
@@ -485,8 +488,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           child: Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+              color: Colors.white.withOpacity(0.85),
+              border: Border(top: BorderSide(color: Colors.black.withOpacity(0.05))),
             ),
             child: Row(
               children: [
@@ -495,11 +498,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text("Trạng thái", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      const Text("Status", style: TextStyle(color: Colors.black45, fontSize: 12)),
                       Text(
-                        isPastDeadline ? "Hết hạn nộp" : "Đang mở",
+                        isPastDeadline ? "Expired" : "Active",
                         style: TextStyle(
-                          color: isPastDeadline ? Colors.redAccent : Colors.greenAccent,
+                          color: isPastDeadline ? Colors.redAccent : Colors.lightGreen,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
@@ -524,14 +527,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFF1A1A1A),
-        border: Border.all(color: Colors.white10),
+        color: Colors.black.withOpacity(0.05),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
       ),
       child:  Center(
         child: Text(
-          isPastDeadline ? "HẾT HẠN NỘP" : "ĐÃ THAM GIA",
-          style: TextStyle(
-            color: Colors.white24,
+          isPastDeadline ? "EXPIRED" : "JOINED",
+          style: const TextStyle(
+            color: Colors.black26,
             fontWeight: FontWeight.w900,
             fontSize: 14,
           ),
@@ -552,8 +555,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.pinkAccent.withOpacity(0.4 * _pulseController.value),
-                blurRadius: 20,
+                color: Colors.pinkAccent.withOpacity(0.3 * _pulseController.value),
+                blurRadius: 15,
                 spreadRadius: 1,
               ),
             ],
@@ -575,7 +578,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
               },
               child: const Center(
                 child: Text(
-                  "THAM GIA NGAY",
+                  "JOIN NOW",
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -608,7 +611,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             ),
           ),
           const SizedBox(width: 10),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(title, style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -628,7 +631,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: const Color(0xFF0D0D0D), // Nền tối để hòa hợp với thiết kế
+      color: const Color(0xFFF8F8F8),
       child: _tabBar,
     );
   }

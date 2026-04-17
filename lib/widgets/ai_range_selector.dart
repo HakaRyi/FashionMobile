@@ -33,10 +33,7 @@ class AIRangeSelector extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.textPink : AppColors.surface,
                 borderRadius: BorderRadius.circular(16), // Bo tròn hơn xíu nhìn hiện đại
-                border: Border.all(
-                  color: isSelected ? Colors.white24 : AppColors.divider,
-                  width: 1,
-                ),
+
                 boxShadow: isSelected ? [
                   BoxShadow(
                     color: AppColors.textPink.withOpacity(0.4),
@@ -51,7 +48,7 @@ class AIRangeSelector extends StatelessWidget {
                 children: [
                   Icon(
                     r['icon'],
-                    color: isSelected ? Colors.white : Colors.white54,
+                    color: isSelected ? Colors.white : Colors.black,
                     size: 24,
                   ),
                   const SizedBox(height: 8),
@@ -59,7 +56,7 @@ class AIRangeSelector extends StatelessWidget {
                     r['label'],
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.white60,
+                      color: isSelected ? Colors.white : Colors.black,
                       fontSize: 11,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     ),

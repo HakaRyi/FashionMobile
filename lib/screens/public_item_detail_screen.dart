@@ -92,11 +92,11 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        "Thành công",
+                        "Success",
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        "Đã gửi yêu cầu tư vấn cho $ownerName",
+                        "Consultation request sent to $ownerName",
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -217,15 +217,15 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       }
     }
 
-    addField('Loại item', item.itemType);
+    addField('Item Type', item.itemType);
     addField('Category', item.category);
-    addField('SubCategory', item.subCategory);
-    addField('Phong cách', item.style);
-    addField('Giới tính', item.gender);
-    addField('Màu chính', item.mainColor);
-    addField('Màu phụ', item.subColor);
-    addField('Chất liệu', item.material);
-    addField('Họa tiết', item.pattern);
+    addField('Sub-Category', item.subCategory);
+    addField('Style', item.style);
+    addField('Gender', item.gender);
+    addField('Primary Color', item.mainColor);
+    addField('Secondary Color', item.subColor);
+    addField('Material', item.material);
+    addField('Pattern', item.pattern);
     addField('Fit', item.fit);
     addField('Neckline', item.neckline);
     addField('Sleeve Length', item.sleeveLength);
@@ -263,7 +263,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
         },
         icon: const Icon(Icons.checkroom),
         label: const Text(
-          'Thử đồ với món này',
+          'Try-on this item',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
@@ -294,7 +294,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
         )
             : Icon(isCooldown ? Icons.timer_outlined : Icons.chat_bubble_outline, size: 20),
         label: Text(
-          isCooldown ? "Gửi lại sau (${_cooldownSeconds}s)" : "Tư vấn món đồ này",
+          isCooldown ? "Resend in (${_cooldownSeconds}s)" : "Get styling advice",
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         style: OutlinedButton.styleFrom(
@@ -334,10 +334,14 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
-                _hasText(item.itemName) ? item.itemName! : 'Chi tiết món đồ',
+                _hasText(item.itemName) ? item.itemName! : 'Item Details',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))
+                  ],
                 ),
               ),
               flexibleSpace: FlexibleSpaceBar(
@@ -356,9 +360,9 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                     Text(
                       _hasText(item.itemName)
                           ? item.itemName!
-                          : 'Chưa đặt tên',
+                          : 'Unnamed Item',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -384,9 +388,9 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
 
                     if (_hasText(item.description)) ...[
                       const Text(
-                        'Mô tả',
+                        'Description',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Colors.black,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -395,7 +399,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                       Text(
                         item.description!,
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: Colors.black54,
                           fontSize: 14,
                           height: 1.5,
                         ),
@@ -404,9 +408,9 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                     ],
 
                     const Text(
-                      'Thông tin chi tiết',
+                      'Technical Specifications',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -418,7 +422,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                     if (item.createdAt != null) ...[
                       const SizedBox(height: 18),
                       Text(
-                        'Tạo ngày: ${_formatDate(item.createdAt)}',
+                        'Added on: ${_formatDate(item.createdAt)}',
                         style: const TextStyle(
                           color: Colors.white54,
                           fontSize: 12,
@@ -542,17 +546,17 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Chủ sở hữu',
+                'Owner',
                 style: TextStyle(
-                  color: Colors.white54,
+                  color: Colors.black87,
                   fontSize: 12,
                 ),
               ),
               const SizedBox(height: 3),
               Text(
-                _hasText(item.ownerUserName) ? item.ownerUserName! : 'Người dùng',
+                _hasText(item.ownerUserName) ? item.ownerUserName! : 'User',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -568,7 +572,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.18),
+        color: AppColors.primary.withOpacity(0.5),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.primary.withOpacity(0.35)),
       ),
@@ -596,9 +600,9 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           border: Border.all(color: AppColors.divider),
         ),
         child: const Text(
-          'Chưa có thông tin chi tiết.',
+          'No detailed information available.',
           style: TextStyle(
-            color: Colors.white70,
+            color: Colors.black,
             fontSize: 14,
           ),
         ),
@@ -625,7 +629,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   child: Text(
                     entry.key,
                     style: const TextStyle(
-                      color: Colors.white60,
+                      color: Colors.black87,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -636,7 +640,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   child: Text(
                     entry.value,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Colors.black,
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -660,23 +664,23 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             const Icon(Icons.error_outline, color: Colors.white, size: 48),
             const SizedBox(height: 12),
             const Text(
-              'Không thể tải chi tiết món đồ',
+              'Failed to load item details',
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              _error ?? 'Đã có lỗi xảy ra',
+              _error ?? 'An unexpected error occurred',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Colors.black87),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadItem,
-              child: const Text('Thử lại'),
+              child: const Text('Retry'),
             ),
           ],
         ),
@@ -687,8 +691,8 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
   Widget _buildEmpty() {
     return const Center(
       child: Text(
-        'Không có dữ liệu món đồ.',
-        style: TextStyle(color: Colors.white70),
+        'Item data is empty.',
+        style: TextStyle(color: Colors.black87),
       ),
     );
   }

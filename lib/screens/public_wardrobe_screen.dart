@@ -42,7 +42,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.menu,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetContext) {
@@ -54,14 +54,14 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
               // Tiêu đề nhỏ cho Menu
               Text(
                 item.itemName,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: Colors.black, fontSize: 12),
               ),
               const SizedBox(height: 10),
 
               // Option 1: AI Gợi ý phối đồ
               ListTile(
-                leading: const Icon(Icons.auto_awesome, color: Colors.white),
-                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.auto_awesome, color: Colors.black),
+                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Navigator.push(
@@ -73,8 +73,8 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
               // Option 2: Thử đồ ảo (Try-on)
               ListTile(
-                leading: const Icon(Icons.face, color: Colors.white),
-                title: const Text("Thử đồ ảo", style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.face, color: Colors.black),
+                title: const Text("Thử đồ ảo", style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   // Đăng chuyển hướng qua màn hình TryOnScreen
@@ -178,10 +178,11 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
               ),
               flexibleSpace: FlexibleSpaceBar(
                 title: Text(
-                  "Tủ đồ công khai của $_userName",
+                  "$_userName's Wardrobe",
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                 ),
                 background: Stack(
@@ -222,34 +223,34 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 70,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _userName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Positioned(
+                    //   left: 16,
+                    //   right: 16,
+                    //   bottom: 70,
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: [
+                    //       Text(
+                    //         _userName,
+                    //         style: const TextStyle(
+                    //           color: Colors.white,
+                    //           fontSize: 22,
+                    //           fontWeight: FontWeight.bold,
+                    //         ),
+                    //       ),
+                    //       const SizedBox(height: 6),
+                    //       Text(
+                    //         _description,
+                    //         maxLines: 2,
+                    //         overflow: TextOverflow.ellipsis,
+                    //         style: const TextStyle(
+                    //           color: Colors.white70,
+                    //           fontSize: 13,
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -385,7 +386,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -394,7 +395,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.grey,
+            color: Colors.black54,
             fontSize: 12,
           ),
         ),

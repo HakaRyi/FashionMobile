@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_colors.dart';
 import '../managers/post_manager.dart';
+import '../services/account_service.dart';
 import 'main_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
@@ -13,8 +14,7 @@ class CreatePostScreen extends StatefulWidget {
   final int? eventId;
   final String? eventName;
   final Map<String, dynamic>? postToEdit;
-  final String? username;
-  final String? avatarUrl;
+
 
   const CreatePostScreen({
     super.key,
@@ -22,8 +22,6 @@ class CreatePostScreen extends StatefulWidget {
     this.eventId,
     this.eventName,
     this.postToEdit,
-    this.username,
-    this.avatarUrl,
   });
 
   @override
@@ -34,10 +32,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final AccountService _accountService = AccountService();
 
   bool _isPublic = true;
   bool _isSubmitting = false;
-
+  bool _isLoadingProfile = true;
   // SỬA: Dùng List để chứa nhiều ảnh
   List<Uint8List> _selectedImages = [];
   String? _existingImageUrl; // Chỉ dùng khi Edit bài viết cũ
@@ -55,13 +54,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (widget.imageBytes != null) {
       _selectedImages.add(widget.imageBytes!);
     }
-
-    if (widget.username != null) {
-      _username = widget.username!;
-      _avatarUrl = widget.avatarUrl ?? "";
-    } else {
-      _loadUserInfo();
-    }
+    _fetchProfileData();
 
     if (_isEditMode) {
       _contentController.text = widget.postToEdit!['content'] ?? '';
@@ -73,15 +66,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       }
     }
   }
-
-  Future<void> _loadUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-
-    setState(() {
-      _username = prefs.getString('username') ?? "Người dùng";
-      _avatarUrl = prefs.getString('avatar') ?? "";
-    });
+  Future<void> _fetchProfileData() async {
+    try {
+      final profile = await _accountService.getMyProfile();
+      if (mounted && profile != null) {
+        setState(() {
+          _username = profile['username'] ?? profile['userName'] ?? profile['Username'] ?? "User";
+          _avatarUrl = profile['avatar'] ?? profile['Avatar'] ?? "";
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching profile in CreatePost: $e");
+      if (mounted) setState(() => _isLoadingProfile = false);
+    }
   }
 
   @override
@@ -201,7 +199,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           onPressed: _isSubmitting ? null : () => Navigator.pop(context),
         ),
         title: Text(
-          _isEditMode ? "Chỉnh sửa bài viết" : "Tạo bài viết",
+          _isEditMode ? "Edit Post" : "Create Post",
           style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
@@ -209,7 +207,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           TextButton(
             onPressed: _isSubmitting ? null : _handlePost,
             child: Text(
-              _isSubmitting ? "ĐANG XỬ LÝ" : (_isEditMode ? "LƯU" : "ĐĂNG"),
+              _isSubmitting ? "WAIT..." : (_isEditMode ? "SAVE" : "POST"),
               style: const TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold),
             ),
           ),
@@ -260,7 +258,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                "BẠN ĐANG THAM GIA: ${widget.eventName}",
+                "JOINING EVENT: ${widget.eventName}",
                 style: const TextStyle(color: AppColors.textPink, fontWeight: FontWeight.bold, fontSize: 13),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -345,7 +343,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             children: [
               Text(_username, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 2),
-              const Text("Bạn đang nghĩ gì?", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              const Text("What's on your mind?", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             ],
           ),
         ],
@@ -363,8 +361,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             fontWeight: FontWeight.bold // Cho đậm lên làm tiêu đề
         ),
         decoration: const InputDecoration(
-          hintText: "Tiêu đề bài viết (tùy chọn)",
-          hintStyle: TextStyle(color: Colors.white24, fontSize: 20),
+          hintText: "Post title (optional)",
+          hintStyle: TextStyle(color: Colors.black26, fontSize: 20),
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
         ),
@@ -381,8 +379,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         keyboardType: TextInputType.multiline,
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, height: 1.5),
         decoration: const InputDecoration(
-          hintText: "Chia sẻ phong cách của bạn...",
-          hintStyle: TextStyle(color: Colors.white38, fontSize: 18),
+          hintText: "Share your style...",
+          hintStyle: TextStyle(color: Colors.black38, fontSize: 18),
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,
         ),
@@ -395,11 +393,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          _attachmentButton(Icons.photo_library_outlined, "Ảnh", _isSubmitting ? null : _pickImage),
+          _attachmentButton(Icons.photo_library_outlined, "Photos", _isSubmitting ? null : _pickImage),
           const SizedBox(width: 16),
-          _attachmentButton(Icons.videocam_outlined, "Video", null),
+          _attachmentButton(Icons.videocam_outlined, "Videos", null),
           const SizedBox(width: 16),
-          _attachmentButton(Icons.location_on_outlined, "Vị trí", null),
+          _attachmentButton(Icons.location_on_outlined, "Location", null),
         ],
       ),
     );
@@ -442,7 +440,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 children: [
                   Icon(_isPublic ? Icons.public : Icons.lock_outline, color: AppColors.textSecondary, size: 16),
                   const SizedBox(width: 6),
-                  Text(_isPublic ? "Công khai" : "Riêng tư", style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  Text(_isPublic ? "Public" : "Private", style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 16),
                 ],
               ),
@@ -457,7 +455,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               elevation: 0,
             ),
-            child: Text(_isSubmitting ? "Đang xử lý..." : (_isEditMode ? "LƯU" : "ĐĂNG"), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Text(_isSubmitting ? "PROCESSING..." : (_isEditMode ? "SAVE" : "POST"), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
         ],
       ),

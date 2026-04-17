@@ -155,10 +155,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               PostItem(post: post),
                               if (index < postManager.posts.length - 1)
                                 const Divider(
-                                  color: AppColors.divider,
+                                  color: Color(0xFFF6F6F6),
                                   height: 1,
-                                  indent: 16,
-                                  endIndent: 16,
+                                  thickness: 8,
+                                  indent: 0,
+                                  endIndent: 0,
                                 ),
                             ],
                           );

@@ -58,7 +58,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: AppColors.backgroundTertiary,
+                backgroundColor: AppColors.divider,
                 backgroundImage: _avatar.isNotEmpty
                     ? NetworkImage(_avatar)
                     : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
@@ -84,9 +84,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => CreatePostScreen(
-                              username: _username,
-                              avatarUrl: _avatar,)),
+                            MaterialPageRoute(builder: (context) => CreatePostScreen()),
                           );
                         },
                         borderRadius: BorderRadius.circular(15),
@@ -94,7 +92,6 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            //Dùng text primary ở đây vì tạo màu xám nhạt
                             color: AppColors.textPrimary.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(15),
                             border: Border.all(color: AppColors.surface.withOpacity(0.1)),

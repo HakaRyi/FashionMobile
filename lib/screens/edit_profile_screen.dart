@@ -138,13 +138,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text("CHỈNH SỬA HỒ SƠ", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+        title: const Text("CHỈNH SỬA HỒ SƠ", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: Colors.black)),
         centerTitle: true,
         actions: [
           _isSaving
               ? const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pinkAccent))))
               : TextButton(onPressed: _handleSave, child: const Text("XONG", style: TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold))),
         ],
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.black, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -199,16 +203,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        Text(label.toUpperCase(), style: const TextStyle(color: Colors.black38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.white, fontSize: 15),
+          style: const TextStyle(color: Colors.black, fontSize: 15),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.white24, size: 20),
+            prefixIcon: Icon(icon, color: Colors.black, size: 20),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.black.withOpacity(0.05),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),

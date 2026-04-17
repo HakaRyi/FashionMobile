@@ -48,18 +48,18 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       context: context,                    // context gốc của WardrobeScreen
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.menu,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text("Xác nhận xóa", style: TextStyle(color: Colors.white)),
-        content: Text("Món đồ '${item['itemName']}' sẽ bị xóa vĩnh viễn."),
+        title: const Text("Confirm Delete", style: TextStyle(color: Colors.black)),
+        content: Text("The item '${item['itemName']}' will be permanently deleted.", style: TextStyle(color: Colors.black)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text("Hủy"),
+            child: const Text("Cancel",style: TextStyle(color: Colors.black)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text("Xóa", style: TextStyle(color: Colors.redAccent)),
+            child: const Text("Delete", style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -84,7 +84,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(   // context gốc an toàn
           const SnackBar(
-            content: Text("Đã xóa món đồ thành công!"),
+            content: Text("Item deleted successfully!"),
             backgroundColor: Colors.greenAccent,
             duration: Duration(seconds: 2),
           ),
@@ -92,13 +92,13 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         _loadItems();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ Xóa thất bại!"), backgroundColor: Colors.redAccent),
+          const SnackBar(content: Text("Delete failed!"), backgroundColor: Colors.redAccent),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Lỗi: $e"), backgroundColor: Colors.redAccent),
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.redAccent),
       );
     }
   }
@@ -115,7 +115,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
               SliverToBoxAdapter(child: _buildHeader(context)),
-              const SliverToBoxAdapter(child: Divider(color: AppColors.divider, thickness: 1)),
+              const SliverToBoxAdapter(child: Divider(color: AppColors.menu, thickness: 0)),
               FutureBuilder<List<dynamic>>(
                 future: _itemsFuture,
                 builder: (context, snapshot) {
@@ -150,7 +150,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
 
                           final item = items[index];
                           return ClothingItem(
-                            title: item['itemName'] ?? "Không tên",
+                            title: item['itemName'] ?? "Unnamed",
                             imageUrl: item['primaryImageUrl'],
                             onTap: () async {
                               // Đợi xem người dùng có xóa đồ trong trang chi tiết không
@@ -182,7 +182,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   void _showActionMenu(BuildContext context, dynamic item) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.menu,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetContext) {
@@ -192,22 +192,22 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.auto_awesome, color: Colors.white),
-                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.auto_awesome, color: Colors.black),
+                title: const Text("AI Outfit Suggestion", style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, SlideRoute(page: AISuggestionScreen(selectedItem: item)
                   ));
                 },
               ),
+              // ListTile(
+              //   leading: const Icon(Icons.favorite, color: Colors.black),
+              //   title: const Text("Thêm vào outfit yêu thích", style: TextStyle(color: Colors.black)),
+              //   onTap: () => Navigator.pop(context),
+              // ),
               ListTile(
-                leading: const Icon(Icons.favorite, color: Colors.white),
-                title: const Text("Thêm vào outfit yêu thích", style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.white),
-                title: const Text("Xóa khỏi tủ đồ", style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.delete, color: Colors.black),
+                title: const Text("Remove from Wardrobe", style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _confirmDelete(context, item);
@@ -284,7 +284,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       child: Column(
         children: [
           const Text(
-              "Tủ Đồ",
+              "Wardrobe",
               style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)
           ),
           const SizedBox(height: 20),
@@ -295,7 +295,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               Expanded(
                 child: ActionButton(
                   icon: Icons.add_a_photo,
-                  label: "Thêm đồ",
+                  label: "Add Item",
                   color: AppColors.accent,
                   onTap: () async {
                     final result = await UploadUtils.showUploadMenu(context);
@@ -307,7 +307,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               Expanded(
                 child: ActionButton(
                   icon: Icons.history,
-                  label: "Lịch sử",
+                  label: "Suggest History",
                   color: Colors.orangeAccent,
                   onTap: () => Navigator.push(
                       context,
@@ -319,7 +319,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               Expanded(
                 child: ActionButton(
                   icon: Icons.face,
-                  label: "Thử đồ",
+                  label: "Try-On",
                   color: AppColors.textPink,
                   onTap: () => Navigator.push(
                       context,

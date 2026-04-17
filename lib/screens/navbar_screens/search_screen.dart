@@ -356,9 +356,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildProfileCard({required UserSuggestionModel user}) {
-    final avatarUrl = user.avatarUrl.isNotEmpty
-        ? user.avatarUrl
-        : 'package:fashion_mobile/assets/images/default_avatar.png';
+    final avatar= user.avatarUrl.isNotEmpty
+        ? NetworkImage(user.avatarUrl)
+        : const AssetImage('assets/images/default_avatar.png') as ImageProvider;
 
     return InkWell(
       onTap: () => _navigateToProfile(user.accountId),
@@ -375,7 +375,7 @@ class _SearchScreenState extends State<SearchScreen> {
               child: CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white10,
-                backgroundImage: NetworkImage(avatarUrl),
+                backgroundImage: avatar,
                 onBackgroundImageError: (_, __) {},
               ),
             ),

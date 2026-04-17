@@ -21,13 +21,14 @@ class UploadUtils {
   static Future<bool?> showUploadMenu(BuildContext context) async {
     return await showModalBottomSheet<bool>( // Thêm <bool> ở đây
       context: context,
+      backgroundColor: Colors.white,
       builder: (context) {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text("Chụp ảnh"),
+              leading: const Icon(Icons.camera_alt, color: Colors.black87),
+              title: const Text("Take a Photo",style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
               onTap: () async {
                 // Phải có await và trả kết quả về cho BottomSheet bằng Navigator.pop
                 final uploaded = await Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadScreen(isCamera: true)));
@@ -35,8 +36,8 @@ class UploadUtils {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text("Thư viện"),
+              leading: const Icon(Icons.photo_library, color: Colors.black87),
+              title: const Text("Choose from Gallery",style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
               onTap: () async {
                 final uploaded = await Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadScreen(isCamera: false)));
                 Navigator.pop(context, uploaded); // Trả 'true' về cho WardrobeScreen
