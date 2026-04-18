@@ -3,6 +3,7 @@ import 'package:fashion_mobile/screens/public_item_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
+import '../models/try_on_source_item.dart';
 import '../models/wardrobe_item_model.dart';
 import '../services/item_service.dart';
 import '../services/wardrobe_service.dart';
@@ -54,14 +55,14 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
               // Tiêu đề nhỏ cho Menu
               Text(
                 item.itemName,
-                style: const TextStyle(color: Colors.black, fontSize: 12),
+                style: const TextStyle(color: AppColors.text, fontSize: 12),
               ),
               const SizedBox(height: 10),
 
               // Option 1: AI Gợi ý phối đồ
               ListTile(
-                leading: const Icon(Icons.auto_awesome, color: Colors.black),
-                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: Colors.black)),
+                leading: const Icon(Icons.auto_awesome, color: AppColors.text),
+                title: const Text("AI gợi ý phối đồ", style: TextStyle(color: AppColors.text)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Navigator.push(
@@ -73,14 +74,24 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
               // Option 2: Thử đồ ảo (Try-on)
               ListTile(
-                leading: const Icon(Icons.face, color: Colors.black),
-                title: const Text("Thử đồ ảo", style: TextStyle(color: Colors.black)),
+                leading: const Icon(Icons.face, color: AppColors.text),
+                title: const Text("Thử đồ ảo", style: TextStyle(color: AppColors.text)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   // Đăng chuyển hướng qua màn hình TryOnScreen
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const TryOnScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => TryOnScreen(
+                        sourceItem: TryOnSourceItem(
+                          itemId: item.itemId,
+                          itemName: item.itemName,
+                          imageUrl: item.imageUrl,
+                          brand: item.brand,
+                          category: item.category,
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -182,7 +193,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: AppColors.text,
                   ),
                 ),
                 background: Stack(
@@ -194,7 +205,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) {
                         return Container(
-                          color: Colors.black26,
+                          color: AppColors.text,
                           child: const Icon(
                             Icons.person,
                             color: Colors.white,
@@ -262,7 +273,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildStatItem("$_totalPublicItems", "Món public"),
+                    _buildStatItem("$_totalPublicItems", "Item public"),
                     _buildStatItem("$_countFollower", "Follower"),
                     _buildStatItem("$_countFollowing", "Following"),
                   ],
@@ -386,7 +397,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.black,
+            color: AppColors.text,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -395,7 +406,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.black54,
+            color: AppColors.text,
             fontSize: 12,
           ),
         ),

@@ -90,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Tải hồ sơ thất bại: ${profileSnapshot.error}',
+                  'Failed to load profile: ${profileSnapshot.error}',
                   style: const TextStyle(color: Colors.black),
                   textAlign: TextAlign.center,
                 ),
@@ -338,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Tạo Bài Đăng",
+                                            "Create Post",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -370,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Quản Lý Đơn",
+                                            "Order History",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -396,7 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   .showSnackBar(
                                                 const SnackBar(
                                                   content: Text(
-                                                    "Không tìm thấy thông tin tài khoản.",
+                                                    "Account information not found.",
                                                   ),
                                                 ),
                                               );
@@ -427,7 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Tủ Đồ",
+                                            "Wardrobe",
                                             style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
@@ -515,7 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   ),
                                                   SizedBox(width: 4),
                                                   Text(
-                                                    "Wapo",
+                                                    "Wapo Wallet",
                                                     style:
                                                     TextStyle(fontSize: 13),
                                                   ),
@@ -557,7 +557,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Chi Tiêu",
+                                            "Spending",
                                             style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
@@ -588,7 +588,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Đã Lưu",
+                                            "Saved",
                                             style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
@@ -628,9 +628,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               padding: const EdgeInsets.all(24),
                               child: Center(
                                 child: Text(
-                                  'Tải bài viết thất bại: ${postSnapshot.error}',
+                                  'Failed to load posts: ${postSnapshot.error}',
                                   style:
-                                  const TextStyle(color: Colors.white54),
+                                  const TextStyle(color: Colors.black26),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -646,8 +646,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               padding: EdgeInsets.all(40),
                               child: Center(
                                 child: Text(
-                                  "Chưa có bài viết nào.",
-                                  style: TextStyle(color: Colors.white38),
+                                  "No posts yet.",
+                                  style: TextStyle(color: Colors.black26),
                                 ),
                               ),
                             ),

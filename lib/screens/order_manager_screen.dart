@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../widgets/order_skeleton.dart';
@@ -279,10 +280,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Tìm kiếm đơn hàng...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.black54),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
+                    fillColor: Colors.black54.withOpacity(0.05),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -321,7 +322,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
             itemBuilder: (_, __) => const OrderSkeleton(),
           )
               : _salesOrders.isEmpty
-              ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.white54)))
+              ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.black54)))
               : ListView.builder(
             controller: _salesScrollController,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -385,7 +386,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
               ? const Center(
             child: Text(
               'Chưa có đơn hàng nào',
-              style: TextStyle(color: Colors.white54, fontSize: 16),
+              style: TextStyle(color: Colors.black54, fontSize: 16),
             ),
           )
               : ListView.builder(
@@ -410,17 +411,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppColors.createHeader,
         elevation: 0,
-        title: const Text('Quản lý đơn hàng', style: TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Quản lý đơn hàng', style: TextStyle(color: Colors.black)),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.pink,
           labelColor: Colors.pink,
-          unselectedLabelColor: Colors.white54,
+          unselectedLabelColor: Colors.black54,
           tabs: const [
             Tab(text: 'Đơn hàng đã tạo'),
             Tab(text: 'Đơn hàng đã mua'),

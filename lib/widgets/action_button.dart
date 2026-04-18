@@ -27,7 +27,7 @@ class ActionButton extends StatelessWidget {
           // Thêm padding ngang để nội dung không sát mép
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.backgroundSecondary,
             borderRadius: BorderRadius.circular(12),
             // border: Border.all(color: AppColors.divider),
           ),
@@ -40,7 +40,7 @@ class ActionButton extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  color: Colors.black87,
+                  color: AppColors.text,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),

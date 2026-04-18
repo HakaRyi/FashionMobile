@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:fashion_mobile/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -124,12 +125,16 @@ class _RefundHistoryScreenState extends State<RefundHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppColors.background,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Lịch sử trả hàng', style: TextStyle(color: Colors.white)),
+        title: const Text('Lịch sử trả hàng', style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
       body: _isLoading
@@ -138,7 +143,7 @@ class _RefundHistoryScreenState extends State<RefundHistoryScreen> {
           ? const Center(
         child: Text(
           'Bạn chưa có yêu cầu trả hàng nào.',
-          style: TextStyle(color: Colors.white54, fontSize: 16),
+          style: TextStyle(color: Colors.black54, fontSize: 16),
         ),
       )
           : ListView.separated(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../services/wardrobe_service.dart';
 import '../../models/wardrobe_item_model.dart';
 
@@ -84,7 +85,7 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
       builder: (_, controller) {
         return Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
+            color: AppColors.background,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -105,7 +106,7 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
                   children: [
                     const Text(
                       "Chọn sản phẩm",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     ElevatedButton(
                       onPressed: () => widget.onSelectionConfirmed(_currentSelected),
@@ -125,10 +126,10 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
                   onChanged: _filterItems,
                   decoration: InputDecoration(
                     hintText: 'Tìm kiếm tên sản phẩm...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.black54),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
+                    fillColor: Colors.black.withOpacity(0.05),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -158,7 +159,7 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.pink.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                          color: isSelected ? Colors.pink.withOpacity(0.2) : Colors.black.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: isSelected ? Colors.pinkAccent : Colors.white10),
                         ),
@@ -186,19 +187,19 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
                                 children: [
                                   Text(
                                     item.itemName,
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     item.brand ?? 'Không có thương hiệu',
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    style: const TextStyle(color: Colors.black54, fontSize: 12),
                                   ),
                                 ],
                               ),
                             ),
                             Icon(
                               isSelected ? Icons.check_circle : Icons.circle_outlined,
-                              color: isSelected ? Colors.pinkAccent : Colors.white54,
+                              color: isSelected ? Colors.pinkAccent : AppColors.backgroundTertiary,
                             ),
                           ],
                         ),
