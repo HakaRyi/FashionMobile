@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/app_colors.dart';
+
 class WardrobeBottomSheet extends StatelessWidget {
   final List<dynamic> wardrobeItems;
   final Function(String url, String name, String category) onSelect;
@@ -21,7 +23,7 @@ class WardrobeBottomSheet extends StatelessWidget {
           const Center(
             child: Text(
               "Tủ đồ của bạn",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 16),
@@ -48,7 +50,14 @@ class WardrobeBottomSheet extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24),
+                      border: Border.all(color: AppColors.borderPrimary),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.textPrimary.withOpacity(0.1),
+                          blurRadius: 10,spreadRadius: 2,
+                          offset: Offset.zero,
+                        ),
+                      ],
                       image: DecorationImage(
                         image: NetworkImage(item['primaryImageUrl'] ?? ''),
                         fit: BoxFit.cover,

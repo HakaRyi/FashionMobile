@@ -36,7 +36,7 @@ class ClothSelectionRow extends StatelessWidget {
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24, width: 1.5),
+          border: Border.all(color: AppColors.borderSecondary, width: 1.5),
           image: DecorationImage(
             image: NetworkImage(item['primaryImageUrl'] ?? ''),
             fit: BoxFit.cover,

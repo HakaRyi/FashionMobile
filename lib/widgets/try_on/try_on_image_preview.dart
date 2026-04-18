@@ -30,7 +30,8 @@ class TryOnImagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return SizedBox(
+      height: 450, // Bạn có thể tăng lên 500 hoặc 550 nếu muốn hình to hơn
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Stack(
