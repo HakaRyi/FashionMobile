@@ -362,7 +362,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                           ? item.itemName!
                           : 'Unnamed Item',
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: AppColors.text,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -390,7 +390,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                       const Text(
                         'Description',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: AppColors.text,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -399,7 +399,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                       Text(
                         item.description!,
                         style: const TextStyle(
-                          color: Colors.black54,
+                          color: AppColors.text,
                           fontSize: 14,
                           height: 1.5,
                         ),
@@ -410,7 +410,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                     const Text(
                       'Technical Specifications',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: AppColors.text,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -548,7 +548,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               const Text(
                 'Owner',
                 style: TextStyle(
-                  color: Colors.black87,
+                  color: AppColors.text,
                   fontSize: 12,
                 ),
               ),
@@ -556,7 +556,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               Text(
                 _hasText(item.ownerUserName) ? item.ownerUserName! : 'User',
                 style: const TextStyle(
-                  color: Colors.black,
+                  color: AppColors.text,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -602,7 +602,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
         child: const Text(
           'No detailed information available.',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.text,
             fontSize: 14,
           ),
         ),
@@ -613,7 +613,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider),
       ),
@@ -629,7 +629,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   child: Text(
                     entry.key,
                     style: const TextStyle(
-                      color: Colors.black87,
+                      color: AppColors.text,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -640,7 +640,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   child: Text(
                     entry.value,
                     style: const TextStyle(
-                      color: Colors.black,
+                      color: AppColors.text,
                       fontSize: 13,
                       height: 1.4,
                     ),

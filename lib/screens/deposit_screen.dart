@@ -216,8 +216,12 @@ class _DepositScreenState extends State<DepositScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Nạp tiền Wapo Pay'),
+        title: const Text('Nạp tiền Wapo Pay', style: TextStyle(color: Colors.black),),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -227,7 +231,7 @@ class _DepositScreenState extends State<DepositScreen> {
             const Text(
               'Nhập số tiền cần nạp',
               style: TextStyle(
-                color: Colors.white70,
+                color: Colors.black,
                 fontSize: 14,
               ),
             ),
@@ -236,17 +240,17 @@ class _DepositScreenState extends State<DepositScreen> {
               controller: _amountController,
               keyboardType: TextInputType.number,
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
               ),
               onChanged: _onAmountChanged,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.black.withOpacity(0.05),
                 suffixText: 'đ',
                 suffixStyle: const TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -277,18 +281,18 @@ class _DepositScreenState extends State<DepositScreen> {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? Colors.pink
-                          : Colors.white.withOpacity(0.05),
+                          : AppColors.text.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
                             ? Colors.pinkAccent
-                            : Colors.white10,
+                            : AppColors.text,
                       ),
                     ),
                     child: Text(
                       '${_currencyFormat.format(amount)}đ',
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.white70,
+                        color: isSelected ? Colors.white : AppColors.text,
                         fontWeight: isSelected
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -302,7 +306,8 @@ class _DepositScreenState extends State<DepositScreen> {
             const Text(
               'Phương thức thanh toán',
               style: TextStyle(
-                color: Colors.white70,
+                color: Colors.black,
+
                 fontSize: 14,
               ),
             ),
@@ -343,7 +348,7 @@ class _DepositScreenState extends State<DepositScreen> {
                         Text(
                           'VNPay (Sandbox)',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors.blueAccent,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -352,7 +357,7 @@ class _DepositScreenState extends State<DepositScreen> {
                         Text(
                           'Thanh toán qua cổng VNPay',
                           style: TextStyle(
-                            color: Colors.white54,
+                            color: Colors.pink,
                             fontSize: 12,
                           ),
                         ),
@@ -381,7 +386,7 @@ class _DepositScreenState extends State<DepositScreen> {
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: Colors.black,
                   strokeWidth: 2,
                 ),
               )

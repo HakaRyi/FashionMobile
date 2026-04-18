@@ -160,11 +160,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppColors.surface,
         elevation: 0,
-        title: const Text('Tạo đơn bán hàng', style: TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Tạo đơn bán hàng', style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
       body: Form(
@@ -181,7 +185,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.black.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white10),
                   ),
@@ -209,12 +213,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           children: [
                             Text(
                               item.itemName,
-                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            Text(item.brand ?? 'Không có thương hiệu', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                            Text(item.brand ?? 'Không có thương hiệu', style: const TextStyle(color: Colors.pinkAccent, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -258,7 +262,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.black.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: _selectedBuyer == null ? Colors.pinkAccent.withOpacity(0.5) : Colors.white10,
@@ -269,7 +273,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     if (_selectedBuyer != null) ...[
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: Colors.white10,
+                        backgroundColor: Colors.black12,
                         backgroundImage: NetworkImage(
                             _selectedBuyer!.avatarUrl.isNotEmpty
                                 ? _selectedBuyer!.avatarUrl
@@ -283,7 +287,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           children: [
                             Text(
                                 _selectedBuyer!.fullName.isNotEmpty ? _selectedBuyer!.fullName : _selectedBuyer!.username,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)
+                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -293,7 +297,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.swap_horiz, color: Colors.white54),
+                      const Icon(Icons.swap_horiz, color: Colors.black),
                     ] else ...[
                       const Icon(Icons.person_add_alt_1, color: Colors.pinkAccent),
                       const SizedBox(width: 8),
@@ -320,11 +324,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               },
               itemBuilder: (context, String suggestion) {
                 return ListTile(
-                  tileColor: const Color(0xFF1E1E1E),
+                  tileColor: AppColors.background,
                   leading: const Icon(Icons.location_on_outlined, color: Colors.pinkAccent),
                   title: Text(
                     suggestion,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(color: Colors.black, fontSize: 14),
                   ),
                 );
               },
@@ -343,13 +347,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 return TextFormField(
                   controller: controller,
                   focusNode: focusNode,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Địa chỉ giao hàng',
-                    labelStyle: const TextStyle(color: Colors.white54),
+                    labelStyle: const TextStyle(color: Colors.black54),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    prefixIcon: const Icon(Icons.map_outlined, color: Colors.white54),
+                    fillColor: Colors.black.withOpacity(0.05),
+                    prefixIcon: const Icon(Icons.map_outlined, color: Colors.black54),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -386,7 +390,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(title, style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
+      child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -394,7 +398,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: type,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.black),
       onChanged: isCurrency ? (value) {
         if (value.isEmpty) return;
         final n = num.tryParse(value.replaceAll('.', ''));
@@ -408,9 +412,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       } : null,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
+        labelStyle: const TextStyle(color: Colors.black54),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.black.withOpacity(0.05),
         suffixText: isCurrency ? 'đ' : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

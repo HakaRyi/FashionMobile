@@ -22,6 +22,7 @@ class AppColors {
   static const Color textPrimary2 = Colors.white;
   static const Color textPink = Color(0xFFFC00A6);
   static const Color stroke = Color(0xFFE3E3E3);
+  static const Color text = Color(0xFF6C1D3B);
   static const Color createHeader = Color(0xFFF8F8F8);
   static final Color borderPrimary = Colors.pink.withOpacity(0.1);
   static final Color borderSecondary = Colors.black.withOpacity(0.2);
