@@ -483,7 +483,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         ),
 
                         const TryOnHistoryList(),
-                        const SizedBox(height: 20), // Thêm khoảng trống nhỏ ở cuối list cuộn
+                        const SizedBox(height: 20),
                       ],
                     ],
                   ),
