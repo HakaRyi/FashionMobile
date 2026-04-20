@@ -25,19 +25,19 @@ class PriceInfoWidget extends StatelessWidget {
           label,
           style: const TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(width: 8),
-        Icon(Icons.stars, color: color, size: 20),
+        const SizedBox(width: 4),
+        Icon(Icons.stars, color: color, size: 14),
         const SizedBox(width: 4),
         Text(
           value,
           style: TextStyle(
             color: valueTextColor ?? (color == Colors.grey ? Colors.grey : Colors.white),
             fontWeight: FontWeight.bold,
-            fontSize: 20,
+            fontSize: 14,
           ),
         ),
       ],

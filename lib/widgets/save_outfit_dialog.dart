@@ -55,9 +55,9 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
           width: 320,
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           decoration: BoxDecoration(
-            color: AppColors.surface, // Dùng màu nền chuẩn của App
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+            border: Border.all(color: AppColors.borderSecondary.withOpacity(0.1), width: 1),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.3),
@@ -73,7 +73,7 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
               const Text(
                 "Lưu Outfit",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -83,7 +83,7 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
               Text(
                 "Thêm bộ trang phục này vào tủ đồ của bạn",
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: AppColors.textPrimary.withOpacity(0.6),
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                 ),
@@ -116,7 +116,7 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
               TextField(
                 controller: _nameController,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
@@ -125,20 +125,20 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
                 decoration: InputDecoration(
                   hintText: "Nhập tên outfit...",
                   hintStyle: TextStyle(
-                    color: Colors.white.withOpacity(0.4),
+                    color: AppColors.textPrimary.withOpacity(0.4),
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                   ),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: AppColors.textPrimary.withOpacity(0.05),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                    borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.1)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                    borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.1)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -158,12 +158,13 @@ class _SaveOutfitDialogState extends State<SaveOutfitDialog> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.redAccent.withOpacity(0.1)),
                         ),
                       ),
                       child: Text(
                         "Hủy bỏ",
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.redAccent.withOpacity(0.7),
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
