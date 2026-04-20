@@ -19,9 +19,15 @@ class ChatService {
   }
 
   String _buildNotificationPreview(Map<String, dynamic> msg) {
-    final content = (msg['content'] ?? '').toString().trim();
-    final photos = (msg['photos'] as List?) ?? [];
-    final sharedPostId = msg['sharedPostId'] ?? msg['SharedPostId'];
+    final content = (msg['content'] ?? msg['Content'] ?? '').toString().trim();
+
+    final photosRaw = msg['photos'] ?? msg['Photos'] ?? [];
+    final List photos = photosRaw is List ? photosRaw : [];
+
+    final sharedPostId = msg['sharedPostId'] ??
+        msg['SharedPostId'] ??
+        msg['postId'] ??
+        msg['PostId'];
 
     if (content.isNotEmpty) return content;
     if (photos.isNotEmpty) return 'Đã gửi ảnh';

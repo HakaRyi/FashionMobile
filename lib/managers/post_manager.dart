@@ -1,4 +1,3 @@
-// lib/managers/post_manager.dart
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -8,10 +7,10 @@ import '../constants/post_status_values.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_reaction_result.dart';
-import '../services/post_service.dart';
-import '../services/reaction_service.dart';
 import '../models/post_share_result.dart';
 import '../models/shareable_user_model.dart';
+import '../services/post_service.dart';
+import '../services/reaction_service.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 GlobalKey<ScaffoldMessengerState>();
@@ -25,13 +24,16 @@ class PostManager extends ChangeNotifier {
   final List<PostFeedModel> _posts = [];
   final Set<int> _postIds = {};
   final List<ShareableUserModel> _shareableUsers = [];
-  List<ShareableUserModel> get shareableUsers => List.unmodifiable(_shareableUsers);
+
+  List<ShareableUserModel> get shareableUsers =>
+      List.unmodifiable(_shareableUsers);
+  List<PostFeedModel> get posts => List.unmodifiable(_posts);
 
   bool isLoadingShareableUsers = false;
-  List<PostFeedModel> get posts => List.unmodifiable(_posts);
 
   final Set<int> _sharingPosts = {};
   final Set<int> _sharingPostsToChat = {};
+
   DateTime? _cursor;
   bool isLoading = false;
   bool isLoadingMore = false;
@@ -206,10 +208,7 @@ class PostManager extends ChangeNotifier {
   }) async {
     if (_sharingPostsToChat.contains(post.postId)) return;
 
-    final validReceiverIds = receiverAccountIds
-        .where((id) => id > 0)
-        .toSet()
-        .toList();
+    final validReceiverIds = receiverAccountIds.where((id) => id > 0).toSet().toList();
 
     if (validReceiverIds.isEmpty) {
       throw Exception('Vui lòng chọn ít nhất một người nhận');
@@ -564,13 +563,9 @@ class PostManager extends ChangeNotifier {
   }
 
   void replaceOrInsertTop(PostFeedModel post) {
-    final index = _posts.indexWhere((p) => p.postId == post.postId);
-    if (index >= 0) {
-      _posts[index] = post;
-    } else {
-      _posts.insert(0, post);
-      _postIds.add(post.postId);
-    }
+    _posts.removeWhere((p) => p.postId == post.postId);
+    _posts.insert(0, post);
+    _postIds.add(post.postId);
     notifyListeners();
   }
 
@@ -592,6 +587,24 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<PostFeedModel?> ensurePostAtTop(int postId) async {
+    try {
+      final existing = _findPostAnywhere(postId);
+
+      if (existing != null) {
+        bringPostToTop(existing);
+        return existing;
+      }
+
+      final fetched = await _postService.getPostDetail(postId);
+      bringPostToTop(fetched);
+      return fetched;
+    } catch (e) {
+      debugPrint('Ensure post at top error: $e');
+      return null;
+    }
+  }
+
   void removePost(int postId) {
     _posts.removeWhere((p) => p.postId == postId);
     _savedPosts.removeWhere((p) => p.postId == postId);
@@ -606,7 +619,8 @@ class PostManager extends ChangeNotifier {
       _posts[feedIndex] = updated;
     }
 
-    final savedIndex = _savedPosts.indexWhere((p) => p.postId == updated.postId);
+    final savedIndex =
+    _savedPosts.indexWhere((p) => p.postId == updated.postId);
     if (savedIndex != -1) {
       _savedPosts[savedIndex] = updated;
     }

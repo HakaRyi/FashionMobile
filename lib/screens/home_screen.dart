@@ -1,13 +1,11 @@
-// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
 import '../managers/post_manager.dart';
-import '../widgets/create_post_header.dart';
 import '../utils/notification_manager.dart';
+import '../widgets/create_post_header.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/post_item.dart';
-import '../services/post_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final int? focusPostId;
@@ -30,11 +28,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    postManager.fetchInitialFeed();
 
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200) {
         postManager.loadMore();
       }
     });
@@ -53,15 +51,47 @@ class _HomeScreenState extends State<HomeScreen> {
     await postManager.fetchInitialFeed();
 
     if (widget.focusPostId != null) {
-      await _bringSharedPostToTop(widget.focusPostId!);
+      await _focusSharedPost(widget.focusPostId!);
     }
-
-    await Future.delayed(const Duration(milliseconds: 150));
 
     if (mounted) {
       setState(() {
         _isVisible = true;
       });
+    }
+  }
+
+  Future<void> _focusSharedPost(int postId) async {
+    if (_isJumpingToSharedPost) return;
+    _isJumpingToSharedPost = true;
+
+    try {
+      final post = await postManager.ensurePostAtTop(postId);
+
+      if (post == null || !mounted) return;
+
+      setState(() {
+        _highlightPostId = postId;
+      });
+
+      await WidgetsBinding.instance.endOfFrame;
+      await WidgetsBinding.instance.endOfFrame;
+
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (mounted) {
+        setState(() {
+          _highlightPostId = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('Focus shared post error: $e');
+    } finally {
+      _isJumpingToSharedPost = false;
     }
   }
 
@@ -73,6 +103,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleRefresh() async {
     await postManager.fetchInitialFeed();
+
+    if (widget.focusPostId != null) {
+      await _focusSharedPost(widget.focusPostId!);
+    }
   }
 
   @override
@@ -88,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: AppColors.surface,
             edgeOffset: 100,
             child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 500),
+              duration: const Duration(milliseconds: 250),
               opacity: _isVisible ? 1.0 : 0.0,
               child: CustomScrollView(
                 controller: _scrollController,
@@ -104,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     flexibleSpace: MainAppBar(),
                     toolbarHeight: 60,
                   ),
-
                   SliverToBoxAdapter(
                     child: Column(
                       children: [
@@ -115,7 +148,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -140,7 +172,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-
                   if (postManager.posts.isEmpty)
                     SliverFillRemaining(
                       hasScrollBody: false,
@@ -171,25 +202,34 @@ class _HomeScreenState extends State<HomeScreen> {
                       delegate: SliverChildBuilderDelegate(
                             (context, index) {
                           final post = postManager.posts[index];
-
-                          final bool isHighlighted = post.postId == _highlightPostId;
+                          final bool isHighlighted =
+                              post.postId == _highlightPostId;
 
                           return Column(
                             children: [
                               const SizedBox(height: 4),
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
-                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isHighlighted
                                       ? AppColors.textPink.withOpacity(0.08)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(14),
                                   border: isHighlighted
-                                      ? Border.all(color: AppColors.textPink, width: 1.4)
+                                      ? Border.all(
+                                    color: AppColors.textPink,
+                                    width: 1.4,
+                                  )
                                       : null,
                                 ),
-                                child: PostItem(post: post),
+                                child: PostItem(
+                                  key: ValueKey(post.postId),
+                                  post: post,
+                                ),
                               ),
                               if (index < postManager.posts.length - 1)
                                 const Divider(
@@ -205,7 +245,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         childCount: postManager.posts.length,
                       ),
                     ),
-
                   if (postManager.isLoadingMore)
                     const SliverToBoxAdapter(
                       child: Padding(
@@ -217,7 +256,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-
                   const SliverToBoxAdapter(
                     child: SizedBox(height: 80),
                   ),
@@ -301,45 +339,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _bringSharedPostToTop(int postId) async {
-    if (_isJumpingToSharedPost) return;
-
-    _isJumpingToSharedPost = true;
-
-    try {
-      final post = await PostService().getPostDetail(postId);
-
-      postManager.bringPostToTop(post);
-
-      if (!mounted) return;
-
-      setState(() {
-        _highlightPostId = postId;
-      });
-
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      if (_scrollController.hasClients) {
-        await _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeOut,
-        );
-      }
-
-      await Future.delayed(const Duration(seconds: 2));
-
-      if (mounted) {
-        setState(() {
-          _highlightPostId = null;
-        });
-      }
-    } catch (e) {
-      debugPrint('Bring shared post to top error: $e');
-    } finally {
-      _isJumpingToSharedPost = false;
-    }
   }
 }

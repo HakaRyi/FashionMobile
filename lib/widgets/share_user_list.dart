@@ -63,9 +63,9 @@ class _ShareUserListState extends State<ShareUserList> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.14),
+        color: color.withOpacity(0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.24)),
+        border: Border.all(color: color.withOpacity(0.20)),
       ),
       child: Text(
         label,
@@ -97,17 +97,34 @@ class _ShareUserListState extends State<ShareUserList> {
           children: [
             TextField(
               controller: _searchController,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+              ),
               decoration: InputDecoration(
                 hintText: 'Tìm người để chia sẻ...',
-                hintStyle: const TextStyle(color: Colors.white54),
-                prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                hintStyle: const TextStyle(
+                  color: AppColors.textSecondary,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: AppColors.textSecondary,
+                ),
                 filled: true,
-                fillColor: AppColors.background,
+                fillColor: AppColors.backgroundSecondary,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: OutlineInputBorder(
+                enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(
+                    color: AppColors.divider,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: AppColors.textPink,
+                    width: 1.2,
+                  ),
                 ),
               ),
             ),
@@ -117,7 +134,9 @@ class _ShareUserListState extends State<ShareUserList> {
                   ? Center(
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Colors.redAccent),
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               )
@@ -131,90 +150,106 @@ class _ShareUserListState extends State<ShareUserList> {
                   ? const Center(
                 child: Text(
                   'Không có người nào để chia sẻ',
-                  style: TextStyle(color: Colors.white60),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               )
                   : ListView.separated(
                 itemCount: users.length,
                 separatorBuilder: (_, __) => const Divider(
-                  color: Colors.white10,
+                  color: AppColors.divider,
                   height: 1,
                 ),
                 itemBuilder: (context, index) {
                   final user = users[index];
-                  final isSelected = widget.selectedUserIds
-                      .contains(user.accountId);
+                  final isSelected = widget.selectedUserIds.contains(user.accountId);
 
-                  return InkWell(
-                    onTap: () => widget.onToggleUser(user),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 10,
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white10,
-                            backgroundImage:
-                            user.avatarUrl != null &&
-                                user.avatarUrl!.isNotEmpty
-                                ? NetworkImage(user.avatarUrl!)
-                                : null,
-                            child: (user.avatarUrl == null ||
-                                user.avatarUrl!.isEmpty)
-                                ? const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                            )
-                                : null,
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => widget.onToggleUser(user),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.backgroundSecondary
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.textPink.withOpacity(0.45)
+                                : AppColors.divider,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user.userName.isNotEmpty
-                                      ? user.userName
-                                      : 'Người dùng',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: [
-                                    if (user.isFollower)
-                                      _buildRoleBadge(
-                                        label: 'Follows you',
-                                        color: Colors.tealAccent,
-                                      ),
-                                    if (user.isFollowing)
-                                      _buildRoleBadge(
-                                        label: 'You follow',
-                                        color: AppColors.textPink,
-                                      ),
-                                  ],
-                                ),
-                              ],
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: AppColors.backgroundSecondary,
+                              backgroundImage: user.avatarUrl != null &&
+                                  user.avatarUrl!.isNotEmpty
+                                  ? NetworkImage(user.avatarUrl!)
+                                  : null,
+                              child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
+                                  ? const Icon(
+                                Icons.person,
+                                color: AppColors.textPink,
+                              )
+                                  : null,
                             ),
-                          ),
-                          Checkbox(
-                            value: isSelected,
-                            activeColor: AppColors.textPink,
-                            onChanged: (_) =>
-                                widget.onToggleUser(user),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    user.userName.isNotEmpty
+                                        ? user.userName
+                                        : 'Người dùng',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      if (user.isFollower)
+                                        _buildRoleBadge(
+                                          label: 'Follows you',
+                                          color: Colors.teal,
+                                        ),
+                                      if (user.isFollowing)
+                                        _buildRoleBadge(
+                                          label: 'You follow',
+                                          color: AppColors.textPink,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Checkbox(
+                              value: isSelected,
+                              activeColor: AppColors.textPink,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              onChanged: (_) => widget.onToggleUser(user),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

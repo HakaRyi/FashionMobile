@@ -31,13 +31,22 @@ class SharedPostCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 240,
         decoration: BoxDecoration(
-          color: isMe ? Colors.white.withOpacity(0.08) : AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12),
+          color: isMe ? AppColors.backgroundSecondary : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.textPink.withOpacity(0.18),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +54,7 @@ class SharedPostCard extends StatelessWidget {
             if (firstImage != null)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(14),
+                  top: Radius.circular(16),
                 ),
                 child: CachedNetworkImage(
                   imageUrl: firstImage,
@@ -54,7 +63,7 @@ class SharedPostCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
                     height: 160,
-                    color: Colors.white10,
+                    color: AppColors.backgroundSecondary,
                     alignment: Alignment.center,
                     child: const CircularProgressIndicator(
                       color: AppColors.textPink,
@@ -63,11 +72,11 @@ class SharedPostCard extends StatelessWidget {
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 160,
-                    color: Colors.white10,
+                    color: AppColors.backgroundSecondary,
                     alignment: Alignment.center,
                     child: const Icon(
                       Icons.broken_image_outlined,
-                      color: Colors.white38,
+                      color: AppColors.textSecondary,
                       size: 30,
                     ),
                   ),
@@ -78,24 +87,34 @@ class SharedPostCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    ownerName.isNotEmpty ? ownerName : 'Người dùng',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textPink,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.textPink.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      ownerName.isNotEmpty ? ownerName : 'Người dùng',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPink,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (title.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         height: 1.3,
@@ -109,7 +128,7 @@ class SharedPostCard extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.textSecondary,
                         fontSize: 12,
                         height: 1.35,
                       ),

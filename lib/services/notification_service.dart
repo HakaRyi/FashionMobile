@@ -236,7 +236,22 @@ class NotificationService {
       channelName: 'Tin nhắn chat',
       payload: payload,
     );
+  }
 
+  Future<void> showManualLocalNotification({
+    required String title,
+    required String body,
+    String channelId = 'fashion_mobile_channel',
+    String channelName = 'Thông báo ứng dụng',
+    String? payload,
+  }) async {
+    await _showLocalNotification(
+      title,
+      body,
+      channelId: channelId,
+      channelName: channelName,
+      payload: payload,
+    );
   }
 
   void disconnect() {

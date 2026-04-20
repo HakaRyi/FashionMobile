@@ -33,16 +33,17 @@ class PostItem extends StatefulWidget {
 }
 
 class _PostItemState extends State<PostItem> {
-  late final int postId;
   final PageController _pageController = PageController();
 
   int currentPage = 0;
   bool showHeart = false;
 
+  int get postId => widget.post.postId;
+
   @override
   void initState() {
     super.initState();
-    postId = widget.post.postId;
+    // postId = widget.post.postId;
   }
 
   @override
@@ -56,6 +57,21 @@ class _PostItemState extends State<PostItem> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant PostItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.post.postId != widget.post.postId) {
+      currentPage = 0;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          _pageController.jumpToPage(0);
+        }
+      });
+    }
   }
 
   bool _canEditPost(String? status) {

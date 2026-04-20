@@ -1,4 +1,3 @@
-// lib/screens/deposit_screen.dart
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
@@ -8,6 +7,8 @@ import '../constants/notification_type.dart';
 import '../utils/app_notification.dart';
 import '../../constants/app_colors.dart';
 import '../managers/payment_manager.dart';
+import '../services/notification_service.dart' as local_noti;
+import '../utils/notification_utils.dart';
 
 class DepositScreen extends StatefulWidget {
   const DepositScreen({super.key});
@@ -47,23 +48,59 @@ class _DepositScreenState extends State<DepositScreen> {
     _appLinks = AppLinks();
 
     _linkSubscription = _appLinks.uriLinkStream.listen(
-          (Uri uri) {
+          (Uri uri) async {
         if (!mounted) return;
 
         if (uri.scheme == 'fashionmobile' && uri.host == 'payment-result') {
           final String? status = uri.queryParameters['status'];
 
           if (status == '00') {
+            await _showDepositSuccessNotification();
             _showSuccessDialog();
           } else {
+            await _showDepositFailedNotification();
             _showErrorDialog();
           }
         }
       },
-      onError: (_) {
+      onError: (_) async {
         if (!mounted) return;
+        await _showDepositFailedNotification();
         _showErrorDialog();
       },
+    );
+  }
+
+  Future<void> _showDepositSuccessNotification() async {
+    if (!mounted) return;
+
+    NotificationUtils.showTopRight(
+      context,
+      message: 'Nạp tiền thành công',
+    );
+
+    await local_noti.NotificationService().showManualLocalNotification(
+      title: 'Nạp tiền thành công',
+      body: 'Bạn đã nạp ${_currencyFormat.format(_selectedAmount)}đ vào ví',
+      channelId: 'wallet_channel',
+      channelName: 'Thông báo ví',
+    );
+  }
+
+  Future<void> _showDepositFailedNotification() async {
+    if (!mounted) return;
+
+    NotificationUtils.showTopRight(
+      context,
+      message: 'Nạp tiền thất bại',
+      isError: true,
+    );
+
+    await local_noti.NotificationService().showManualLocalNotification(
+      title: 'Nạp tiền thất bại',
+      body: 'Giao dịch nạp tiền không thành công hoặc đã bị hủy',
+      channelId: 'wallet_channel',
+      channelName: 'Thông báo ví',
     );
   }
 
@@ -93,6 +130,8 @@ class _DepositScreenState extends State<DepositScreen> {
         message: "Lỗi hệ thống",
         type: NotificationType.error,
       );
+
+      await _showDepositFailedNotification();
     } finally {
       if (!mounted) return;
 
@@ -216,7 +255,10 @@ class _DepositScreenState extends State<DepositScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Nạp tiền Wapo Pay', style: TextStyle(color: Colors.black),),
+        title: const Text(
+          'Nạp tiền Wapo Pay',
+          style: TextStyle(color: Colors.black),
+        ),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -307,7 +349,6 @@ class _DepositScreenState extends State<DepositScreen> {
               'Phương thức thanh toán',
               style: TextStyle(
                 color: Colors.black,
-
                 fontSize: 14,
               ),
             ),
