@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import 'dart:io';
+import 'shared_post_card.dart';
+
 class ChatBubble extends StatelessWidget {
   final String message;
   final List<String>? photos;
   final bool isMe;
   final List<dynamic>? reactions;
-  const ChatBubble({super.key, required this.message,this.photos, required this.isMe,this.reactions});
+  final Map<String, dynamic>? sharedPost;
+  final VoidCallback? onTapSharedPost;
+
+  const ChatBubble({
+    super.key,
+    required this.message,
+    this.photos,
+    required this.isMe,
+    this.reactions,
+    this.sharedPost,
+    this.onTapSharedPost,
+  });
+
+  bool get _hasSharedPost {
+    return sharedPost != null && sharedPost!['sharedPostId'] != null;
+  }
+
   String _getEmoji(String type) {
     switch (type.toLowerCase()) {
       case 'haha': return '😆';
@@ -26,11 +44,14 @@ class ChatBubble extends StatelessWidget {
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (photos != null && photos!.isNotEmpty) _buildPhotosGrid(context),
+
             if (message.isNotEmpty)
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 2),
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.75,
+                ),
                 decoration: BoxDecoration(
                   color: isMe ? AppColors.textPink : AppColors.surface,
                   borderRadius: BorderRadius.only(
@@ -40,8 +61,21 @@ class ChatBubble extends StatelessWidget {
                     bottomRight: Radius.circular(isMe ? 0 : 16),
                   ),
                 ),
-                child: Text(message, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                child: Text(
+                  message,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
               ),
+
+            if (_hasSharedPost) ...[
+              if (message.isNotEmpty || (photos != null && photos!.isNotEmpty))
+                const SizedBox(height: 6),
+              SharedPostCard(
+                sharedPost: sharedPost!,
+                isMe: isMe,
+                onTap: onTapSharedPost,
+              ),
+            ],
           ],
         ),
         // HIỂN THỊ REACTION

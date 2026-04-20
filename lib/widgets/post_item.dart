@@ -13,7 +13,7 @@ import '../screens/navbar_screens/profile_screen.dart';
 import '../screens/other_profile_screen.dart';
 import '../screens/public_wardrobe_screen.dart';
 import 'comments/comment_sheet.dart';
-import 'package:share_plus/share_plus.dart';
+import 'share_post_users_sheet.dart';
 import 'report_post_sheet.dart';
 
 class PostItem extends StatefulWidget {
@@ -129,6 +129,25 @@ class _PostItemState extends State<PostItem> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _openShareUsersSheet() async {
+    final currentPost = postManager.getPostAnywhereOrNull(postId) ?? widget.post;
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SharePostUsersSheet(post: currentPost),
+    );
+
+    if (!mounted || result != true) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã chia sẻ bài viết vào chat'),
+      ),
     );
   }
 
@@ -616,28 +635,12 @@ class _PostItemState extends State<PostItem> {
                 icon: Icons.mode_comment_outlined,
                 color: AppColors.textPrimary,
               ),
-              // const SizedBox(width: 14),
-              // _buildActionIcon(
-              //   onTap: () async {
-              //     try {
-              //       final currentPost =
-              //           postManager.getPostAnywhereOrNull(postId) ?? widget.post;
-              //
-              //       await postManager.sharePost(currentPost);
-              //
-              //       if (!mounted) return;
-              //       ScaffoldMessenger.of(context).showSnackBar(
-              //         const SnackBar(
-              //           content: Text('Chia sẻ bài viết thành công'),
-              //         ),
-              //       );
-              //     } catch (e) {
-              //       _showError('Chia sẻ bài viết thất bại: $e');
-              //     }
-              //   },
-              //   icon: Icons.send_outlined,
-              //   color: AppColors.textPrimary,
-              // ),
+              const SizedBox(width: 14),
+              _buildActionIcon(
+                onTap: _openShareUsersSheet,
+                icon: Icons.send_outlined,
+                color: AppColors.textPrimary,
+              ),
               const Spacer(),
               _buildActionIcon(
                 onTap: () async {

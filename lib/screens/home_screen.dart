@@ -7,9 +7,15 @@ import '../widgets/create_post_header.dart';
 import '../utils/notification_manager.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/post_item.dart';
+import '../services/post_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int? focusPostId;
+
+  const HomeScreen({
+    super.key,
+    this.focusPostId,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -18,11 +24,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isVisible = false;
   final ScrollController _scrollController = ScrollController();
+  int? _highlightPostId;
+  bool _isJumpingToSharedPost = false;
 
   @override
   void initState() {
     super.initState();
-    postManager.fetchInitialFeed();
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -31,17 +38,30 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    // postManager.fetchPosts();
     notificationManager.initialize();
     notificationManager.fetchNotificationHistory();
 
-    Future.delayed(const Duration(milliseconds: 150), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() {
-          _isVisible = true;
-        });
+        _initializeHome();
       }
     });
+  }
+
+  Future<void> _initializeHome() async {
+    await postManager.fetchInitialFeed();
+
+    if (widget.focusPostId != null) {
+      await _bringSharedPostToTop(widget.focusPostId!);
+    }
+
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    if (mounted) {
+      setState(() {
+        _isVisible = true;
+      });
+    }
   }
 
   @override
@@ -151,10 +171,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             (context, index) {
                           final post = postManager.posts[index];
 
+                          final bool isHighlighted = post.postId == _highlightPostId;
+
                           return Column(
                             children: [
                               const SizedBox(height: 4),
-                              PostItem(post: post),
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isHighlighted
+                                      ? AppColors.textPink.withOpacity(0.08)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: isHighlighted
+                                      ? Border.all(color: AppColors.textPink, width: 1.4)
+                                      : null,
+                                ),
+                                child: PostItem(post: post),
+                              ),
                               if (index < postManager.posts.length - 1)
                                 const Divider(
                                   color: AppColors.divider,
@@ -264,5 +299,45 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _bringSharedPostToTop(int postId) async {
+    if (_isJumpingToSharedPost) return;
+
+    _isJumpingToSharedPost = true;
+
+    try {
+      final post = await PostService().getPostDetail(postId);
+
+      postManager.bringPostToTop(post);
+
+      if (!mounted) return;
+
+      setState(() {
+        _highlightPostId = postId;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (_scrollController.hasClients) {
+        await _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      }
+
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (mounted) {
+        setState(() {
+          _highlightPostId = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('Bring shared post to top error: $e');
+    } finally {
+      _isJumpingToSharedPost = false;
+    }
   }
 }

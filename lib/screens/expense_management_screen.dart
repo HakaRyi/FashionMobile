@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 import '../models/cashflow_point_model.dart';
 import '../models/expense_by_reference_type_model.dart';
 import '../models/expense_summary_model.dart';
-import '../models/transaction_detail_model.dart';
+import '../models/spending_limit_model.dart';
 import '../models/transaction_history_model.dart';
+import '../models/update_spending_limit_request.dart';
 import '../services/expense_service.dart';
 
 class ExpenseManagementScreen extends StatefulWidget {
@@ -26,11 +27,14 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   late int selectedYear;
 
   bool isLoading = true;
+  bool isUpdatingSpendingLimit = false;
+
   String selectedType = '';
   String selectedStatus = '';
   String selectedReferenceType = '';
 
   ExpenseSummaryModel? summary;
+  SpendingLimitModel? spendingLimit;
   List<TransactionHistoryModel> transactions = [];
   List<ExpenseByReferenceTypeModel> expenseByType = [];
   List<CashflowPointModel> cashflows = [];
@@ -56,7 +60,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   String formatMoney(double value) {
-    return '${_moneyFormat.format(value)} đ';
+    return '${_moneyFormat.format(value)} VND';
   }
 
   String formatCompactMoney(double value) {
@@ -76,15 +80,15 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     final abs = value.abs();
 
     if (abs >= 1000000000) {
-      return '${(value / 1000000000).toStringAsFixed(1)} tỷ';
+      return '${(value / 1000000000).toStringAsFixed(1)}B';
     }
     if (abs >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)} triệu';
+      return '${(value / 1000000).toStringAsFixed(1)}M';
     }
     if (abs >= 1000) {
       return '${(value / 1000).toStringAsFixed(0)}K';
     }
-    return '${_moneyFormat.format(value)} đ';
+    return '${_moneyFormat.format(value)} VND';
   }
 
   String formatAdaptiveMoney(double value, {bool compact = false}) {
@@ -98,6 +102,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     }
 
     try {
+      final fromDate = DateTime(selectedYear, selectedMonth, 1);
+      final toDate = DateTime(selectedYear, selectedMonth + 1, 0);
+
       final summaryResult = await _expenseService.getExpenseSummary(
         month: selectedMonth,
         year: selectedYear,
@@ -117,10 +124,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         referenceType:
         selectedReferenceType.isEmpty ? null : selectedReferenceType,
         keyword: _keywordController.text,
+        fromDate: fromDate,
+        toDate: toDate,
       );
-
-      final fromDate = DateTime(selectedYear, selectedMonth, 1);
-      final toDate = DateTime(selectedYear, selectedMonth + 1, 0);
 
       final cashflowResult = await _expenseService.getCashflow(
         fromDate: fromDate,
@@ -128,19 +134,26 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         groupBy: 'day',
       );
 
+      final spendingLimitResult = await _expenseService.getMySpendingLimit(
+        month: selectedMonth,
+        year: selectedYear,
+      );
+
       if (!mounted) return;
+
       setState(() {
         summary = summaryResult;
         expenseByType = expenseTypeResult;
         transactions =
         (transactionResult['items'] as List<TransactionHistoryModel>);
         cashflows = cashflowResult;
+        spendingLimit = spendingLimitResult;
       });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Lỗi tải dữ liệu: $e'),
+          content: Text('Failed to load data: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -175,21 +188,21 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   String _mapReferenceType(String value) {
     switch (value) {
       case 'TopUp':
-        return 'Nạp tiền';
+        return 'Top up';
       case 'OrderPayment':
-        return 'Thanh toán đơn hàng';
+        return 'Order payment';
       case 'OrderRefund':
-        return 'Hoàn tiền đơn hàng';
+        return 'Order refund';
       case 'TryOn':
-        return 'Try-On';
+        return 'Try-on';
       case 'EventReward':
-        return 'Thưởng sự kiện';
+        return 'Event reward';
       case 'Withdraw':
-        return 'Rút tiền';
+        return 'Withdraw';
       case 'Adjustment':
-        return 'Điều chỉnh';
+        return 'Adjustment';
       case 'PackagePurchase':
-        return 'Mua gói dịch vụ';
+        return 'Package purchase';
       default:
         return value;
     }
@@ -198,13 +211,13 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   String _mapStatus(String value) {
     switch (value) {
       case 'Pending':
-        return 'Đang xử lý';
+        return 'Pending';
       case 'Success':
-        return 'Thành công';
+        return 'Success';
       case 'Failed':
-        return 'Thất bại';
+        return 'Failed';
       case 'Cancelled':
-        return 'Đã hủy';
+        return 'Cancelled';
       default:
         return value;
     }
@@ -274,7 +287,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Tháng $selectedMonth/$selectedYear',
+                'Month $selectedMonth/$selectedYear',
                 style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
@@ -293,7 +306,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   border: Border.all(color: Colors.white.withOpacity(0.12)),
                 ),
                 child: Text(
-                  '${summary?.totalTransactions ?? 0} giao dịch',
+                  '${summary?.totalTransactions ?? 0} transactions',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11.5,
@@ -305,7 +318,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'Số dư hiện tại',
+            'Current balance',
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 6),
@@ -327,7 +340,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Đang giữ: ${formatMoney(lockedBalance)}',
+            'Locked: ${formatMoney(lockedBalance)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -342,7 +355,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               Expanded(
                 child: _buildHeroMiniInfo(
                   icon: Icons.arrow_downward_rounded,
-                  label: 'Tiền vào',
+                  label: 'Income',
                   value: formatMoney(totalIncome),
                   color: const Color(0xFF10B981),
                 ),
@@ -351,7 +364,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               Expanded(
                 child: _buildHeroMiniInfo(
                   icon: Icons.arrow_upward_rounded,
-                  label: 'Tiền ra',
+                  label: 'Expense',
                   value: formatMoney(totalExpense),
                   color: const Color(0xFFEF4444),
                 ),
@@ -363,7 +376,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             icon: netAmount >= 0
                 ? Icons.trending_up_rounded
                 : Icons.trending_down_rounded,
-            label: 'Dòng tiền ròng',
+            label: 'Net cashflow',
             value: formatMoney(netAmount),
             color: netAmount >= 0
                 ? const Color(0xFF38BDF8)
@@ -441,12 +454,52 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     );
   }
 
+  Widget _buildMonthYearPicker() {
+    final months = List.generate(12, (index) => index + 1);
+    final currentYear = DateTime.now().year;
+    final years = List.generate(5, (index) => currentYear - 2 + index);
+
+    return _buildSectionCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildDropdown(
+              value: selectedMonth.toString(),
+              hint: 'Month',
+              items: months.map((e) => e.toString()).toList(),
+              labelBuilder: (v) => 'Month $v',
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => selectedMonth = int.parse(v));
+                _loadData();
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildDropdown(
+              value: selectedYear.toString(),
+              hint: 'Year',
+              items: years.map((e) => e.toString()).toList(),
+              labelBuilder: (v) => v,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => selectedYear = int.parse(v));
+                _loadData();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryGrid() {
     return Row(
       children: [
         Expanded(
           child: _buildSummaryMetricCard(
-            title: 'Tiền vào',
+            title: 'Income',
             value: formatAdaptiveMoney(summary?.totalIncome ?? 0, compact: true),
             icon: Icons.south_west_rounded,
             color: const Color(0xFF10B981),
@@ -455,7 +508,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildSummaryMetricCard(
-            title: 'Tiền ra',
+            title: 'Expense',
             value: formatAdaptiveMoney(summary?.totalExpense ?? 0, compact: true),
             icon: Icons.north_east_rounded,
             color: const Color(0xFFEF4444),
@@ -531,8 +584,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color:
-              (isPositive
+              color: (isPositive
                   ? const Color(0xFF2563EB)
                   : const Color(0xFFF59E0B))
                   .withOpacity(0.12),
@@ -551,7 +603,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Dòng tiền ròng',
+                  'Net cashflow',
                   style: TextStyle(
                     fontSize: 12.5,
                     color: Color(0xFF6B7280),
@@ -586,7 +638,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              isPositive ? 'Tích cực' : 'Giảm',
+              isPositive ? 'Positive' : 'Negative',
               style: TextStyle(
                 color: isPositive
                     ? const Color(0xFF166534)
@@ -594,6 +646,246 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpendingLimitCard() {
+    final data = spendingLimit;
+
+    if (data == null) {
+      return _buildSectionCard(
+        child: const Text(
+          'No spending limit data available.',
+          style: TextStyle(
+            fontSize: 13.5,
+            color: Color(0xFF6B7280),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    final hasLimit =
+        data.monthlySpendingLimit != null && data.monthlySpendingLimit! > 0;
+    final progress = hasLimit ? (data.usedPercent / 100).clamp(0.0, 1.0) : 0.0;
+
+    Color statusColor;
+    String statusText;
+
+    if (!hasLimit) {
+      statusColor = const Color(0xFF6B7280);
+      statusText = 'No limit set';
+    } else if (data.isExceeded) {
+      statusColor = const Color(0xFFEF4444);
+      statusText = 'Limit exceeded';
+    } else if (data.isWarning) {
+      statusColor = const Color(0xFFF59E0B);
+      statusText = 'Near warning threshold';
+    } else {
+      statusColor = const Color(0xFF10B981);
+      statusText = 'Within safe range';
+    }
+
+    return _buildSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Spending limit',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: _showUpdateSpendingLimitSheet,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_rounded, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'Update',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Track your monthly spending against the selected limit',
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildLimitMetric(
+                  label: 'Monthly limit',
+                  value: hasLimit
+                      ? formatMoney(data.monthlySpendingLimit!)
+                      : 'Unlimited',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildLimitMetric(
+                  label: 'Spent',
+                  value: formatMoney(data.spentThisMonth),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildLimitMetric(
+                  label: 'Remaining',
+                  value: hasLimit ? formatMoney(data.remainingAmount) : '--',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildLimitMetric(
+                  label: 'Used',
+                  value: '${data.usedPercent.toStringAsFixed(1)}%',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: const Color(0xFFF1F5F9),
+              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Text(
+                  data.isHardSpendingLimit ? 'Hard limit' : 'Warning only',
+                  style: const TextStyle(
+                    color: Color(0xFF374151),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Text(
+                  'Warning ${data.spendingWarningThresholdPercent.toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    color: Color(0xFF374151),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLimitMetric({
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF111827),
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -639,7 +931,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Bộ lọc giao dịch',
+            'Transaction filters',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -650,7 +942,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           TextField(
             controller: _keywordController,
             decoration: InputDecoration(
-              hintText: 'Tìm theo mô tả giao dịch...',
+              hintText: 'Search by transaction description...',
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: _keywordController.text.trim().isNotEmpty
                   ? IconButton(
@@ -690,11 +982,11 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               Expanded(
                 child: _buildDropdown(
                   value: selectedType,
-                  hint: 'Loại tiền',
+                  hint: 'Type',
                   items: const ['', 'Credit', 'Debit'],
                   labelBuilder: (v) {
-                    if (v.isEmpty) return 'Tất cả';
-                    return v == 'Credit' ? 'Tiền vào' : 'Tiền ra';
+                    if (v.isEmpty) return 'All';
+                    return v == 'Credit' ? 'Income' : 'Expense';
                   },
                   onChanged: (v) {
                     setState(() => selectedType = v ?? '');
@@ -706,7 +998,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               Expanded(
                 child: _buildDropdown(
                   value: selectedStatus,
-                  hint: 'Trạng thái',
+                  hint: 'Status',
                   items: const [
                     '',
                     'Pending',
@@ -714,7 +1006,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                     'Failed',
                     'Cancelled',
                   ],
-                  labelBuilder: (v) => v.isEmpty ? 'Tất cả' : _mapStatus(v),
+                  labelBuilder: (v) => v.isEmpty ? 'All' : _mapStatus(v),
                   onChanged: (v) {
                     setState(() => selectedStatus = v ?? '');
                     _loadData();
@@ -726,7 +1018,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           const SizedBox(height: 10),
           _buildDropdown(
             value: selectedReferenceType,
-            hint: 'Nghiệp vụ',
+            hint: 'Reference type',
             items: const [
               '',
               'TopUp',
@@ -739,7 +1031,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               'PackagePurchase',
             ],
             labelBuilder: (v) =>
-            v.isEmpty ? 'Tất cả nghiệp vụ' : _mapReferenceType(v),
+            v.isEmpty ? 'All reference types' : _mapReferenceType(v),
             onChanged: (v) {
               setState(() => selectedReferenceType = v ?? '');
               _loadData();
@@ -756,7 +1048,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Biểu đồ dòng tiền',
+            'Cashflow chart',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -765,12 +1057,12 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Thu và chi trong tháng đã chọn',
+            'Income and expense during the selected month',
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 18),
           if (cashflows.isEmpty)
-            _buildEmptyState('Chưa có dữ liệu cashflow.')
+            _buildEmptyState('No cashflow data available.')
           else
             Column(
               children: [
@@ -851,7 +1143,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             return touchedSpots.map((spot) {
                               final isIncome = spot.barIndex == 0;
                               return LineTooltipItem(
-                                '${isIncome ? 'Thu' : 'Chi'}\n${formatMoney(spot.y)}',
+                                '${isIncome ? 'Income' : 'Expense'}\n${formatMoney(spot.y)}',
                                 TextStyle(
                                   color: isIncome
                                       ? const Color(0xFF10B981)
@@ -898,9 +1190,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                 const SizedBox(height: 14),
                 Row(
                   children: const [
-                    _ChartLegend(color: Color(0xFF10B981), label: 'Thu nhập'),
+                    _ChartLegend(color: Color(0xFF10B981), label: 'Income'),
                     SizedBox(width: 16),
-                    _ChartLegend(color: Color(0xFFEF4444), label: 'Chi tiêu'),
+                    _ChartLegend(color: Color(0xFFEF4444), label: 'Expense'),
                   ],
                 ),
               ],
@@ -936,7 +1228,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Chi tiêu theo nhóm',
+            'Expense by category',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -945,12 +1237,12 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Tỷ trọng từng nghiệp vụ trong tháng',
+            'Distribution by reference type for the selected month',
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 16),
           if (expenseByType.isEmpty)
-            _buildEmptyState('Chưa có dữ liệu chi tiêu.')
+            _buildEmptyState('No expense data available.')
           else ...[
             SizedBox(
               height: 220,
@@ -962,18 +1254,15 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   sections: expenseByType.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
-                    final double percent = total == 0
-                        ? 0.0
-                        : (item.amount / total) * 100;
+                    final double percent =
+                    total == 0 ? 0.0 : (item.amount / total) * 100;
                     final color = _chartColors[index % _chartColors.length];
 
                     return PieChartSectionData(
                       value: item.amount,
                       color: color,
                       radius: 52,
-                      title: percent >= 8
-                          ? '${percent.toStringAsFixed(0)}%'
-                          : '',
+                      title: percent >= 8 ? '${percent.toStringAsFixed(0)}%' : '',
                       titleStyle: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -1053,7 +1342,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          '${item.transactionCount} giao dịch',
+                          '${item.transactionCount} transactions',
                           style: const TextStyle(
                             fontSize: 12.5,
                             color: Color(0xFF6B7280),
@@ -1078,7 +1367,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Lịch sử giao dịch',
+            'Transaction history',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -1087,7 +1376,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '${transactions.length} giao dịch gần nhất',
+            '${transactions.length} recent transactions',
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF6B7280),
@@ -1095,7 +1384,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 14),
           if (transactions.isEmpty)
-            _buildEmptyState('Không có giao dịch nào.')
+            _buildEmptyState('No transactions found.')
           else
             ...transactions.map((item) {
               final bool isCredit = item.type.toLowerCase() == 'credit';
@@ -1158,7 +1447,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: statusColor.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius:
+                                        BorderRadius.circular(999),
                                       ),
                                       child: Text(
                                         _mapStatus(item.status),
@@ -1184,7 +1474,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        item.description ?? 'Không có mô tả',
+                        item.description ?? 'No description',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1216,7 +1506,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                           children: [
                             Expanded(
                               child: _buildBalanceMini(
-                                label: 'Trước',
+                                label: 'Before',
                                 value: formatAdaptiveMoney(
                                   item.balanceBefore,
                                   compact: true,
@@ -1230,7 +1520,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             ),
                             Expanded(
                               child: _buildBalanceMini(
-                                label: 'Sau',
+                                label: 'After',
                                 value: formatAdaptiveMoney(
                                   item.balanceAfter,
                                   compact: true,
@@ -1272,7 +1562,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Chi tiết',
+                                  'Details',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
@@ -1307,7 +1597,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Số dư $label',
+            label,
             style: const TextStyle(
               fontSize: 11.5,
               color: Color(0xFF6B7280),
@@ -1457,7 +1747,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                detail.displayTitle ?? 'Chi tiết giao dịch',
+                                detail.displayTitle ?? 'Transaction details',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -1495,7 +1785,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                       child: Column(
                         children: [
                           Text(
-                            isCredit ? 'Tiền vào' : 'Tiền ra',
+                            isCredit ? 'Income' : 'Expense',
                             style: TextStyle(
                               fontSize: 13,
                               color: typeColor,
@@ -1522,44 +1812,42 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                     ),
                     const SizedBox(height: 18),
                     _buildDetailGroup(
-                      title: 'Thông tin chung',
+                      title: 'General information',
                       children: [
-                        _detailRow('Loại', detail.type),
+                        _detailRow('Type', detail.type),
                         _detailRow(
-                          'Nghiệp vụ',
+                          'Reference type',
                           _mapReferenceType(detail.referenceType),
                         ),
-                        _detailRow('Trạng thái', _mapStatus(detail.status)),
+                        _detailRow('Status', _mapStatus(detail.status)),
                         _detailRow(
-                          'Thời gian',
-                          DateFormat(
-                            'dd/MM/yyyy HH:mm',
-                          ).format(detail.createdAt),
+                          'Time',
+                          DateFormat('dd/MM/yyyy HH:mm').format(detail.createdAt),
                         ),
-                        _detailRow('Mô tả', detail.description ?? '--'),
+                        _detailRow('Description', detail.description ?? '--'),
                       ],
                     ),
                     const SizedBox(height: 14),
                     _buildDetailGroup(
-                      title: 'Biến động số dư',
+                      title: 'Balance changes',
                       children: [
-                        _detailRow('Số tiền', formatMoney(detail.amount)),
+                        _detailRow('Amount', formatMoney(detail.amount)),
                         _detailRow(
-                          'Số dư trước',
+                          'Balance before',
                           formatMoney(detail.balanceBefore),
                         ),
                         _detailRow(
-                          'Số dư sau',
+                          'Balance after',
                           formatMoney(detail.balanceAfter),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
                     _buildDetailGroup(
-                      title: 'Nguồn tham chiếu',
+                      title: 'Reference source',
                       children: [
-                        _detailRow('Nguồn', detail.sourceName ?? '--'),
-                        _detailRow('Mã nguồn', detail.sourceCode ?? '--'),
+                        _detailRow('Source', detail.sourceName ?? '--'),
+                        _detailRow('Source code', detail.sourceCode ?? '--'),
                       ],
                     ),
                   ],
@@ -1573,7 +1861,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không tải được chi tiết giao dịch: $e'),
+          content: Text('Failed to load transaction details: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1643,6 +1931,208 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     );
   }
 
+  Future<void> _showUpdateSpendingLimitSheet() async {
+    final current = spendingLimit;
+
+    final limitController = TextEditingController(
+      text: current?.monthlySpendingLimit?.toStringAsFixed(0) ?? '',
+    );
+
+    double warningPercent = current?.spendingWarningThresholdPercent ?? 80;
+    bool isHardLimit = current?.isHardSpendingLimit ?? false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD1D5DB),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Update spending limit',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: limitController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Monthly limit',
+                        hintText: 'Example: 2000000',
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Warning threshold: ${warningPercent.toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Slider(
+                      value: warningPercent,
+                      min: 1,
+                      max: 100,
+                      divisions: 99,
+                      label: warningPercent.toStringAsFixed(0),
+                      onChanged: (value) {
+                        setModalState(() => warningPercent = value);
+                      },
+                    ),
+                    SwitchListTile(
+                      value: isHardLimit,
+                      onChanged: (value) {
+                        setModalState(() => isHardLimit = value);
+                      },
+                      title: const Text(
+                        'Enable hard limit',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: const Text(
+                        'If disabled, the system only shows warnings.',
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isUpdatingSpendingLimit
+                            ? null
+                            : () async {
+                          final raw = limitController.text.trim();
+                          double? limit;
+
+                          if (raw.isNotEmpty) {
+                            limit = double.tryParse(raw);
+                            if (limit == null || limit < 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Monthly limit must be a valid non-negative number.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          Navigator.pop(context);
+
+                          await _updateSpendingLimit(
+                            monthlySpendingLimit: limit,
+                            isHardSpendingLimit: isHardLimit,
+                            spendingWarningThresholdPercent:
+                            warningPercent,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF111827),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save changes',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _updateSpendingLimit({
+    required double? monthlySpendingLimit,
+    required bool isHardSpendingLimit,
+    required double spendingWarningThresholdPercent,
+  }) async {
+    try {
+      setState(() => isUpdatingSpendingLimit = true);
+
+      await _expenseService.updateMySpendingLimit(
+        UpdateSpendingLimitRequest(
+          monthlySpendingLimit: monthlySpendingLimit,
+          isHardSpendingLimit: isHardSpendingLimit,
+          spendingWarningThresholdPercent: spendingWarningThresholdPercent,
+        ),
+      );
+
+      await _loadData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Spending limit updated successfully.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update spending limit: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isUpdatingSpendingLimit = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _keywordController.dispose();
@@ -1658,7 +2148,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         backgroundColor: const Color(0xFFF3F6FB),
         foregroundColor: const Color(0xFF111827),
         title: const Text(
-          'Quản lý chi tiêu',
+          'Expense Management',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
@@ -1679,9 +2169,13 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             children: [
               _buildHeroCard(),
               const SizedBox(height: 16),
+              _buildMonthYearPicker(),
+              const SizedBox(height: 16),
               _buildSummaryGrid(),
               const SizedBox(height: 12),
               _buildNetCard(),
+              const SizedBox(height: 16),
+              _buildSpendingLimitCard(),
               const SizedBox(height: 16),
               _buildFilterSection(),
               const SizedBox(height: 16),

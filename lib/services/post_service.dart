@@ -7,6 +7,7 @@ import '../constants/api_constants.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_share_result.dart';
+import '../models/shareable_user_model.dart';
 import 'api_client.dart';
 
 class PostService {
@@ -421,26 +422,62 @@ class PostService {
     return PagedPostsResponse.fromJson(root);
   }
 
-  Future<PostShareResult> sharePost(int postId) async {
-    final endpoint = ApiConstants.sharePost.replaceAll(
-      '{postId}',
-      postId.toString(),
+  Future<List<ShareableUserModel>> getShareableUsers() async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.getShareableUsersEndpoint}',
     );
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-    final response = await ApiClient.post(uri);
+    final response = await ApiClient.get(uri);
 
     if (response.statusCode != 200) {
-      throw Exception('Share post failed: ${response.body}');
+      throw Exception('Failed to load shareable users: ${response.body}');
     }
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final data = decoded['data'];
+    final decoded = jsonDecode(response.body);
 
-    if (data is Map<String, dynamic>) {
-      return PostShareResult.fromJson(data);
+    if (decoded is List) {
+      return decoded
+          .map((e) => ShareableUserModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
-    return PostShareResult.fromJson(decoded);
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+
+      if (data is List) {
+        return data
+            .map((e) => ShareableUserModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+
+      final items = (decoded['items'] as List?) ?? const [];
+      return items
+          .map((e) => ShareableUserModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw Exception('Unexpected shareable users response');
+  }
+
+  Future<void> sharePostToChat({
+    required int postId,
+    required List<int> receiverAccountIds,
+    String? caption,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.sharePostToChatEndpoint}',
+    );
+
+    final body = <String, dynamic>{
+      'postId': postId,
+      'receiverAccountIds': receiverAccountIds,
+      'caption': caption?.trim().isNotEmpty == true ? caption!.trim() : null,
+    };
+
+    final response = await ApiClient.post(uri, body: body);
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Share post to chat failed: ${response.body}');
+    }
   }
 }

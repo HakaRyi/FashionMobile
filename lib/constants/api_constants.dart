@@ -1,11 +1,15 @@
 class ApiConstants {
-  static const String baseUrl = "http://10.0.2.2:5196/api";
+  // static const String baseUrl = "http://10.0.2.2:5196/api";
   //static const String baseUrl = "http://192.168.1.21:5196/api";
+  static const String baseUrl = "http://192.168.102.24:5196/api";
 
   static const String baseAIUrl = "https://retiform-illa-refinedly.ngrok-free.dev";
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
-  static const String baseSignalRUrl = "http://10.0.2.2:5196";
+
+  //static const String baseSignalRUrl = "http://10.0.2.2:5196";
   //static const String baseSignalRUrl = "http://192.168.1.21:5196";
+  static const String baseSignalRUrl = "http://192.168.102.24:5196";
+
   static const String refreshTokenEndpoint = "/auth/refresh-token";
   static const String chatEndpoint = "/Chat";
   static const String groupEndpoint = "/Group";
@@ -51,7 +55,6 @@ class ApiConstants {
 
   static const String toggleSavePost = "/post/{postId}/save";
   static const String getSavedPosts = "/post/saved";
-  static const String sharePost = "/post/{postId}/share";
 
   static const String getComments = "/post/{postId}/comment";
   static const String createComment = "/post/{postId}/comment";
@@ -85,4 +88,9 @@ class ApiConstants {
 
   static const String reportTypes = "/reports/types";
   static const String reportPost = "/reports/posts/{postId}";
+
+  static const String getMySpendingLimitEndpoint = "/expenses/me/spending-limit";
+  static const String updateMySpendingLimitEndpoint = "/expenses/me/spending-limit";
+  static const String sharePostToChatEndpoint = "/Chat/share-post";
+  static const String getShareableUsersEndpoint = "/Follow/get-shareable-users";
 }

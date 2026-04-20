@@ -1,6 +1,6 @@
-// lib/utils/try_on_manager.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../core/api_exception.dart';
 import '../services/try_on_history_service.dart';
 import '../services/try_on_service.dart';
 
@@ -20,7 +20,7 @@ class TryOnManager extends ChangeNotifier {
         String? modelAssetPath,
         String? modelImageUrl,
         required String clothFilePath,
-        int? category
+        int? category,
       }) async {
     if (isProcessing) return;
 
@@ -28,26 +28,34 @@ class TryOnManager extends ChangeNotifier {
     resultImageBytes = null;
     notifyListeners();
 
-    final result = await _service.processTryOn(
-      modelAssetPath: modelAssetPath,
-      modelImageUrl: modelImageUrl,
-      clothImagePath: clothFilePath,
-      category: category,
-    );
+    try {
+      final result = await _service.processTryOn(
+        modelAssetPath: modelAssetPath,
+        modelImageUrl: modelImageUrl,
+        clothImagePath: clothFilePath,
+        category: category,
+      );
 
-    isProcessing = false;
-    if (result != null) {
-      resultImageBytes = result;
-      if (resultImageBytes != null) {
-        await _historyService.saveHistory(resultImageBytes!);
-        await fetchHistory();
+      if (result == null) {
+        _showErrorNotification(
+          globalContext,
+          "Không nhận được ảnh kết quả từ hệ thống.",
+        );
+        return;
       }
-      _showSuccessNotification(globalContext);
-    } else {
-      _showErrorNotification(globalContext);
-    }
 
-    notifyListeners();
+      resultImageBytes = result;
+      await _historyService.saveHistory(resultImageBytes!);
+      await fetchHistory();
+      _showSuccessNotification(globalContext);
+    } on ApiException catch (e) {
+      _showErrorNotification(globalContext, e.message);
+    } catch (e) {
+      _showErrorNotification(globalContext, "Lỗi xử lý quần áo: $e");
+    } finally {
+      isProcessing = false;
+      notifyListeners();
+    }
   }
 
   void resetResult() {
@@ -70,10 +78,10 @@ class TryOnManager extends ChangeNotifier {
     );
   }
 
-  void _showErrorNotification(BuildContext context) {
+  void _showErrorNotification(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Lỗi xử lý quần áo, vui lòng thử lại!"),
+      SnackBar(
+        content: Text(message),
         backgroundColor: Colors.red,
       ),
     );
