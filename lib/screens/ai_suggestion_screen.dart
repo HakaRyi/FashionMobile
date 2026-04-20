@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../services/wallet_service.dart';
 import '../services/wardrobe_service.dart';
 import '../widgets/clothing_item.dart';
 import '../widgets/ai_range_selector.dart';
@@ -24,6 +25,11 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
   List<dynamic> _searchResults = [];
   List<Map<String, dynamic>> _selectedOthers = [];
   bool _isSearching = false;
+
+  final WalletService _walletService = WalletService();
+  double _currentBalance = 0;
+  final double _serviceCost = 2000; // Chi phí ní thiết lập ở Backend
+  bool _isLoadingBalance = true;
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -64,7 +70,23 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
       }
     });
   }
-
+  void initState() {
+    super.initState();
+    _fetchBalance();
+  }
+  Future<void> _fetchBalance() async {
+    try {
+      final balance = await _walletService.getMyWalletBalance();
+      if (mounted) {
+        setState(() {
+          _currentBalance = balance;
+          _isLoadingBalance = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingBalance = false);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,7 +218,26 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SafeArea(
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+        Padding(
+        padding: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Balance: ${_isLoadingBalance ? "..." : "${_currentBalance.toInt()} đ"}",
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
+            ),
+            Text(
+              "Cost: ${_serviceCost.toInt()} đ / request",
+              style: const TextStyle(color: AppColors.textPink, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+        Row(
           children: [
             Expanded(
               child: Container(
@@ -233,6 +274,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
               ),
             )
           ],
+        ),
+        ],
         ),
       ),
     );

@@ -314,7 +314,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Icon(Icons.add, color: AppColors.textPrimary),
+                child: const Icon(Icons.add, color: Colors.white),
               ),
             ],
           ),

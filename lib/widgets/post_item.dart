@@ -745,13 +745,12 @@ class _PostItemState extends State<PostItem> {
 
   String _timeAgo(DateTime? date) {
     if (date == null) return '';
-
+    final utcDate = date.isUtc ? date : DateTime.parse('${date.toIso8601String()}Z');
     // Chuyển đổi sang giờ Local (nếu server trả về UTC)
-    final localDate = date.toLocal();
+    final localDate = utcDate.toLocal();
     final now = DateTime.now();
     final diff = now.difference(localDate);
 
-    // Trường hợp thời gian bị lệch nhẹ do đồng hồ hệ thống
     if (diff.isNegative || diff.inSeconds < 30) return 'Just now';
 
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';

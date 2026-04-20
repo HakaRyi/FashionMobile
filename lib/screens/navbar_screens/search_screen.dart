@@ -407,7 +407,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "${user.followerCount} người theo dõi",
+                    "${user.followerCount} Followers",
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -429,7 +429,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               child: Text(
-                user.isFollowing ? "Đang theo dõi" : "Theo dõi",
+                user.isFollowing ? "Following" : "Follow",
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
