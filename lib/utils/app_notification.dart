@@ -19,7 +19,7 @@ class NotificationService {
         top: MediaQuery.of(context).padding.top + 10,
         right: 0,
         child: Material(
-          color: AppColors.backgroundSecondary,
+          color: Colors.transparent,
           child: AnimatedToastWidget(
             title: title,
             message: message,

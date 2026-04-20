@@ -1,6 +1,7 @@
 import 'package:fashion_mobile/screens/refund_request_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../constants/app_colors.dart';
 import '../constants/notification_type.dart';
 import '../models/order_model.dart';
 import '../utils/app_notification.dart';
@@ -112,13 +113,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+            child: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                color: isHighlight ? Colors.pinkAccent : Colors.white,
+                color: isHighlight ? Colors.pinkAccent : AppColors.textPrimary,
                 fontSize: 14,
                 fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
               ),
@@ -312,14 +313,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.background.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: AppColors.borderSecondary),
       ),
       child: Text(
         'Trạng thái: ${_getDisplayStatus(status)}',
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -327,17 +328,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Chi tiết đơn hàng', style: TextStyle(color: Colors.white)),
+        title: const Text('Chi tiết đơn hàng', style: TextStyle(color: AppColors.textPrimary)),
         centerTitle: true,
       ),
       body: _isLoading
           ? const Padding(padding: EdgeInsets.all(16), child: OrderSkeleton())
           : _order == null
-          ? const Center(child: Text('Không tìm thấy đơn hàng', style: TextStyle(color: Colors.white54)))
+          ? const Center(child: Text('Không tìm thấy đơn hàng', style: TextStyle(color: AppColors.textPrimary)))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -346,7 +347,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: AppColors.backgroundSecondary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -360,12 +361,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Thông tin nhận hàng', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Thông tin nhận hàng', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: AppColors.backgroundSecondary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -377,13 +378,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Danh sách sản phẩm', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Danh sách sản phẩm', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             ..._order!.orderDetails.map((item) => Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: AppColors.backgroundSecondary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -396,8 +397,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       height: 60,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        width: 60, height: 60, color: Colors.grey[800],
-                        child: const Icon(Icons.image, color: Colors.white54),
+                        width: 60, height: 60, color: AppColors.textSecondary,
+                        child: const Icon(Icons.image, color: AppColors.textPrimary),
                       ),
                     ),
                   ),
@@ -406,15 +407,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.itemName, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                        Text(item.itemName, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
                         const SizedBox(height: 4),
-                        Text('Số lượng: ${item.quantity}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text('Số lượng: ${item.quantity}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       ],
                     ),
                   ),
                   Text(
                     '${NumberFormat.decimalPattern('vi_VN').format(item.totalPrice)}đ',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -423,19 +424,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: AppColors.backgroundSecondary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
                   _buildInfoRow('Tạm tính:', '${NumberFormat.decimalPattern('vi_VN').format(_order!.subTotal)}đ'),
                   _buildInfoRow('Phí dịch vụ:', '${NumberFormat.decimalPattern('vi_VN').format(_order!.serviceFee)}đ'),
-                  const Divider(color: Colors.white10),
+                  const Divider(color: AppColors.divider),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Tổng cộng', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('Tổng cộng', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
                       Text(
                         '${_order!.formattedTotalAmount}đ',
                         style: const TextStyle(color: Colors.pinkAccent, fontSize: 20, fontWeight: FontWeight.bold),
@@ -454,8 +455,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           : Container(
         padding: const EdgeInsets.all(16),
         decoration: const BoxDecoration(
-          color: Color(0xFF1E1E1E),
-          border: Border(top: BorderSide(color: Colors.white10)),
+          color: AppColors.backgroundSecondary,
+          border: Border(top: BorderSide(color: AppColors.divider)),
         ),
         child: SafeArea(
           child: _buildActionButtons(),

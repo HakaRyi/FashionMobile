@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/notification_type.dart';
@@ -70,7 +71,7 @@ class _AnimatedToastWidgetState extends State<AnimatedToastWidget> with SingleTi
           margin: const EdgeInsets.only(top: 16, right: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E), // Nền tối hợp với app của bạn
+            color: AppColors.background, // Nền tối hợp với app của bạn
             borderRadius: BorderRadius.circular(12),
             border: Border(
               left: BorderSide(color: widget.type.color, width: 4), // Vạch màu phân loại
@@ -96,7 +97,7 @@ class _AnimatedToastWidgetState extends State<AnimatedToastWidget> with SingleTi
                     Text(
                       widget.title,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -105,7 +106,7 @@ class _AnimatedToastWidgetState extends State<AnimatedToastWidget> with SingleTi
                     Text(
                       widget.message,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.textPrimary,
                         fontSize: 14,
                       ),
                     ),
@@ -116,7 +117,7 @@ class _AnimatedToastWidgetState extends State<AnimatedToastWidget> with SingleTi
                 onTap: () {
                   _controller.reverse().then((_) => widget.onDismissed());
                 },
-                child: const Icon(Icons.close, color: Colors.white54, size: 20),
+                child: const Icon(Icons.close, color: AppColors.textPrimary, size: 20),
               ),
             ],
           ),
