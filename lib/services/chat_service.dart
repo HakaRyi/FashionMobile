@@ -18,6 +18,18 @@ class ChatService {
     return prefs.getString('token');
   }
 
+  String _buildNotificationPreview(Map<String, dynamic> msg) {
+    final content = (msg['content'] ?? '').toString().trim();
+    final photos = (msg['photos'] as List?) ?? [];
+    final sharedPostId = msg['sharedPostId'] ?? msg['SharedPostId'];
+
+    if (content.isNotEmpty) return content;
+    if (photos.isNotEmpty) return 'Đã gửi ảnh';
+    if (sharedPostId != null) return 'Đã chia sẻ một bài viết';
+
+    return 'Tin nhắn mới';
+  }
+
   // Khởi tạo kết nối SignalR
   Future<void> initSignalR({
     required Function(dynamic message) onMessageReceived,
@@ -67,7 +79,7 @@ class ChatService {
             senderId: msg['senderId'] ?? 0,
             senderName: msg['senderName'] ?? "Người dùng",
             senderAvatar: msg['senderAvatar'],
-            content: msg['content'] ?? "",
+            content: _buildNotificationPreview(msg),
             photos: List<String>.from(msg['photos'] ?? []),
             isGroup: msg['groupName'] != "Private Chat",
             groupName: msg['groupName']?? msg['GroupName'],

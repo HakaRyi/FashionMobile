@@ -10,8 +10,8 @@ import '../models/post_feed_model.dart';
 import '../models/post_reaction_result.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/post_share_result.dart';
+import '../models/shareable_user_model.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 GlobalKey<ScaffoldMessengerState>();
@@ -24,11 +24,14 @@ class PostManager extends ChangeNotifier {
 
   final List<PostFeedModel> _posts = [];
   final Set<int> _postIds = {};
+  final List<ShareableUserModel> _shareableUsers = [];
+  List<ShareableUserModel> get shareableUsers => List.unmodifiable(_shareableUsers);
 
+  bool isLoadingShareableUsers = false;
   List<PostFeedModel> get posts => List.unmodifiable(_posts);
 
   final Set<int> _sharingPosts = {};
-
+  final Set<int> _sharingPostsToChat = {};
   DateTime? _cursor;
   bool isLoading = false;
   bool isLoadingMore = false;
@@ -74,54 +77,6 @@ class PostManager extends ChangeNotifier {
     } catch (_) {}
 
     return null;
-  }
-
-  Future<void> sharePost(PostFeedModel post) async {
-    if (_sharingPosts.contains(post.postId)) return;
-    _sharingPosts.add(post.postId);
-
-    try {
-      final currentPost = _findPostAnywhere(post.postId) ?? post;
-
-      final link = 'https://yourdomain.com/posts/${currentPost.postId}';
-
-      final parts = <String>[];
-      final title = (currentPost.title ?? '').trim();
-      final content = (currentPost.content ?? '').trim();
-
-      if (title.isNotEmpty) {
-        parts.add(title);
-      }
-
-      if (content.isNotEmpty) {
-        parts.add(content);
-      }
-
-      parts.add(link);
-
-      final shareText = parts.join('\n\n');
-
-      final result = await Share.share(shareText);
-
-      if (result.status != ShareResultStatus.success) {
-        return;
-      }
-
-      final PostShareResult apiResult =
-      await _postService.sharePost(currentPost.postId);
-
-      final synced = currentPost.copyWith(
-        shareCount: apiResult.shareCount,
-      );
-
-      _updatePostEverywhere(synced);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Share post error: $e');
-      rethrow;
-    } finally {
-      _sharingPosts.remove(post.postId);
-    }
   }
 
   PostFeedModel? getPostOrNull(int postId) {
@@ -241,6 +196,47 @@ class PostManager extends ChangeNotifier {
       isLoadingSaved = false;
       isLoadingMoreSaved = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> sharePostToChat({
+    required PostFeedModel post,
+    required List<int> receiverAccountIds,
+    String? caption,
+  }) async {
+    if (_sharingPostsToChat.contains(post.postId)) return;
+
+    final validReceiverIds = receiverAccountIds
+        .where((id) => id > 0)
+        .toSet()
+        .toList();
+
+    if (validReceiverIds.isEmpty) {
+      throw Exception('Vui lòng chọn ít nhất một người nhận');
+    }
+
+    _sharingPostsToChat.add(post.postId);
+
+    try {
+      final currentPost = _findPostAnywhere(post.postId) ?? post;
+
+      await _postService.sharePostToChat(
+        postId: currentPost.postId,
+        receiverAccountIds: validReceiverIds,
+        caption: caption,
+      );
+
+      final updated = currentPost.copyWith(
+        shareCount: currentPost.shareCount + validReceiverIds.length,
+      );
+
+      _updatePostEverywhere(updated);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Share post to chat error: $e');
+      rethrow;
+    } finally {
+      _sharingPostsToChat.remove(post.postId);
     }
   }
 
@@ -578,6 +574,24 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  void bringPostToTop(PostFeedModel post) {
+    _posts.removeWhere((p) => p.postId == post.postId);
+    _posts.insert(0, post);
+    _postIds.add(post.postId);
+
+    final savedIndex = _savedPosts.indexWhere((p) => p.postId == post.postId);
+    if (savedIndex != -1) {
+      _savedPosts[savedIndex] = post;
+    }
+
+    final myIndex = _myPosts.indexWhere((p) => p.postId == post.postId);
+    if (myIndex != -1) {
+      _myPosts[myIndex] = post;
+    }
+
+    notifyListeners();
+  }
+
   void removePost(int postId) {
     _posts.removeWhere((p) => p.postId == postId);
     _savedPosts.removeWhere((p) => p.postId == postId);
@@ -690,6 +704,31 @@ class PostManager extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchShareableUsers({bool refresh = false}) async {
+    if (isLoadingShareableUsers) return;
+
+    if (!refresh && _shareableUsers.isNotEmpty) {
+      return;
+    }
+
+    isLoadingShareableUsers = true;
+    notifyListeners();
+
+    try {
+      final users = await _postService.getShareableUsers();
+
+      _shareableUsers
+        ..clear()
+        ..addAll(users);
+    } catch (e) {
+      debugPrint('Fetch shareable users error: $e');
+      rethrow;
+    } finally {
+      isLoadingShareableUsers = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchInitialFeed() async {
     await fetchFeed(refresh: true);
   }
@@ -697,6 +736,19 @@ class PostManager extends ChangeNotifier {
   Future<void> loadMore() async {
     if (!hasMore || isLoading || isLoadingMore) return;
     await fetchFeed();
+  }
+
+  void clearShareableUsers() {
+    _shareableUsers.clear();
+    notifyListeners();
+  }
+
+  ShareableUserModel? getShareableUserById(int accountId) {
+    try {
+      return _shareableUsers.firstWhere((u) => u.accountId == accountId);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

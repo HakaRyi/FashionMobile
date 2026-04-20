@@ -53,7 +53,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
       if (index != -1) {
         var updatedGroup = _groups.removeAt(index);
-        updatedGroup['lastMessage'] = msg['content'];
+        updatedGroup['lastMessage'] = _buildLastMessagePreview(msg);
         updatedGroup['lastMessageAt'] = DateTime.now().toIso8601String();
         updatedGroup['unreadCount'] = (updatedGroup['unreadCount'] ?? 0) + 1;
         _groups.insert(0, updatedGroup);
@@ -317,6 +317,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
     );
   }
+
+  String _buildLastMessagePreview(dynamic msg) {
+    final content = (msg['content'] ?? '').toString().trim();
+    final photos = (msg['photos'] as List?) ?? [];
+    final sharedPostId = msg['sharedPostId'] ?? msg['SharedPostId'];
+
+    if (content.isNotEmpty) return content;
+    if (photos.isNotEmpty) return 'Đã gửi ảnh';
+    if (sharedPostId != null) return 'Đã chia sẻ một bài viết';
+
+    return 'Tin nhắn mới';
+  }
+
   @override
   void dispose() {
     _msgSub?.cancel();

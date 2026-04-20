@@ -1,3 +1,4 @@
+// lib/services/expense_service.dart
 import 'dart:convert';
 
 import '../constants/api_constants.dart';
@@ -6,6 +7,8 @@ import '../models/expense_by_reference_type_model.dart';
 import '../models/expense_summary_model.dart';
 import '../models/transaction_detail_model.dart';
 import '../models/transaction_history_model.dart';
+import '../models/spending_limit_model.dart';
+import '../models/update_spending_limit_request.dart';
 import 'api_client.dart';
 
 class ExpenseService {
@@ -147,5 +150,46 @@ class ExpenseService {
     return jsonData
         .map((e) => CashflowPointModel.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<SpendingLimitModel> getMySpendingLimit({
+    required int month,
+    required int year,
+  }) async {
+    final uri = _buildUri(ApiConstants.getMySpendingLimitEndpoint, {
+      'month': month,
+      'year': year,
+    });
+
+    final response = await ApiClient.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Không thể tải giới hạn chi tiêu. Mã lỗi: ${response.statusCode}',
+      );
+    }
+
+    final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+    return SpendingLimitModel.fromJson(jsonData);
+  }
+
+  Future<SpendingLimitModel> updateMySpendingLimit(
+      UpdateSpendingLimitRequest request,
+      ) async {
+    final uri = _buildUri(ApiConstants.updateMySpendingLimitEndpoint);
+
+    final response = await ApiClient.put(
+      uri,
+      body: request.toJson(),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Không thể cập nhật giới hạn chi tiêu. Mã lỗi: ${response.statusCode}',
+      );
+    }
+
+    final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+    return SpendingLimitModel.fromJson(jsonData);
   }
 }

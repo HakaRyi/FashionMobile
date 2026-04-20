@@ -9,6 +9,7 @@ import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input_field.dart';
 import '../screens/chat_settings_screen.dart';
 import '../services/chat_service.dart';
+import 'home_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final int groupId;
@@ -95,6 +96,22 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
   }
+
+  void _openSharedPostOnHome(dynamic message) {
+    final int? sharedPostId = message['sharedPostId'] as int?;
+
+    if (sharedPostId == null || sharedPostId <= 0) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(
+          focusPostId: sharedPostId,
+        ),
+      ),
+    );
+  }
+
   void _handleIncomingMessage(dynamic msg) {
     if (!mounted) return;
 
@@ -120,6 +137,14 @@ class _ChatScreenState extends State<ChatScreen> {
         'senderName': msg['senderName'] ?? msg['SenderName'] ?? "Unknown",
         'senderAvatar': avatar,
         'sentAt': msg['sentAt'] ?? msg['SentAt'] ?? DateTime.now().toIso8601String(),
+
+        'sharedPostId': msg['sharedPostId'] ?? msg['SharedPostId'],
+        'sharedPostTitle': msg['sharedPostTitle'] ?? msg['SharedPostTitle'],
+        'sharedPostContent': msg['sharedPostContent'] ?? msg['SharedPostContent'],
+        'sharedPostImages': msg['sharedPostImages'] ?? msg['SharedPostImages'] ?? [],
+        'sharedPostOwnerId': msg['sharedPostOwnerId'] ?? msg['SharedPostOwnerId'],
+        'sharedPostOwnerName': msg['sharedPostOwnerName'] ?? msg['SharedPostOwnerName'],
+        'sharedPostOwnerAvatar': msg['sharedPostOwnerAvatar'] ?? msg['SharedPostOwnerAvatar'],
       };
       bool alreadyExists = _messages.any((m) => m['messageId'] == normalizedMsg['messageId']);
       if (!alreadyExists) {
@@ -145,6 +170,13 @@ class _ChatScreenState extends State<ChatScreen> {
           return {
             ...m,
             'senderAvatar': m['senderAvatar'] ?? widget.avatarUrl,
+            'sharedPostId': m['sharedPostId'],
+            'sharedPostTitle': m['sharedPostTitle'],
+            'sharedPostContent': m['sharedPostContent'],
+            'sharedPostImages': m['sharedPostImages'] ?? [],
+            'sharedPostOwnerId': m['sharedPostOwnerId'],
+            'sharedPostOwnerName': m['sharedPostOwnerName'],
+            'sharedPostOwnerAvatar': m['sharedPostOwnerAvatar'],
           };
         }).toList().reversed.toList();
         _isLoading = false;
@@ -359,6 +391,16 @@ class _ChatScreenState extends State<ChatScreen> {
                                 photos: (m['photos'] as List?)?.map((e) => e.toString()).toList(),
                                 reactions: m['reactions'],
                                 isMe: isMe,
+                                sharedPost: {
+                                  'sharedPostId': m['sharedPostId'],
+                                  'sharedPostTitle': m['sharedPostTitle'],
+                                  'sharedPostContent': m['sharedPostContent'],
+                                  'sharedPostImages': m['sharedPostImages'] ?? [],
+                                  'sharedPostOwnerId': m['sharedPostOwnerId'],
+                                  'sharedPostOwnerName': m['sharedPostOwnerName'],
+                                  'sharedPostOwnerAvatar': m['sharedPostOwnerAvatar'],
+                                },
+                                onTapSharedPost: () => _openSharedPostOnHome(m),
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
