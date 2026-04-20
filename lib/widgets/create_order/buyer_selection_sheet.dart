@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../services/follow_service.dart';
 import '../../models/search_model.dart';
 
@@ -66,7 +67,7 @@ class _BuyerSelectionSheetState extends State<BuyerSelectionSheet> {
       builder: (_, controller) {
         return Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
+            color: AppColors.background,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -86,21 +87,21 @@ class _BuyerSelectionSheetState extends State<BuyerSelectionSheet> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     "Chọn người mua",
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: TextField(
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black),
                   onChanged: _filterFollowers,
                   decoration: InputDecoration(
                     hintText: 'Tìm kiếm theo tên hoặc username...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.black54),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
+                    fillColor: Colors.black.withOpacity(0.05),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -135,7 +136,7 @@ class _BuyerSelectionSheetState extends State<BuyerSelectionSheet> {
                       ),
                       title: Text(
                         user.fullName.isNotEmpty ? user.fullName : user.username,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
                         '@${user.username}',

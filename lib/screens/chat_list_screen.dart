@@ -70,10 +70,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
-        title: const Text("TIN NHẮN",
-            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        title: const Text("MESSAGES",
+            style: TextStyle(color: Colors.black87,fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -106,7 +106,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   final group = _groups[index];
                   return ChatItem(
                     name: group['name'],
-                    lastMessage: group['lastMessage'] ?? "Bấm để trò chuyện",
+                    lastMessage: group['lastMessage'] ?? "Tap to start chatting",
                     avatarUrl: group['avatar'] ?? "...",
                     isOnline: group['isOnline'] == "Online",
                     time: group['lastMessageAt'] ?? "",
@@ -130,7 +130,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.menu,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
@@ -138,20 +138,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Tạo nhóm mới", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text("Create New Group", style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
               TextField(
                   controller: nameController,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
-                      hintText: "Tên nhóm...",
+                      hintText: "Group name...",
                       filled: true,
-                      fillColor: AppColors.background,
+                      fillColor: Color(0xFFF1F1F1),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)
                   )
               ),
               const SizedBox(height: 20),
-              const Align(alignment: Alignment.centerLeft, child: Text("Chọn thành viên", style: TextStyle(color: Colors.white70))),
+              const Align(alignment: Alignment.centerLeft, child: Text("Select members", style: TextStyle(color: Colors.black87))),
 
               SizedBox(
                 height: 200,
@@ -168,7 +168,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     bool isSelected = selectedMembers.any((m) => m['id'] == userId);
 
                     return CheckboxListTile(
-                      title: Text(user['name'], style: const TextStyle(color: Colors.white)),
+                      title: Text(user['name'], style: const TextStyle(color: Colors.black87)),
                       value: isSelected,
                       activeColor: AppColors.textPink,
                       onChanged: (val) {
@@ -190,7 +190,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   setModalState(() => isCreating = true);
 
                   String groupName = nameController.text.trim();
-                  if (groupName.isEmpty) groupName = "Nhóm mới";
+                  if (groupName.isEmpty) groupName = "New Group";
                   List<int> ids = selectedMembers.map((m) => m['id'] as int).toList();
 
                   // FIX LỖI Ở ĐÂY: Bây giờ hàm này trả về Future nên await được
@@ -206,7 +206,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
                 child: isCreating
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text("TẠO NHÓM"),
+                    : const Text("CREATE GROUP",style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 20),
             ],
@@ -226,7 +226,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (mounted) Navigator.pop(context);
 
     if (success) {
-      NotificationUtils.showTopRight(context, message: "Tạo nhóm thành công!");
+      NotificationUtils.showTopRight(context, message: "Group created successfully!");
       _loadInitialGroups(); //refresh list
       if (_groups.isNotEmpty) {
         int newGroupId = _groups.first['groupId'];
@@ -235,7 +235,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }else{
       NotificationUtils.showTopRight(
           context,
-          message: "Tạo nhóm thất bại, vui lòng thử lại!",
+          message: "Failed to create group, please try again!",
           isError: true
       );
     }
@@ -292,10 +292,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
           borderRadius: BorderRadius.circular(15),
         ),
         child: const TextField(
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.black87),
           decoration: InputDecoration(
             icon: Icon(Icons.search, color: Colors.grey),
-            hintText: "Tìm kiếm cuộc trò chuyện...",
+            hintText: "Search conversations...",
             hintStyle: TextStyle(color: Colors.grey),
             border: InputBorder.none,
           ),
@@ -311,7 +311,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         children: [
           Icon(Icons.chat_bubble_outline, size: 80, color: Colors.white24),
           const SizedBox(height: 16),
-          const Text("Chưa có cuộc hội thoại nào",
+          const Text("No conversations yet",
               style: TextStyle(color: Colors.white54)),
         ],
       ),

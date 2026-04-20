@@ -30,7 +30,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
+        color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.all(24),
@@ -43,7 +43,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppColors.text,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -56,7 +56,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+                  icon: const Icon(Icons.notifications_none_rounded, color: AppColors.text),
                   onPressed: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -69,7 +69,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
               const Text(
                 "Wapo Pay",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.text,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -80,9 +80,9 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: AppColors.backgroundSecondary,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white10),
+
             ),
             child: Column(
               children: [
@@ -92,7 +92,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
                     const Text(
                       "Số dư ví",
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.text,
                         fontSize: 16,
                       ),
                     ),
@@ -105,7 +105,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
                       },
                       child: Icon(
                         _isBalanceObscured ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white54,
+                        color: AppColors.text,
                         size: 20,
                       ),
                     ),
@@ -119,7 +119,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
                     Text(
                       _isBalanceObscured ? "******" : _currencyFormat.format(widget.initialBalance),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.text,
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
@@ -130,7 +130,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
                         child: Text(
                           "đ",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors.black,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,

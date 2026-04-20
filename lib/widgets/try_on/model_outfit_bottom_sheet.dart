@@ -29,15 +29,15 @@ class ModelOutfitBottomSheet extends StatelessWidget {
             const Center(
               child: Text(
                   "Đổi Model / Outfit",
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)
               ),
             ),
             const SizedBox(height: 12),
             const TabBar(
               indicatorColor: AppColors.textPink,
               labelColor: AppColors.textPink,
-              unselectedLabelColor: Colors.white54,
-              dividerColor: Colors.white10,
+              unselectedLabelColor: AppColors.textPrimary,
+              dividerColor: AppColors.divider,
               tabs: [
                 Tab(text: "Model của tôi"),
                 Tab(text: "Outfit của tôi"),
@@ -62,9 +62,9 @@ class ModelOutfitBottomSheet extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.person_off_outlined, color: Colors.white54, size: 60),
+                              const Icon(Icons.person_off_outlined, color: AppColors.textPrimary, size: 60),
                               const SizedBox(height: 16),
-                              const Text("Chưa có model, thêm ngay đi!", style: TextStyle(color: Colors.white, fontSize: 16)),
+                              const Text("Chưa có model, thêm ngay đi!", style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
                               const SizedBox(height: 20),
                               ElevatedButton.icon(
                                 onPressed: () {
@@ -136,7 +136,7 @@ class ModelOutfitBottomSheet extends StatelessWidget {
                                 Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white24, width: 1),
+                                    border: Border.all(color: AppColors.borderPrimary, width: 1),
                                     image: DecorationImage(
                                       image: NetworkImage(modelData['imageUrl'] ?? 'https://via.placeholder.com/150'),
                                       fit: BoxFit.cover,
@@ -203,10 +203,10 @@ class ModelOutfitBottomSheet extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white24, width: 1),
+                            border: Border.all(color: AppColors.borderPrimary, width: 2),
                             image: DecorationImage(
                               image: NetworkImage(outfit['imageUrl'] ?? 'https://via.placeholder.com/150'),
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                             ),
                           ),
                           child: Align(

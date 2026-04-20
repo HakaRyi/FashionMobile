@@ -21,9 +21,9 @@ class ClothingItem extends StatelessWidget {
       onLongPress: onLongPress, // Gắn vào đây
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.backgroundSecondary,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: AppColors.stroke),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,7 +44,7 @@ class ClothingItem extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 title,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.bold),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

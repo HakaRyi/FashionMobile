@@ -1,5 +1,7 @@
+import 'package:fashion_mobile/utils/app_notification.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/notification_type.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/google_login_button.dart';
 import 'main_screen.dart'; // Giả sử đây là trang chứa Navbar của bạn
@@ -20,8 +22,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService(); // Khởi tạo Service
+  final AuthService _authService = AuthService();
   final GoogleAuthManager _googleAuthManager = GoogleAuthManager();
+  final NotificationService _appNotification = NotificationService();
+
 
   bool _isLoading = false;
   Future<void> _handleLogin() async {
@@ -29,7 +33,12 @@ class _LoginScreenState extends State<LoginScreen> {
     String pass = _passwordController.text.trim();
 
     if (email.isEmpty || pass.isEmpty) {
-      _showSnackBar("Vui lòng nhập đầy đủ thông tin");
+      NotificationService.show(
+        context,
+        title: "Thông báo",
+        message: "Vui lòng nhập đầy đủ thông tin",
+        type: NotificationType.warning,
+      );
       return;
     }
 
@@ -40,7 +49,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result['success']) {
-      // Lưu Token vào bộ nhớ nếu cần (ví dụ: SharedPreferences) rồi qua trang Home
       print("Token: ${result['data']['accessToken']}");
 
       Navigator.pushReplacement(
@@ -48,8 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
     } else {
-      // Hiển thị lỗi từ API trả về
-      _showSnackBar(result['message']);
+      NotificationService.show(
+        context,
+        title: "Lỗi",
+        message: "Đăng nhập thất bại",
+        type: NotificationType.error,
+      );
     }
   }
 
@@ -84,21 +96,29 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       } else {
-        if (mounted) _showSnackBar(result['message']);
+        if (mounted) {
+          NotificationService.show(
+            context,
+            title: "Lỗi",
+            message: "Đăng nnập thất bại, vui lòng thử lại",
+            type: NotificationType.error,
+          );
+        }
       }
     } catch (e) {
-      if (mounted) _showSnackBar(e.toString());
+      if (mounted) {
+        NotificationService.show(
+          context,
+          title: "Lỗi",
+          message: "Đăng nnập thất bại, vui lòng thử lại",
+          type: NotificationType.error,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
-    );
   }
 
   @override
@@ -110,7 +130,6 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: [
             const SizedBox(height: 100),
-            // Logo hoặc Icon App
             Image.asset(
               'assets/images/logowapo.png',
               height: 35,
@@ -141,12 +160,18 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
 
             const SizedBox(height: 20),
-            // Nút Login chính
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15),
-                gradient: const LinearGradient(colors: [Color(0xFFFC00A6), Color(0xFFB50076)]),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFF7AE7),
+                    Color(0xFFFBAECD),
+                  ],
+                ),
               ),
               child: ElevatedButton(
                 onPressed: _handleLogin,
@@ -159,17 +184,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: _isLoading
                     ? const SizedBox(height: 20, width: 20,
                             child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 strokeWidth: 2))
                     : const Text("ĐĂNG NHẬP",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold)),
               ),
             ),
 
             const SizedBox(height: 20),
-            const Text("HOẶC", style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const Text("HOẶC", style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             const SizedBox(height: 20),
 
             GoogleLoginButton(
@@ -180,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Chưa có tài khoản?", style: TextStyle(color: Colors.white70)),
+                const Text("Chưa có tài khoản?", style: TextStyle(color: AppColors.textPrimary)),
                 TextButton(
                   onPressed: () {
                     Navigator.push(

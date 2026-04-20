@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../constants/api_constants.dart';
 import 'dart:typed_data';
+import '../constants/notification_type.dart';
+import '../utils/app_notification.dart';
 import '../utils/model_manager.dart';
 import '../widgets/price_info_widget.dart';
 import '../utils/try_on_manager.dart';
@@ -225,11 +227,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
 
       if (downloadedFile == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Không thể tải ảnh món đồ để thử.'),
-            backgroundColor: Colors.red,
-          ),
+        NotificationService.show(
+          context,
+          title: "Lỗi",
+          message: "Không thể tải món đồ để thử",
+          type: NotificationType.error,
         );
         return;
       }
@@ -261,7 +263,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
   void _showFullWardrobeBottomSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -284,7 +286,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
   void _showModelSelectionBottomSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -329,17 +331,17 @@ class _TryOnScreenState extends State<TryOnScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.backgroundSecondary,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "Thử đồ ảo",
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
@@ -355,130 +357,144 @@ class _TryOnScreenState extends State<TryOnScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                TryOnImagePreview(
-                resultBytes: resultBytes,
-                isProcessing: isProcessing,
-                selectedModel: _selectedModel,
-                hasSelectedCloth: hasSelectedCloth,
-                selectedClothFile: selectedClothFile,
-                selectedNetworkClothUrl: _selectedNetworkClothUrl,
-                onRemoveCloth: () {
-                  setState(() {
-                    selectedClothFile = null;
-                    _selectedNetworkClothUrl = null;
-                    _selectedClothName = null;
-                    _selectedCategoryId = null;
-                  });
-                },
-                onEditModel: _showModelSelectionBottomSheet,
-              ),
-
-              if (resultBytes != null && !isProcessing)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(), // Hiệu ứng cuộn mượt mà
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _actionButton(Icons.delete_outline, "Xóa", Colors.redAccent, _clearTryOnResult),
-                      _actionButton(Icons.file_download_outlined, "Tải về", Colors.blueAccent, () async {
-                        await _saveImageToGallery(resultBytes);
-                        _clearTryOnResult();
-                      }),
-                      _actionButton(Icons.save_alt_outlined, "Lưu", Colors.amber, () async {
-                        final result = await showGeneralDialog<bool>(
-                          context: context,
-                          barrierDismissible: true,
-                          barrierLabel: "Save",
-                          pageBuilder: (ctx, a1, a2) => Container(),
-                          transitionBuilder: (ctx, a1, a2, child) {
-                            return Transform.scale(
-                              scale: a1.value,
-                              child: SaveOutfitDialog(imageBytes: resultBytes),
-                            );
-                          },
-                          transitionDuration: const Duration(milliseconds: 300),
-                        );
+                      TryOnImagePreview(
+                        resultBytes: resultBytes,
+                        isProcessing: isProcessing,
+                        selectedModel: _selectedModel,
+                        hasSelectedCloth: hasSelectedCloth,
+                        selectedClothFile: selectedClothFile,
+                        selectedNetworkClothUrl: _selectedNetworkClothUrl,
+                        onRemoveCloth: () {
+                          setState(() {
+                            selectedClothFile = null;
+                            _selectedNetworkClothUrl = null;
+                            _selectedClothName = null;
+                            _selectedCategoryId = null;
+                          });
+                        },
+                        onEditModel: _showModelSelectionBottomSheet,
+                      ),
 
-                        if (result == true && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("✨ Đã lưu vào tủ đồ thành công!"), backgroundColor: Colors.green),
-                          );
-                          _clearTryOnResult();
-                        }
-                      }),
-                      _actionButton(Icons.share_outlined, "Chia sẻ", Colors.green, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreatePostScreen(imageBytes: resultBytes),
-                          ),
-                        ).then((_) => _clearTryOnResult());
-                      }),
-                    ],
-                  ),
-                ),
+                      if (resultBytes != null && !isProcessing)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _actionButton(Icons.delete_outline, "Xóa", Colors.redAccent, _clearTryOnResult),
+                              _actionButton(Icons.file_download_outlined, "Tải về", Colors.blueAccent, () async {
+                                await _saveImageToGallery(resultBytes);
+                                _clearTryOnResult();
+                              }),
+                              _actionButton(Icons.save_alt_outlined, "Lưu", Colors.amber, () async {
+                                final result = await showGeneralDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: true,
+                                  barrierLabel: "Save",
+                                  pageBuilder: (ctx, a1, a2) => Container(),
+                                  transitionBuilder: (ctx, a1, a2, child) {
+                                    return Transform.scale(
+                                      scale: a1.value,
+                                      child: SaveOutfitDialog(imageBytes: resultBytes),
+                                    );
+                                  },
+                                  transitionDuration: const Duration(milliseconds: 300),
+                                );
 
-              if (resultBytes == null && !isProcessing)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.person, color: Colors.white70, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "Model hiện tại: ${_selectedModel.displayName ?? 'Model mặc định'}",
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                                if (result == true && context.mounted) {
+                                  NotificationService.show(
+                                    context,
+                                    title: "Thành Công",
+                                    message: "Lưu đồ vào tủ đồ thành công",
+                                    type: NotificationType.success,
+                                  );
+                                  _clearTryOnResult();
+                                }
+                              }),
+                              _actionButton(Icons.share_outlined, "Chia sẻ", Colors.green, () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CreatePostScreen(imageBytes: resultBytes),
+                                  ),
+                                ).then((_) => _clearTryOnResult());
+                              }),
+                            ],
                           ),
                         ),
-                      ),
+
+                      if (resultBytes == null && !isProcessing)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person, color: AppColors.textPrimary, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Model hiện tại: ${_selectedModel.displayName ?? 'Model mặc định'}",
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      if (resultBytes == null && !isProcessing) ...[
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Text(
+                            "Chọn món đồ để thử",
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+
+                        ClothSelectionRow(
+                          wardrobeItems: _myWardrobeItems,
+                          isLoading: _isLoadingWardrobe,
+                          onPickImage: _pickImage,
+                          onShowFullWardrobe: _showFullWardrobeBottomSheet,
+                          onSelectCloth: (url, name, category) {
+                            setState(() {
+                              selectedClothFile = null;
+                              _selectedNetworkClothUrl = url;
+                              _selectedClothName = name;
+                              _selectedCategoryId = _mapCategoryToInt(category);
+                            });
+                          },
+                        ),
+
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Text(
+                            "Lịch sử thử đồ",
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+
+                        const TryOnHistoryList(),
+                        const SizedBox(height: 20), // Thêm khoảng trống nhỏ ở cuối list cuộn
+                      ],
                     ],
                   ),
                 ),
-
-              if (resultBytes == null && !isProcessing) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    "Chọn món đồ để thử",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-                ClothSelectionRow(
-                  wardrobeItems: _myWardrobeItems,
-                  isLoading: _isLoadingWardrobe,
-                  onPickImage: _pickImage,
-                  onShowFullWardrobe: _showFullWardrobeBottomSheet,
-                  onSelectCloth: (url, name, category) {
-                    setState(() {
-                      selectedClothFile = null;
-                      _selectedNetworkClothUrl = url;
-                      _selectedClothName = name;
-                      _selectedCategoryId = _mapCategoryToInt(category);
-                    });
-                  },
-                ),
-
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    "Lịch sử thử đồ",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-                const TryOnHistoryList(),
-              ],
+              ),
 
               if (resultBytes == null && !isProcessing)
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                  decoration: BoxDecoration(
+                    color: AppColors.mainBackground,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   child: Column(
@@ -492,13 +508,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                 label: "Số dư:",
                                 value: _isLoadingBalance ? "..." : "${_currentBalance.toInt()} đ",
                                 color: Colors.grey,
+                                valueTextColor: AppColors.textSecondary,
                               ),
                               const SizedBox(height: 8),
                               PriceInfoWidget(
                                 label: "Chi phí:",
                                 value: "${_tryOnCost.toInt()} đ",
                                 color: AppColors.textPink,
-                                valueTextColor: Colors.white,
+                                valueTextColor: AppColors.textPrimary,
                               ),
 
                             ],
@@ -515,7 +532,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   ? const LinearGradient(colors: [Color(0xFFFC00A6), Color(0xFFB50076)])
                                   : null),
                               color: (!canProceed && !isNotEnoughBalance || isProcessing)
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? AppColors.textPrimary.withOpacity(0.1)
                                   : null,
                             ),
                             child: ElevatedButton(
@@ -534,6 +551,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                 shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(15),
+                                  side: BorderSide(color: AppColors.borderPrimary, width: 2)
                                 ),
                               ),
                               child: Text(

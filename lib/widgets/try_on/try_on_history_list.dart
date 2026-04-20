@@ -32,7 +32,7 @@ class TryOnHistoryList extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: AppColors.backgroundSecondary,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -54,7 +54,7 @@ class TryOnHistoryList extends StatelessWidget {
                     Expanded(
                       child: Text(
                         formattedDate,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                       ),
                     ),
                     ElevatedButton(

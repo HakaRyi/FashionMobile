@@ -36,7 +36,7 @@ class PublicClothingItem extends StatelessWidget {
       onLongPress: onLongPress,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.backgroundSecondary,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: AppColors.divider),
         ),
@@ -88,7 +88,7 @@ class PublicClothingItem extends StatelessWidget {
                   Text(
                     title.trim().isEmpty ? 'Chưa đặt tên' : title,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.text,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
@@ -99,7 +99,7 @@ class PublicClothingItem extends StatelessWidget {
                   Text(
                     "$likes lượt thích",
                     style: const TextStyle(
-                      color: Colors.grey,
+                      color: AppColors.text,
                       fontSize: 11,
                     ),
                   ),

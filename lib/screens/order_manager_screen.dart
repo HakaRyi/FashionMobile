@@ -1,3 +1,4 @@
+import 'package:fashion_mobile/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../widgets/order_skeleton.dart';
@@ -122,7 +123,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
 
   Widget _buildStatusBadge(String status) {
     Color bgColor;
-    Color textColor;
+    Color? textColor;
     String text;
 
     switch (status) {
@@ -132,8 +133,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
         text = 'Chờ xử lý';
         break;
       case 'COMPLETED':
+        bgColor = Colors.blue.withOpacity(0.3);
+        textColor = Color(0xFF01BBFF);
+        text = 'Giao hàng thành công';
+        break;
+      case 'DONE':
         bgColor = Colors.green.withOpacity(0.2);
-        textColor = Colors.greenAccent;
+        textColor = Color(0xFF31D832);
         text = 'Hoàn thành';
         break;
       default:
@@ -173,9 +179,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: AppColors.backgroundSecondary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: AppColors.borderSecondary),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,13 +191,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
               children: [
                 Text(
                   "#${order.orderId}",
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 _buildStatusBadge(order.status),
               ],
             ),
             const SizedBox(height: 12),
-            const Divider(color: Colors.white10, height: 1),
+            const Divider(color: AppColors.divider, height: 1),
             const SizedBox(height: 12),
             if (order.orderDetails.isNotEmpty)
               Row(
@@ -208,8 +214,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                       errorBuilder: (_, __, ___) => Container(
                         width: 60,
                         height: 60,
-                        color: Colors.grey[800],
-                        child: const Icon(Icons.image, color: Colors.white54),
+                        color: AppColors.backgroundTertiary,
+                        child: const Icon(Icons.image, color: AppColors.text),
                       ),
                     ),
                   ),
@@ -220,14 +226,14 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                       children: [
                         Text(
                           order.displayItemName,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           "$accountLabel: ${displayAccount?.name ?? 'Ẩn danh'}",
-                          style: const TextStyle(color: Colors.white54, fontSize: 13),
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
                         ),
                       ],
                     ),
@@ -245,12 +251,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                   children: [
                     Text(
                       "Tạo: ${order.formattedCreatedAt}",
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       "Cập nhật: ${order.formattedUpdatedAt}",
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -279,10 +285,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Tìm kiếm đơn hàng...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    hintStyle: const TextStyle(color: AppColors.textPrimary),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textPrimary),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
+                    fillColor: AppColors.textPrimary.withOpacity(0.05),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -304,11 +310,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pink,
+                  backgroundColor: AppColors.accent,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Icon(Icons.add, color: Colors.white),
+                child: const Icon(Icons.add, color: AppColors.textPrimary),
               ),
             ],
           ),
@@ -321,7 +327,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
             itemBuilder: (_, __) => const OrderSkeleton(),
           )
               : _salesOrders.isEmpty
-              ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.white54)))
+              ? const Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: Colors.black54)))
               : ListView.builder(
             controller: _salesScrollController,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -385,7 +391,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
               ? const Center(
             child: Text(
               'Chưa có đơn hàng nào',
-              style: TextStyle(color: Colors.white54, fontSize: 16),
+              style: TextStyle(color: Colors.black54, fontSize: 16),
             ),
           )
               : ListView.builder(
@@ -410,17 +416,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> with Sing
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppColors.createHeader,
         elevation: 0,
-        title: const Text('Quản lý đơn hàng', style: TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Quản lý đơn hàng', style: TextStyle(color: Colors.black)),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.pink,
           labelColor: Colors.pink,
-          unselectedLabelColor: Colors.white54,
+          unselectedLabelColor: Colors.black54,
           tabs: const [
             Tab(text: 'Đơn hàng đã tạo'),
             Tab(text: 'Đơn hàng đã mua'),

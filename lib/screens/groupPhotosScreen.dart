@@ -38,14 +38,18 @@ class _GroupPhotosScreenState extends State<GroupPhotosScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("File phương tiện", style: TextStyle(fontSize: 18)),
+        title: const Text("Media, files & links", style: TextStyle(fontSize: 18, color: Colors.black)),
         backgroundColor: AppColors.background,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
           : _photos.isEmpty
-          ? const Center(child: Text("Chưa có hình ảnh nào", style: TextStyle(color: Colors.white38)))
+          ? const Center(child: Text("Chưa có hình ảnh nào", style: TextStyle(color: Colors.black38)))
           : GridView.builder(
         padding: const EdgeInsets.all(2),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

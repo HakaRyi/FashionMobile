@@ -119,7 +119,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       final transactionResult = await _expenseService.getMyTransactions(
         page: 1,
         pageSize: 30,
-        type: selectedType.isEmpty ? null : selectedType,
+        // FE tự suy Credit/Debit để thích nghi với nhiều raw type từ BE.
         status: selectedStatus.isEmpty ? null : selectedStatus,
         referenceType:
         selectedReferenceType.isEmpty ? null : selectedReferenceType,
@@ -164,21 +164,106 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     }
   }
 
+  String _resolveDisplayType(TransactionHistoryModel item) {
+    final rawType = item.type.trim().toLowerCase();
+    final rawReferenceType = item.referenceType.trim().toLowerCase();
+    final amount = item.amount;
+
+    const debitTypes = {
+      'debit',
+      'system_fee_payment',
+      'escrow_hold',
+      'orderpayment',
+      'withdraw',
+      'packagepurchase',
+    };
+
+    const creditTypes = {
+      'credit',
+      'prize_reward',
+      'event_refund',
+      'event_cancel_refund',
+      'refund',
+      'orderrefund',
+      'topup',
+    };
+
+    if (debitTypes.contains(rawType)) return 'Debit';
+    if (creditTypes.contains(rawType)) return 'Credit';
+
+    if (rawReferenceType == 'event' && amount < 0) return 'Debit';
+    if (rawReferenceType == 'event_reject' && amount > 0) return 'Credit';
+
+    if (amount < 0) return 'Debit';
+    if (amount > 0) return 'Credit';
+
+    return 'Debit';
+  }
+
+  String _resolveDetailDisplayType(dynamic detail) {
+    final rawType = (detail.type ?? '').toString().trim().toLowerCase();
+    final rawReferenceType =
+    (detail.referenceType ?? '').toString().trim().toLowerCase();
+    final amount = ((detail.amount ?? 0) as num).toDouble();
+
+    const debitTypes = {
+      'debit',
+      'system_fee_payment',
+      'escrow_hold',
+      'orderpayment',
+      'withdraw',
+      'packagepurchase',
+    };
+
+    const creditTypes = {
+      'credit',
+      'prize_reward',
+      'event_refund',
+      'event_cancel_refund',
+      'refund',
+      'orderrefund',
+      'topup',
+    };
+
+    if (debitTypes.contains(rawType)) return 'Debit';
+    if (creditTypes.contains(rawType)) return 'Credit';
+
+    if (rawReferenceType == 'event' && amount < 0) return 'Debit';
+    if (rawReferenceType == 'event_reject' && amount > 0) return 'Credit';
+
+    if (amount < 0) return 'Debit';
+    if (amount > 0) return 'Credit';
+
+    return 'Debit';
+  }
+
+  double _resolveDisplayAmount(double value) {
+    return value.abs();
+  }
+
   Color _typeColor(String type) {
     if (type.toLowerCase() == 'credit') return const Color(0xFF10B981);
     if (type.toLowerCase() == 'debit') return const Color(0xFFEF4444);
     return Colors.grey;
   }
 
+  IconData _typeIcon(String type) {
+    if (type.toLowerCase() == 'credit') {
+      return Icons.south_west_rounded;
+    }
+    return Icons.north_east_rounded;
+  }
+
   Color _statusColor(String status) {
-    switch (status) {
-      case 'Success':
+    switch (status.trim().toLowerCase()) {
+      case 'success':
         return const Color(0xFF10B981);
-      case 'Pending':
+      case 'pending':
         return const Color(0xFFF59E0B);
-      case 'Failed':
+      case 'failed':
         return const Color(0xFFEF4444);
-      case 'Cancelled':
+      case 'cancelled':
+      case 'canceled':
         return const Color(0xFF6B7280);
       default:
         return const Color(0xFF6B7280);
@@ -195,8 +280,12 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         return 'Order refund';
       case 'TryOn':
         return 'Try-on';
+      case 'Event':
+        return 'Event';
       case 'EventReward':
         return 'Event reward';
+      case 'Event_Reject':
+        return 'Event reject';
       case 'Withdraw':
         return 'Withdraw';
       case 'Adjustment':
@@ -209,24 +298,36 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   String _mapStatus(String value) {
-    switch (value) {
-      case 'Pending':
+    switch (value.trim().toLowerCase()) {
+      case 'pending':
         return 'Pending';
-      case 'Success':
+      case 'success':
+      case 'completed':
         return 'Success';
-      case 'Failed':
+      case 'failed':
         return 'Failed';
-      case 'Cancelled':
+      case 'cancelled':
+      case 'canceled':
         return 'Cancelled';
       default:
         return value;
     }
   }
 
+  List<TransactionHistoryModel> get _displayTransactions {
+    return transactions.where((item) {
+      final displayType = _resolveDisplayType(item);
+
+      if (selectedType.isNotEmpty && displayType != selectedType) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
   String _shortPeriod(String period) {
-    final digits = RegExp(
-      r'\d+',
-    ).allMatches(period).map((e) => e.group(0)).toList();
+    final digits =
+    RegExp(r'\d+').allMatches(period).map((e) => e.group(0)).toList();
     if (digits.isNotEmpty) return digits.last ?? period;
     return period;
   }
@@ -296,10 +397,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(999),
@@ -509,7 +608,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         Expanded(
           child: _buildSummaryMetricCard(
             title: 'Expense',
-            value: formatAdaptiveMoney(summary?.totalExpense ?? 0, compact: true),
+            value:
+            formatAdaptiveMoney(summary?.totalExpense ?? 0, compact: true),
             icon: Icons.north_east_rounded,
             color: const Color(0xFFEF4444),
           ),
@@ -630,7 +730,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: (isPositive
                   ? const Color(0xFFDCFCE7)
@@ -649,6 +750,45 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUpdateLimitButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _showUpdateSpendingLimitSheet,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111827),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF111827).withOpacity(0.16),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.edit_rounded, size: 16, color: Colors.white),
+              SizedBox(width: 6),
+              Text(
+                'Update',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -706,35 +846,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   ),
                 ),
               ),
-              InkWell(
-                onTap: _showUpdateSpendingLimitSheet,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.edit_rounded, size: 16),
-                      SizedBox(width: 6),
-                      Text(
-                        'Update',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _buildUpdateLimitButton(),
             ],
           ),
           const SizedBox(height: 4),
@@ -990,7 +1102,6 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   },
                   onChanged: (v) {
                     setState(() => selectedType = v ?? '');
-                    _loadData();
                   },
                 ),
               ),
@@ -1025,7 +1136,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               'OrderPayment',
               'OrderRefund',
               'TryOn',
+              'Event',
               'EventReward',
+              'Event_Reject',
               'Withdraw',
               'Adjustment',
               'PackagePurchase',
@@ -1036,6 +1149,26 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               setState(() => selectedReferenceType = v ?? '');
               _loadData();
             },
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  selectedType = '';
+                  selectedStatus = '';
+                  selectedReferenceType = '';
+                  _keywordController.clear();
+                });
+                _loadData();
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text(
+                'Reset filters',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
         ],
       ),
@@ -1376,19 +1509,20 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '${transactions.length} recent transactions',
+            '${_displayTransactions.length} recent transactions',
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF6B7280),
             ),
           ),
           const SizedBox(height: 14),
-          if (transactions.isEmpty)
+          if (_displayTransactions.isEmpty)
             _buildEmptyState('No transactions found.')
           else
-            ...transactions.map((item) {
-              final bool isCredit = item.type.toLowerCase() == 'credit';
-              final Color amountColor = _typeColor(item.type);
+            ..._displayTransactions.map((item) {
+              final displayType = _resolveDisplayType(item);
+              final bool isCredit = displayType == 'Credit';
+              final Color amountColor = _typeColor(displayType);
               final Color statusColor = _statusColor(item.status);
 
               return InkWell(
@@ -1416,9 +1550,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Icon(
-                              isCredit
-                                  ? Icons.south_west_rounded
-                                  : Icons.north_east_rounded,
+                              _typeIcon(displayType),
                               color: amountColor,
                             ),
                           ),
@@ -1464,6 +1596,12 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                                       text: DateFormat(
                                         'dd/MM/yyyy HH:mm',
                                       ).format(item.createdAt),
+                                    ),
+                                    _buildInfoPill(
+                                      icon: isCredit
+                                          ? Icons.add_rounded
+                                          : Icons.remove_rounded,
+                                      text: displayType,
                                     ),
                                   ],
                                 ),
@@ -1535,7 +1673,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${isCredit ? '+' : '-'} ${formatAdaptiveMoney(item.amount, compact: true)}',
+                              '${isCredit ? '+' : '-'} ${formatAdaptiveMoney(_resolveDisplayAmount(item.amount), compact: true)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -1696,8 +1834,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         backgroundColor: Colors.transparent,
         isScrollControlled: true,
         builder: (_) {
-          final isCredit = detail.type.toLowerCase() == 'credit';
-          final typeColor = _typeColor(detail.type);
+          final displayType = _resolveDetailDisplayType(detail);
+          final isCredit = displayType == 'Credit';
+          final typeColor = _typeColor(displayType);
 
           return DraggableScrollableSheet(
             expand: false,
@@ -1708,7 +1847,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               return Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: ListView(
                   controller: scrollController,
@@ -1735,9 +1875,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
-                            isCredit
-                                ? Icons.south_west_rounded
-                                : Icons.north_east_rounded,
+                            _typeIcon(displayType),
                             color: typeColor,
                           ),
                         ),
@@ -1798,7 +1936,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                '${isCredit ? '+' : '-'} ${formatMoney(detail.amount)}',
+                                '${isCredit ? '+' : '-'} ${formatMoney(_resolveDisplayAmount((detail.amount as num).toDouble()))}',
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
@@ -1814,7 +1952,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                     _buildDetailGroup(
                       title: 'General information',
                       children: [
-                        _detailRow('Type', detail.type),
+                        _detailRow('Type', displayType),
                         _detailRow(
                           'Reference type',
                           _mapReferenceType(detail.referenceType),
@@ -1822,7 +1960,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         _detailRow('Status', _mapStatus(detail.status)),
                         _detailRow(
                           'Time',
-                          DateFormat('dd/MM/yyyy HH:mm').format(detail.createdAt),
+                          DateFormat('dd/MM/yyyy HH:mm')
+                              .format(detail.createdAt),
                         ),
                         _detailRow('Description', detail.description ?? '--'),
                       ],
@@ -1831,7 +1970,14 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                     _buildDetailGroup(
                       title: 'Balance changes',
                       children: [
-                        _detailRow('Amount', formatMoney(detail.amount)),
+                        _detailRow(
+                          'Amount',
+                          formatMoney(
+                            _resolveDisplayAmount(
+                              (detail.amount as num).toDouble(),
+                            ),
+                          ),
+                        ),
                         _detailRow(
                           'Balance before',
                           formatMoney(detail.balanceBefore),
@@ -1956,7 +2102,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1979,6 +2126,38 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(16),
+                        border:
+                        Border.all(color: const Color(0xFFC7D2FE)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.shield_outlined,
+                            color: Color(0xFF4F46E5),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isHardLimit
+                                  ? 'Hard limit is enabled. Spending above the limit will be blocked.'
+                                  : 'Warning mode only. The system will warn you near the threshold.',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF3730A3),
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -2049,7 +2228,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                           if (raw.isNotEmpty) {
                             limit = double.tryParse(raw);
                             if (limit == null || limit < 0) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(
                                 const SnackBar(
                                   content: Text(
                                     'Monthly limit must be a valid non-negative number.',
@@ -2072,7 +2252,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF111827),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

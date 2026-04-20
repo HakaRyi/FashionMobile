@@ -326,7 +326,7 @@ class _SearchScreenState extends State<SearchScreen> {
         const Divider(
           height: 1,
           thickness: 1,
-          color: Color(0xFF2C2C2C),
+          color: Color(0xFFFD9FBB),
         ),
         ListView.builder(
           shrinkWrap: true,
@@ -345,7 +345,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     height: 1,
                     thickness: 1,
                     indent: 90,
-                    color: Color(0xFF2C2C2C),
+                    color: Color(0xFFFD9FBB),
                   ),
               ],
             );
@@ -356,9 +356,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildProfileCard({required UserSuggestionModel user}) {
-    final avatarUrl = user.avatarUrl.isNotEmpty
-        ? user.avatarUrl
-        : 'package:fashion_mobile/assets/images/default_avatar.png';
+    final avatar= user.avatarUrl.isNotEmpty
+        ? NetworkImage(user.avatarUrl)
+        : const AssetImage('assets/images/default_avatar.png') as ImageProvider;
 
     return InkWell(
       onTap: () => _navigateToProfile(user.accountId),
@@ -375,7 +375,7 @@ class _SearchScreenState extends State<SearchScreen> {
               child: CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white10,
-                backgroundImage: NetworkImage(avatarUrl),
+                backgroundImage: avatar,
                 onBackgroundImageError: (_, __) {},
               ),
             ),
@@ -419,8 +419,8 @@ class _SearchScreenState extends State<SearchScreen> {
             ElevatedButton(
               onPressed: () => _handleToggleFollow(user),
               style: ElevatedButton.styleFrom(
-                backgroundColor: user.isFollowing ? Colors.white24 : Colors.pinkAccent.withOpacity(0.1),
-                foregroundColor: user.isFollowing ? Colors.white : Colors.pinkAccent,
+                backgroundColor: user.isFollowing ? AppColors.backgroundSecondary : Colors.pinkAccent.withOpacity(0.1),
+                foregroundColor: user.isFollowing ? AppColors.textPink : Colors.pinkAccent,
                 elevation: 0,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
@@ -469,7 +469,6 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
-// <--- KẾT THÚC SỬA
 
   Widget _buildSectionTitle(String title) {
     return Padding(

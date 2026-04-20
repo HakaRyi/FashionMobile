@@ -70,9 +70,13 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("AI Stylist", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text("AI Stylist", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
@@ -128,16 +132,16 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
           decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.divider)
+              //border: Border.all(color: AppColors.divider)
           ),
           child: TextField(
             onChanged: _onSearchChanged,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
               hintText: "Nhập tên người dùng...",
-              hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+              hintStyle: const TextStyle(color: Colors.black54, fontSize: 13),
               border: InputBorder.none,
-              icon: Icon(Icons.search, color: _isSearching ? AppColors.textPink : Colors.white24, size: 20),
+              icon: Icon(Icons.search, color: _isSearching ? AppColors.textPink : Colors.black54, size: 20),
             ),
           ),
         ),
@@ -153,7 +157,7 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                   backgroundImage: user['avatarUrl'] != null ? NetworkImage(user['avatarUrl']) : null,
                   child: user['avatarUrl'] == null ? const Icon(Icons.person) : null,
                 ),
-                title: Text(user['userName'], style: const TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(user['userName'], style: const TextStyle(color: Colors.black, fontSize: 13)),
                 onTap: () {
                   setState(() {
                     if (!_selectedOthers.any((element) => element['id'] == user['wardrobeId'])) {
@@ -172,8 +176,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             child: Wrap(
               spacing: 8,
               children: _selectedOthers.map((w) => Chip(
-                backgroundColor: AppColors.textPink.withOpacity(0.2),
-                side: const BorderSide(color: AppColors.textPink),
+                backgroundColor: Colors.black,
+                side: const BorderSide(color: Colors.black),
                 label: Text(w['name'], style: const TextStyle(color: Colors.white, fontSize: 11)),
                 deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
                 onDeleted: () => setState(() => _selectedOthers.remove(w)),
@@ -197,13 +201,13 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(25), border: Border.all(color: AppColors.divider)),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(25),),
                 child: TextField(
                   controller: _promptController,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black),
                   decoration: const InputDecoration(
                     hintText: "Thêm yêu cầu (vd: đi tiệc, năng động...)",
-                    hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
+                    hintStyle: TextStyle(color: Colors.black45, fontSize: 13),
                     border: InputBorder.none,
                   ),
                 ),

@@ -38,10 +38,10 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text("KẾT QUẢ GỢI Ý",
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.black)),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -111,7 +111,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.textPink.withOpacity(0.2)),
+       // border: Border.all(color: AppColors.textPink.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -128,7 +128,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
               children: [
                 const Text("PHỐI ĐỒ CÙNG", style: TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text(widget.title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(widget.title, style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.bold)),
               ],
             ),
           ),

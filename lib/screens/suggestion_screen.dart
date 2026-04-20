@@ -30,13 +30,14 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+
         centerTitle: true,
         title: const Text(
-          "LỊCH SỬ GỢI Ý",
-          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2),
+          "SUGGESTION HISTORY",
+          style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -80,7 +81,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
           MaterialPageRoute(
             builder: (_) => HistoryDetailScreen(
               historyId: history.id,
-              title: history.referenceItemName ?? "Gợi ý phối đồ",
+              title: history.referenceItemName ?? "Outfit Suggestion",
               refImage: history.referenceItemImage,
             ),
           ),
@@ -107,7 +108,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                     ? DecorationImage(image: NetworkImage(refImage), fit: BoxFit.cover)
                     : null,
               ),
-              child: refImage == null ? const Icon(Icons.inventory_2_outlined, color: Colors.white24) : null,
+              child: refImage == null ? const Icon(Icons.inventory_2_outlined, color: Colors.white10) : null,
             ),
             const SizedBox(width: 16),
 
@@ -122,13 +123,13 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                         DateFormat('dd/MM • HH:mm').format(date),
                         style: const TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
-                      const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+                      const Icon(Icons.chevron_right, color: Colors.black, size: 18),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     prompt,
-                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -138,8 +139,8 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                       const Icon(Icons.auto_awesome, color: Colors.amber, size: 12),
                       const SizedBox(width: 4),
                       Text(
-                        history.referenceItemName ?? "Gợi ý phối đồ",
-                        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                        history.referenceItemName ?? "Outfit Suggestion",
+                        style: TextStyle(color: Colors.black.withOpacity(0.4), fontSize: 11),
                       ),
                     ],
                   ),
@@ -159,7 +160,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
         children: [
           Icon(Icons.history_toggle_off, size: 64, color: Colors.white.withOpacity(0.1)),
           const SizedBox(height: 16),
-          const Text("Chưa có lịch sử phối đồ", style: TextStyle(color: Colors.white38)),
+          const Text("No recommendation history", style: TextStyle(color: Colors.black)),
         ],
       ),
     );

@@ -85,7 +85,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể kết nối phòng chat!')),
+          const SnackBar(content: Text('Could not connect to chat room!')),
         );
       }
     } catch (e) {
@@ -139,7 +139,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             title: const Text(
-              'Bỏ theo dõi?',
+              'Unfollow?',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -147,7 +147,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               ),
             ),
             content: const Text(
-              'Bạn có chắc chắn muốn bỏ theo dõi người dùng này không?',
+              'Are you sure you want to unfollow this user?',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
@@ -157,14 +157,14 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
-                  'Hủy',
+                  'Cancel',
                   style: TextStyle(color: Colors.white54),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 child: const Text(
-                  'Bỏ theo dõi',
+                  'Unfollow',
                   style: TextStyle(
                     color: Colors.redAccent,
                     fontWeight: FontWeight.bold,
@@ -200,7 +200,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Không thể thực hiện, vui lòng thử lại!'),
+            content: Text('Action failed, please try again!'),
           ),
         );
       }
@@ -213,7 +213,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Không thể thực hiện, vui lòng thử lại!'),
+            content: Text('Action failed, please try again!'),
           ),
         );
       }
@@ -245,7 +245,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Tải hồ sơ thất bại: ${profileSnapshot.error}',
+                  'Failed to load profile: ${profileSnapshot.error}',
                   style: const TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
@@ -260,7 +260,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'Không tìm thấy thông tin người dùng.',
+                  'User information not found.',
                   style: TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
@@ -269,9 +269,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           }
 
           final String avatar = (user['avatar'] ?? '').toString();
-          final String name = (user['username'] ?? 'Người dùng').toString();
-          final String email = (user['email'] ?? 'Đang cập nhật...').toString();
-          final String bio = (user['description'] ?? 'Chưa có giới thiệu về bản thân.')
+          final String name = (user['username'] ?? 'User').toString();
+          final String email = (user['email'] ?? 'Updating...').toString();
+          final String bio = (user['description'] ?? 'No bio available.')
               .toString();
 
           final int baseFollowerCount =
@@ -344,7 +344,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           shadows: [
-                            Shadow(color: Colors.black45, blurRadius: 5),
+                            Shadow(color: Colors.white, blurRadius: 5),
                           ],
                         ),
                       ),
@@ -451,7 +451,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                   Text(
                                     name,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -459,7 +459,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                   Text(
                                     email,
                                     style: const TextStyle(
-                                      color: Colors.white54,
+                                      color: Colors.black38,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -467,7 +467,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                   Text(
                                     bio,
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: Colors.black,
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
@@ -503,8 +503,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                           )
                                               : Text(
                                             isFollowing
-                                                ? 'Đang theo dõi'
-                                                : 'Theo dõi',
+                                                ? 'Following'
+                                                : 'Follow',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -530,7 +530,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            'Nhắn tin',
+                                            'Message',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -571,7 +571,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            'Xem tủ đồ công khai',
+                                            'View Public Wardrobe',
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: Colors.pinkAccent,
@@ -613,9 +613,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               padding: const EdgeInsets.all(24),
                               child: Center(
                                 child: Text(
-                                  'Tải bài viết thất bại: ${postSnapshot.error}',
+                                  'Failed to load posts: ${postSnapshot.error}',
                                   style: const TextStyle(
-                                    color: Colors.white54,
+                                    color: Colors.black26,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -632,8 +632,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               padding: EdgeInsets.all(40),
                               child: Center(
                                 child: Text(
-                                  'Chưa có bài viết nào.',
-                                  style: TextStyle(color: Colors.white38),
+                                  'No posts yet.',
+                                  style: TextStyle(color: Colors.black26),
                                 ),
                               ),
                             ),

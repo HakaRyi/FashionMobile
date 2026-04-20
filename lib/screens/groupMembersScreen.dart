@@ -79,7 +79,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.menu,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Container(
@@ -87,22 +87,22 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
         height: MediaQuery.of(context).size.height * 0.7,
         child: Column(
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
-            const Text("Mời vào nhóm", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Invite to Group", style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 15),
             if (availableFriends.isEmpty)
-              const Expanded(child: Center(child: Text("Mọi người đều đã ở trong nhóm", style: TextStyle(color: Colors.white38))))
+              const Expanded(child: Center(child: Text("Everyone is already in the group", style: TextStyle(color: Colors.black))))
             else
               Expanded(
                 child: ListView.separated(
                   itemCount: availableFriends.length,
-                  separatorBuilder: (c, i) => const Divider(color: Colors.white10),
+                  separatorBuilder: (c, i) => const Divider(color: Colors.white),
                   itemBuilder: (c, index) {
                     final friend = availableFriends[index];
                     return ListTile(
                       leading: CircleAvatar(backgroundImage: NetworkImage(friend['avatar'] ?? "https://cdn-icons-png.flaticon.com/512/8377/8377384.png")),
-                      title: Text(friend['name'] ?? "User", style: const TextStyle(color: Colors.white)),
+                      title: Text(friend['name'] ?? "User", style: const TextStyle(color: Colors.black)),
                       trailing: const Icon(Icons.add_circle_outline, color: AppColors.textPink),
                       onTap: () {
                         Navigator.pop(ctx);
@@ -126,7 +126,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
     if (mounted) Navigator.pop(context); // Tắt loading
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã thêm thành viên!")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Member added!")));
       _fetchMembers(); // Load lại danh sách tại chỗ để thấy người mới
     }
   }
@@ -136,9 +136,13 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Thành viên nhóm", style: TextStyle(fontSize: 18)),
+        title: const Text("Group Members", style: TextStyle(fontSize: 18, color: Colors.black)),
         backgroundColor: AppColors.background,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       // THÊM NÚT "+" Ở ĐÂY
       floatingActionButton: FloatingActionButton(
@@ -153,13 +157,13 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: _filterMembers,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
-                hintText: "Tìm thành viên...",
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
-                prefixIcon: const Icon(Icons.search, color: Colors.white38),
+                hintText: "Search members...",
+                hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+                prefixIcon: const Icon(Icons.search, color: Colors.black26),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.black45.withOpacity(0.05),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
@@ -182,15 +186,15 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
                   ),
                   title: Row(
                     children: [
-                      Text(user['username'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(user['username'], style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                       if (isMe) ...[
                         const SizedBox(width: 8),
-                        const Text("(Bạn)", style: TextStyle(color: Colors.white38, fontSize: 12)),
+                        const Text("(You)", style: TextStyle(color:AppColors.textPink, fontSize: 12)),
                       ]
                     ],
                   ),
-                  subtitle: Text(user['isOnline'] == "Online" ? "Đang hoạt động" : "Ngoại tuyến",
-                      style: TextStyle(color: user['isOnline'] == "Online" ? Colors.greenAccent : Colors.white38, fontSize: 12)),
+                  subtitle: Text(user['isOnline'] == "Online" ? "Active now" : "Offline",
+                      style: TextStyle(color: user['isOnline'] == "Online" ? Colors.green : Colors.white38, fontSize: 12)),
                   trailing: user['status'] == "Active" ? const Icon(Icons.check_circle, color: Colors.pinkAccent, size: 16) : null,
                 );
               },
@@ -228,7 +232,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      print("Lỗi nhắn tin riêng: $e");
+      print("Private chat error: $e");
     }
   }
 
@@ -241,11 +245,11 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
 
     final int accountId = user['id'];
     final String username = user['username'] ?? "Người dùng";
-    final String avatar = user['avatar'] ?? "https://cdn-icons-png.flaticon.com/512/8377/8377384.png";
+    final String avatar = user['avatar'] ?? "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg";
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.menu,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -257,14 +261,14 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
             children: [
               ListTile(
                 leading: CircleAvatar(backgroundImage: NetworkImage(avatar)),
-                title: Text(username, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                subtitle: const Text("Tùy chọn thành viên", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                title: Text(username, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                subtitle: const Text("Member options", style: TextStyle(color: Colors.black45, fontSize: 12)),
               ),
               const Divider(color: Colors.white10),
 
               ListTile(
-                leading: const Icon(Icons.person_outline, color: Colors.white),
-                title: const Text("Xem trang cá nhân", style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.person_outline, color: Colors.black),
+                title: const Text("View Profile", style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -275,8 +279,8 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
               ),
 
               ListTile(
-                leading: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-                title: const Text("Nhắn tin riêng", style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.chat_bubble_outline, color: Colors.black),
+                title: const Text("Send Message", style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.pop(context);
                   _handleStartPrivateChat(accountId, username, avatar);

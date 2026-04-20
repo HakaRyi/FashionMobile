@@ -71,7 +71,7 @@ class _PostItemState extends State<PostItem> {
     if (currentPost.accountId <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Không tìm thấy thông tin người dùng.'),
+          content: Text('User information not found.'),
         ),
       );
       return;
@@ -197,7 +197,7 @@ class _PostItemState extends State<PostItem> {
         final shareCount = post.shareCount;
         final postUserId = post.accountId;
         final userName =
-        post.userName.trim().isNotEmpty ? post.userName : 'Người dùng';
+        post.userName.trim().isNotEmpty ? post.userName : 'User';
         final avatarUrl =
         (post.avatarUrl != null && post.avatarUrl!.trim().isNotEmpty)
             ? post.avatarUrl!
@@ -254,8 +254,8 @@ class _PostItemState extends State<PostItem> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Divider(
-                  color: AppColors.divider,
-                  height: 1,
+                  color: Colors.white,
+                  height: 0,
                 ),
               ),
             ],
@@ -482,7 +482,7 @@ class _PostItemState extends State<PostItem> {
             }
           });
         } catch (e) {
-          _showError('Thích bài viết thất bại: $e');
+          _showError('Like post failed: $e');
         }
       },
       child: Stack(
@@ -623,7 +623,7 @@ class _PostItemState extends State<PostItem> {
                   try {
                     await postManager.toggleLikePost(postId);
                   } catch (e) {
-                    _showError('Thích bài viết thất bại: $e');
+                    _showError('Like post failed: $e');
                   }
                 },
                 icon: isLiked ? Icons.favorite : Icons.favorite_border,
@@ -648,7 +648,7 @@ class _PostItemState extends State<PostItem> {
                     await postManager.toggleSavePost(postId);
                     widget.onRefresh?.call();
                   } catch (e) {
-                    _showError('Lưu bài viết thất bại: $e');
+                    _showError('Save post failed: $e');
                   }
                 },
                 icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
@@ -659,7 +659,7 @@ class _PostItemState extends State<PostItem> {
           const SizedBox(height: 8),
           if (likeCount > 0)
             Text(
-              '$likeCount lượt thích',
+              '$likeCount likes',
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
@@ -671,7 +671,7 @@ class _PostItemState extends State<PostItem> {
             GestureDetector(
               onTap: _openComments,
               child: Text(
-                'Xem $commentCount bình luận',
+                'View all $commentCount comments',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -752,13 +752,13 @@ class _PostItemState extends State<PostItem> {
     final diff = now.difference(localDate);
 
     // Trường hợp thời gian bị lệch nhẹ do đồng hồ hệ thống
-    if (diff.isNegative || diff.inSeconds < 30) return 'Vừa xong';
+    if (diff.isNegative || diff.inSeconds < 30) return 'Just now';
 
-    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
 
-    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
 
-    if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
 
     // Nếu quá 7 ngày thì hiện ngày tháng cụ thể
     return DateFormat('dd/MM/yyyy').format(localDate);
@@ -772,7 +772,7 @@ class _PostItemState extends State<PostItem> {
         return Container(
           padding: const EdgeInsets.only(bottom: 20),
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
+            color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -797,7 +797,7 @@ class _PostItemState extends State<PostItem> {
                       color: AppColors.textPrimary,
                     ),
                     title: const Text(
-                      "Chỉnh sửa bài viết",
+                      "Edit Post",
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -830,7 +830,7 @@ class _PostItemState extends State<PostItem> {
                     color: Colors.redAccent,
                   ),
                   title: const Text(
-                    "Xóa bài viết",
+                    "Delete Post",
                     style: TextStyle(
                       color: Colors.redAccent,
                       fontSize: 16,
@@ -856,7 +856,7 @@ class _PostItemState extends State<PostItem> {
                     ),
                   ),
                   title: const Text(
-                    "Báo cáo bài viết",
+                    "Report Post",
                     style: TextStyle(
                       color: Colors.redAccent,
                       fontWeight: FontWeight.w600,
@@ -864,7 +864,7 @@ class _PostItemState extends State<PostItem> {
                     ),
                   ),
                   subtitle: const Text(
-                    "Tôi lo ngại về bài viết này",
+                    "I am concerned about this post",
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -886,7 +886,7 @@ class _PostItemState extends State<PostItem> {
                     color: AppColors.textPrimary,
                   ),
                   title: const Text(
-                    "Không quan tâm",
+                    "Not interested",
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
@@ -908,18 +908,18 @@ class _PostItemState extends State<PostItem> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF2C2C2C),
         title: const Text(
-          "Xóa bài viết?",
+          "Delete post?",
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          "Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.",
+          "Are you sure you want to delete this post? This action cannot be undone.",
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text(
-              "Hủy",
+              "Cancel",
               style: TextStyle(color: Colors.white54),
             ),
           ),
@@ -933,13 +933,13 @@ class _PostItemState extends State<PostItem> {
                 if (!mounted) return;
                 ScaffoldMessenger.of(parentContext).showSnackBar(
                   SnackBar(
-                    content: Text('Xóa bài thất bại: $e'),
+                    content: Text('Failed to delete post: $e'),
                   ),
                 );
               }
             },
             child: const Text(
-              "Xóa",
+              "Delete",
               style: TextStyle(color: Colors.redAccent),
             ),
           ),

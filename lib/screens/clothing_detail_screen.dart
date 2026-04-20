@@ -103,10 +103,14 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+        ),
         centerTitle: true,
         title: Text(
           _isEditing ? "EDIT DETAILS" : "CLOTHING INFO",
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2, color: Colors.black),
         ),
         actions: [
           if (widget.showEditButton)
@@ -145,7 +149,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
               children: [
                 Container(width: 4, height: 20, decoration: BoxDecoration(color: Colors.pinkAccent, borderRadius: BorderRadius.circular(10))),
                 const SizedBox(width: 10),
-                const Text("Attributes", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text("Attributes", style: TextStyle(color: Colors.pinkAccent, fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 16),
@@ -167,7 +171,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       width: double.infinity,
       height: 400,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.menu,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
@@ -227,6 +231,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         _buildGroupTitle("DESIGN DETAILS"),
         _buildTwoColumnRow([
           _buildItemTile("Color", "mainColor", Icons.palette_outlined),
+          _buildItemTile("SubColor", "subColor", Icons.palette_outlined),
           _buildItemTile("Size", "size", Icons.format_size),
         ]),
         _buildTwoColumnRow([
@@ -259,17 +264,59 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
           child: Column(
             children: [
               _buildSwitchTile("Public Item", "isPublic", Icons.visibility_outlined),
-              const Divider(color: Colors.white10, height: 1, indent: 50),
+              const Divider(color: Colors.white, height: 1, indent: 50),
               _buildStatusDropdownTile(),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        _buildItemTile("Description", "description", Icons.notes_rounded),
+        _buildDescriptionField(),
       ],
     );
   }
-
+  Widget _buildDescriptionField() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        // NỀN CỦA CẢ KHỐI DESCRIPTION
+        color: _isEditing ? Colors.pinkAccent.withOpacity(0.02) : Colors.black.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+            color: _isEditing ? Colors.pinkAccent.withOpacity(0.3) : Colors.black.withOpacity(0.1)
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notes_rounded, size: 18, color: _isEditing ? Colors.pinkAccent : Colors.black26),
+              const SizedBox(width: 8),
+              Text(
+                  "Description",
+                  style: TextStyle(color: Colors.black.withOpacity(0.4), fontSize: 12, fontWeight: FontWeight.bold)
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['description'],
+            enabled: _isEditing,
+            maxLines: null,
+            style: const TextStyle(color: Colors.black, fontSize: 14, height: 1.5),
+            decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                hintText: "No description provided",
+                hintStyle: TextStyle(color: Colors.black26)
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   // Hàm bổ trợ chia 2 cột
   Widget _buildTwoColumnRow(List<Widget> children) {
     return Row(
@@ -316,7 +363,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       leading: Icon(icon, size: 20, color: Colors.pinkAccent.withOpacity(0.7)),
-      title: Text(label, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+      title: Text(label, style: TextStyle(color: Colors.black.withOpacity(0.5), fontSize: 13)),
       trailing: _isEditing
           ? SizedBox(
         height: 30,
@@ -328,7 +375,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
           },
         ),
       )
-          : Text(val ? "YES" : "NO", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          : Text(val ? "YES" : "NO", style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -340,18 +387,18 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       leading: Icon(Icons.check_box_outlined, size: 20, color: Colors.pinkAccent.withOpacity(0.7)),
-      title: const Text("Status", style: TextStyle(color: Colors.white, fontSize: 13)),
+      title:  Text("Status", style: TextStyle(color: Colors.black.withOpacity(0.5), fontSize: 13)),
       trailing: _isEditing
           ? DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: statusMap.containsKey(currentStatus) ? currentStatus : "1",
           dropdownColor: AppColors.surface,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: Colors.black, fontSize: 14),
           items: statusMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
           onChanged: (val) => setState(() => _controllers['status']!.text = val!),
         ),
       )
-          : Text(statusMap[currentStatus] ?? "Active", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          : Text(statusMap[currentStatus] ?? "Active", style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold)),
     );
   }
   Widget _buildTimelineSection() {
@@ -375,8 +422,8 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12)),
-        Text(value, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: Colors.black.withOpacity(0.3), fontSize: 12)),
+        Text(value, style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w500)),
       ],
     );
   }

@@ -27,20 +27,20 @@ class ActionButton extends StatelessWidget {
           // Thêm padding ngang để nội dung không sát mép
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.backgroundSecondary,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.divider),
+            // border: Border.all(color: AppColors.divider),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 26), // Giảm size icon tí cho cân đối
+              Icon(icon, color: color, size: 30), // Giảm size icon tí cho cân đối
               const SizedBox(height: 8),
               Text(
                 label,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.text,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),

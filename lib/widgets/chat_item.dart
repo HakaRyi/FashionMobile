@@ -74,12 +74,12 @@ class ChatItem extends StatelessWidget {
       ),
       title: Text(
         name,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 16),
       ),
       subtitle: Text(
         lastMessage,
         style: TextStyle(
-          color: isUnread ? Colors.white : Colors.white70,
+          color: isUnread ? Colors.black : Colors.black87,
           fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
           fontSize: 13,
         ),
@@ -93,7 +93,7 @@ class ChatItem extends StatelessWidget {
           Text(
             _formatTime(time), // GỌI HÀM FORMAT Ở ĐÂY
             style: TextStyle(
-                color: isUnread ? AppColors.textPink : Colors.white30,
+                color: isUnread ? AppColors.textPink : Colors.black26,
                 fontSize: 11
             ),
           ),
@@ -104,7 +104,7 @@ class ChatItem extends StatelessWidget {
               height: 18,
               decoration: const BoxDecoration(color: AppColors.textPink, shape: BoxShape.circle),
               child: const Center(
-                  child: Text("!", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))
+                  child: Text("!", style: TextStyle(fontSize: 10, color: Colors.black, fontWeight: FontWeight.bold))
               ),
             ),
         ],

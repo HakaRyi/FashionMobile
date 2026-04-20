@@ -9,6 +9,7 @@ class WardrobeItemModel {
   final String? imageUrl;
   final bool isSaved;
   final bool isOwner;
+  final String? category;
 
   WardrobeItemModel({
     required this.itemId,
@@ -20,6 +21,7 @@ class WardrobeItemModel {
     this.imageUrl,
     this.isSaved = false,
     this.isOwner = false,
+    this.category,
   });
 
   factory WardrobeItemModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class WardrobeItemModel {
         imageUrl: json['thumbnailUrl'] ?? json['imageUrl'],
         isSaved: json['isSaved'] ?? false,
         isOwner: json['isOwner'] ?? false,
+        category: json['category'],
       );
     } catch (e) {
       print("❌ LỖI TẠI WardrobeItemModel: $e | Dữ liệu gây lỗi: $json");
@@ -45,6 +48,7 @@ class WardrobeItemModel {
       itemId: this.itemId,
       itemName: this.itemName,
       imageUrl: this.imageUrl,
+      category: this.category,
       isSaved: isSaved ?? this.isSaved,
       isOwner: this.isOwner,
     );

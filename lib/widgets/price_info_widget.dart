@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_colors.dart';
+
 class PriceInfoWidget extends StatelessWidget {
   final String label;
   final String value;
@@ -22,7 +24,7 @@ class PriceInfoWidget extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white54,
+            color: AppColors.textPrimary,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),

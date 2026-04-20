@@ -90,8 +90,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Tải hồ sơ thất bại: ${profileSnapshot.error}',
-                  style: const TextStyle(color: Colors.white70),
+                  'Failed to load profile: ${profileSnapshot.error}',
+                  style: const TextStyle(color: Colors.black),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -292,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     name,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -300,7 +300,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     email,
                                     style: const TextStyle(
-                                      color: Colors.white54,
+                                      color: Colors.black38,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -308,7 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     bio,
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: Colors.black,
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
@@ -328,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ).then((_) => _refreshData()),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.pink,
+                                            backgroundColor: Colors.pinkAccent,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
@@ -338,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Tạo Bài Đăng",
+                                            "Create Post",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -370,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Quản Lý Đơn",
+                                            "Order History",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.white,
@@ -396,7 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   .showSnackBar(
                                                 const SnackBar(
                                                   content: Text(
-                                                    "Không tìm thấy thông tin tài khoản.",
+                                                    "Account information not found.",
                                                   ),
                                                 ),
                                               );
@@ -414,8 +414,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           },
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.white,
+                                            backgroundColor: Colors.pinkAccent,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pinkAccent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -426,7 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Tủ Đồ",
+                                            "Wardrobe",
                                             style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
@@ -488,9 +489,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   ),
                                               style:
                                               OutlinedButton.styleFrom(
+                                                backgroundColor: Colors.pinkAccent,
                                                 foregroundColor: Colors.white,
                                                 side: const BorderSide(
-                                                  color: Colors.white24,
+                                                  color: Colors.pinkAccent,
                                                 ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
@@ -513,7 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   ),
                                                   SizedBox(width: 4),
                                                   Text(
-                                                    "Wapo",
+                                                    "Wapo Wallet",
                                                     style:
                                                     TextStyle(fontSize: 13),
                                                   ),
@@ -541,9 +543,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           style: OutlinedButton.styleFrom(
+                                            backgroundColor: Colors.pinkAccent,
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pinkAccent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -554,7 +557,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Chi Tiêu",
+                                            "Spending",
                                             style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
@@ -571,9 +574,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           style: OutlinedButton.styleFrom(
+                                            backgroundColor: Colors.pinkAccent,
                                             foregroundColor: Colors.white,
                                             side: const BorderSide(
-                                              color: Colors.white24,
+                                              color: Colors.pinkAccent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -584,7 +588,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            "Đã Lưu",
+                                            "Saved",
                                             style: TextStyle(fontSize: 13),
                                             textAlign: TextAlign.center,
                                           ),
@@ -611,7 +615,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Padding(
                                 padding: EdgeInsets.all(40),
                                 child: CircularProgressIndicator(
-                                  color: Colors.pink,
+                                  color: Colors.pinkAccent,
                                 ),
                               ),
                             ),
@@ -624,9 +628,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               padding: const EdgeInsets.all(24),
                               child: Center(
                                 child: Text(
-                                  'Tải bài viết thất bại: ${postSnapshot.error}',
+                                  'Failed to load posts: ${postSnapshot.error}',
                                   style:
-                                  const TextStyle(color: Colors.white54),
+                                  const TextStyle(color: Colors.black26),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -642,8 +646,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               padding: EdgeInsets.all(40),
                               child: Center(
                                 child: Text(
-                                  "Chưa có bài viết nào.",
-                                  style: TextStyle(color: Colors.white38),
+                                  "No posts yet.",
+                                  style: TextStyle(color: Colors.black26),
                                 ),
                               ),
                             ),
