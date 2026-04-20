@@ -129,6 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (match) removedCount++;
         return match;
       });
+      final rawSentAt = msg['sentAt'] ?? msg['SentAt'];
       print("DEBUG SIGNALR: Đã xóa $removedCount tin nhắn ảo khớp nội dung.");
       final normalizedMsg = {
         ...msg,
@@ -136,7 +137,9 @@ class _ChatScreenState extends State<ChatScreen> {
         'photos': incomingPhotos,
         'senderName': msg['senderName'] ?? msg['SenderName'] ?? "Unknown",
         'senderAvatar': avatar,
-        'sentAt': msg['sentAt'] ?? msg['SentAt'] ?? DateTime.now().toIso8601String(),
+        'sentAt': rawSentAt != null
+            ? DateTime.parse(rawSentAt.toString()).toLocal().toIso8601String()
+            : DateTime.now().toIso8601String(),
 
         'sharedPostId': msg['sharedPostId'] ?? msg['SharedPostId'],
         'sharedPostTitle': msg['sharedPostTitle'] ?? msg['SharedPostTitle'],
@@ -167,8 +170,16 @@ class _ChatScreenState extends State<ChatScreen> {
     if (mounted) {
       setState(() {
         _messages = history.map((m) {
+          final rawSentAt = m['sentAt'] ?? m['SentAt'];
+          String localSentAt = DateTime.now().toIso8601String();
+
+          if (rawSentAt != null) {
+            // Parse string từ server, sau đó gọi .toLocal() để về giờ VN
+            localSentAt = DateTime.parse(rawSentAt.toString()).toLocal().toIso8601String();
+          }
           return {
             ...m,
+            'sentAt': localSentAt,
             'senderAvatar': m['senderAvatar'] ?? widget.avatarUrl,
             'sharedPostId': m['sharedPostId'],
             'sharedPostTitle': m['sharedPostTitle'],
@@ -352,7 +363,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     m['senderId']?.toString() == myId.toString();
 
                 final DateTime sentTime = m['sentAt'] != null
-                    ? DateTime.parse(m['sentAt'].toString()).toLocal()
+                    ? DateTime.parse(m['sentAt'].toString())
                     : DateTime.now();
 
                 return GestureDetector(

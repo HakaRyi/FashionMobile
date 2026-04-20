@@ -87,7 +87,7 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Gợi ý đồ phối cùng với:", style: TextStyle(color: Colors.white70)),
+                  const Text("Style suggestions for:", style: TextStyle(color: Colors.black87)),
                   const SizedBox(height: 16),
                   Center(
                     child: SizedBox(
@@ -101,8 +101,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  const Text("Phạm vi tìm kiếm (có thể chọn nhiều):",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  const Text("Search range (Multiple selections allowed):",
+                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 16),
                   AIRangeSelector(
                     selectedRanges: _selectedRanges,
@@ -138,7 +138,7 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             onChanged: _onSearchChanged,
             style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
-              hintText: "Nhập tên người dùng...",
+              hintText: "Enter username...",
               hintStyle: const TextStyle(color: Colors.black54, fontSize: 13),
               border: InputBorder.none,
               icon: Icon(Icons.search, color: _isSearching ? AppColors.textPink : Colors.black54, size: 20),
@@ -206,7 +206,7 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                   controller: _promptController,
                   style: const TextStyle(color: Colors.black),
                   decoration: const InputDecoration(
-                    hintText: "Thêm yêu cầu (vd: đi tiệc, năng động...)",
+                    hintText: "Add details (e.g., party, active...)",
                     hintStyle: TextStyle(color: Colors.black45, fontSize: 13),
                     border: InputBorder.none,
                   ),
@@ -216,7 +216,6 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             const SizedBox(width: 12),
             GestureDetector(
               onTap: () {
-                // CHUYỂN DỮ LIỆU SANG MÀN HÌNH KẾT QUẢ
                 Navigator.push(context, MaterialPageRoute(
                     builder: (context) => AIResultScreen(
                       baseItem: widget.selectedItem,
