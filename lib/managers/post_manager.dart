@@ -249,6 +249,17 @@ class PostManager extends ChangeNotifier {
     );
   }
 
+  Future<void> refreshPostById(int postId) async {
+    try {
+      final updatedPost = await _postService.getPostDetail(postId);
+      _updatePostEverywhere(updatedPost);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Refresh post by id error: $e');
+      rethrow;
+    }
+  }
+
   Future<void> fetchMyPosts({
     int page = 1,
     int pageSize = 10,

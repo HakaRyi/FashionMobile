@@ -256,7 +256,7 @@ class _DepositScreenState extends State<DepositScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         title: const Text(
-          'Nạp tiền Wapo Pay',
+          'Top up your Wapo Pay account',
           style: TextStyle(color: Colors.black),
         ),
         centerTitle: true,
@@ -271,7 +271,7 @@ class _DepositScreenState extends State<DepositScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             const Text(
-              'Nhập số tiền cần nạp',
+              'Enter the amount',
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 14,
@@ -346,7 +346,7 @@ class _DepositScreenState extends State<DepositScreen> {
             ),
             const SizedBox(height: 40),
             const Text(
-              'Phương thức thanh toán',
+              'Payment methods',
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 14,
@@ -396,7 +396,7 @@ class _DepositScreenState extends State<DepositScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Thanh toán qua cổng VNPay',
+                          'Payment via VNPay gateway',
                           style: TextStyle(
                             color: Colors.pink,
                             fontSize: 12,
@@ -432,7 +432,7 @@ class _DepositScreenState extends State<DepositScreen> {
                 ),
               )
                   : Text(
-                'Thanh toán ${_currencyFormat.format(_selectedAmount)}đ',
+                'Pay ${_currencyFormat.format(_selectedAmount)}đ',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

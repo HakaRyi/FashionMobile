@@ -1,3 +1,4 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
@@ -54,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await _focusSharedPost(widget.focusPostId!);
     }
 
+    await Future.delayed(const Duration(milliseconds: 150));
+
     if (mounted) {
       setState(() {
         _isVisible = true;
@@ -78,7 +81,11 @@ class _HomeScreenState extends State<HomeScreen> {
       await WidgetsBinding.instance.endOfFrame;
 
       if (_scrollController.hasClients) {
-        _scrollController.jumpTo(0);
+        await _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
       }
 
       await Future.delayed(const Duration(seconds: 2));
@@ -122,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: AppColors.surface,
             edgeOffset: 100,
             child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 300),
               opacity: _isVisible ? 1.0 : 0.0,
               child: CustomScrollView(
                 controller: _scrollController,
@@ -155,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: const [
                           Text(
-                            'Bản tin mới nhất',
+                            'Latest news',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,

@@ -178,7 +178,7 @@ class _SearchScreenState extends State<SearchScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         title: const Text(
-          "Tìm kiếm",
+          "Search",
           style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
@@ -203,16 +203,16 @@ class _SearchScreenState extends State<SearchScreen> {
             else if (_searchQuery.isEmpty) ...[
               if (_history.isNotEmpty) ...[
                 _buildSectionTitleWithAction(
-                    "Lịch sử tìm kiếm",
-                    "Xóa",
+                    "Search history",
+                    "Delete",
                     _clearHistory
                 ),
                 _buildSearchHistory(),
               ],
-              _buildSectionTitle("Gợi ý cho bạn"),
+              _buildSectionTitle("Here are some suggestions for you."),
               _buildSuggestedProfiles(_suggestions),
             ] else ...[
-              _buildSectionTitle("Kết quả tìm kiếm"),
+              _buildSectionTitle("Search results"),
               if (_isLoadingSearch)
                 const Padding(
                   padding: EdgeInsets.only(top: 20),
@@ -247,7 +247,7 @@ class _SearchScreenState extends State<SearchScreen> {
           textInputAction: TextInputAction.search,
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: "Tìm kiếm người dùng ...",
+            hintText: "Searching for users ...",
             hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             prefixIcon: const Icon(Icons.search, color: Colors.pinkAccent),
             suffixIcon: _searchQuery.isNotEmpty
@@ -448,7 +448,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(Icons.search_off_rounded, size: 60, color: Colors.white24),
             const SizedBox(height: 16),
             const Text(
-              "Không tìm thấy người dùng",
+              "No user found",
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
@@ -457,7 +457,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Thử tìm kiếm với một từ khóa khác xem sao.",
+              "Try searching with a different keyword.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,

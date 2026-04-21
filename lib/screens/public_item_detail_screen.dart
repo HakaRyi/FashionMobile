@@ -44,6 +44,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -172,23 +173,37 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       final groupId = await _itemService.sendConsultRequest(widget.itemId);
 
       if (groupId != null && mounted) {
-        // Bắt đầu cooldown 5s
         setState(() => _cooldownSeconds = 5);
+
+        _cooldownTimer?.cancel();
         _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (_cooldownSeconds == 0) {
+          if (!mounted) {
+            timer.cancel();
+            return;
+          }
+
+          if (_cooldownSeconds <= 1) {
+            setState(() => _cooldownSeconds = 0);
             timer.cancel();
           } else {
-            if (mounted) setState(() => _cooldownSeconds--);
+            setState(() => _cooldownSeconds--);
           }
         });
 
-        _showCustomToast(
-          groupId,
-          _item!.ownerUserName ?? "Chủ sở hữu",
-          _item!.ownerAvatarUrl ?? "",
+        Navigator.push(
+          context,
+          SlideRoute(
+            page: ChatScreen(
+              groupId: groupId,
+              userName: _item!.ownerUserName ?? "Owner",
+              avatarUrl: _item!.ownerAvatarUrl ?? "",
+              isOnline: true,
+            ),
+          ),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Lỗi: ${e.toString()}")),
       );

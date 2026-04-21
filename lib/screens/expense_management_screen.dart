@@ -91,6 +91,17 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     return '${_moneyFormat.format(value)} VND';
   }
 
+  DateTime _toVietnamTime(DateTime dateTime) {
+    if (dateTime.isUtc) {
+      return dateTime.add(const Duration(hours: 7));
+    }
+    return dateTime;
+  }
+
+  String _formatVietnamTime(DateTime dateTime) {
+    return DateFormat('dd/MM/yyyy HH:mm').format(_toVietnamTime(dateTime));
+  }
+
   String formatAdaptiveMoney(double value, {bool compact = false}) {
     if (compact) return formatShortMoney(value);
     return formatMoney(value);
@@ -1593,9 +1604,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                                     ),
                                     _buildInfoPill(
                                       icon: Icons.schedule_rounded,
-                                      text: DateFormat(
-                                        'dd/MM/yyyy HH:mm',
-                                      ).format(item.createdAt),
+                                      text: _formatVietnamTime(item.createdAt),
                                     ),
                                     _buildInfoPill(
                                       icon: isCredit
@@ -1960,8 +1969,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         _detailRow('Status', _mapStatus(detail.status)),
                         _detailRow(
                           'Time',
-                          DateFormat('dd/MM/yyyy HH:mm')
-                              .format(detail.createdAt),
+                          _formatVietnamTime(detail.createdAt),
                         ),
                         _detailRow('Description', detail.description ?? '--'),
                       ],

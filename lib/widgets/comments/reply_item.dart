@@ -1,6 +1,7 @@
-// lib/widgets/comments/reply_item.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../constants/app_colors.dart';
 import '../../models/comment_reply_model.dart';
 
 class ReplyItem extends StatelessWidget {
@@ -11,9 +12,41 @@ class ReplyItem extends StatelessWidget {
     required this.reply,
   });
 
+  DateTime? _parseUtcToLocal(dynamic raw) {
+    if (raw == null) return null;
+
+    try {
+      String value = raw.toString().trim();
+      if (value.isEmpty) return null;
+
+      if (!value.endsWith('Z') && !value.contains('+')) {
+        value += 'Z';
+      }
+
+      return DateTime.parse(value).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatTime(dynamic rawCreatedAt) {
+    final localDate = _parseUtcToLocal(rawCreatedAt);
+    if (localDate == null) return '';
+
+    final now = DateTime.now();
+    final diff = now.difference(localDate);
+
+    if (diff.isNegative || diff.inSeconds < 30) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} m';
+    if (diff.inHours < 24) return '${diff.inHours} h';
+    if (diff.inDays < 7) return '${diff.inDays} d';
+
+    return DateFormat('dd/MM/yyyy • HH:mm').format(localDate);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final String timeText = _formatTime(reply.createdAt);
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -22,13 +55,17 @@ class ReplyItem extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: Colors.grey.shade300,
+            backgroundColor: AppColors.backgroundSecondary,
             backgroundImage:
             reply.avatarUrl != null && reply.avatarUrl!.isNotEmpty
                 ? NetworkImage(reply.avatarUrl!)
                 : null,
             child: (reply.avatarUrl == null || reply.avatarUrl!.isEmpty)
-                ? const Icon(Icons.person, size: 14)
+                ? const Icon(
+              Icons.person,
+              size: 14,
+              color: AppColors.textSecondary,
+            )
                 : null,
           ),
           const SizedBox(width: 8),
@@ -40,16 +77,18 @@ class ReplyItem extends StatelessWidget {
                   padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: theme.brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.04)
-                        : Colors.grey.shade100,
+                    color: AppColors.backgroundSecondary,
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.divider.withOpacity(0.8),
+                    ),
                   ),
                   child: RichText(
                     text: TextSpan(
                       style: DefaultTextStyle.of(context).style.copyWith(
                         fontSize: 14,
                         height: 1.35,
+                        color: AppColors.textPrimary,
                       ),
                       children: [
                         TextSpan(
@@ -61,20 +100,34 @@ class ReplyItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (reply.likeCount > 0) ...[
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Text(
-                      "${reply.likeCount} likes",
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                const SizedBox(height: 5),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 4,
+                    children: [
+                      if (timeText.isNotEmpty)
+                        Text(
+                          timeText,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      if (reply.likeCount > 0)
+                        Text(
+                          "${reply.likeCount} likes",
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
                   ),
-                ],
+                ),
               ],
             ),
           ),

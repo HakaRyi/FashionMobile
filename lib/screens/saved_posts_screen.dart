@@ -162,7 +162,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
     return RefreshIndicator(
       onRefresh: () => postManager.fetchSavedPosts(refresh: true),
       child: posts.isEmpty
-          ? _buildEmptyState(Icons.bookmark_outline, "Chưa lưu bài viết nào")
+          ? _buildEmptyState(Icons.bookmark_outline, "No posts saved yet.")
           : ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: posts.length,
@@ -178,7 +178,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
     return RefreshIndicator(
       onRefresh: _fetchSavedItems,
       child: _savedItems.isEmpty
-          ? _buildEmptyState(Icons.checkroom_outlined, "Chưa lưu món đồ nào")
+          ? _buildEmptyState(Icons.checkroom_outlined, "No items have been saved yet.")
           : GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
