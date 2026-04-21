@@ -1,5 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:event_bus/event_bus.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+import '../main.dart';
+import '../screens/try_on_screen.dart';
 class ChatMessageEvent {
   final dynamic message;
   ChatMessageEvent(this.message);
@@ -33,6 +39,12 @@ class ModelProcessedEvent {
     required this.modelId,
     required this.status,
   });
+}
+
+class TryOnCompletedEvent {
+  final Uint8List? imageBytes;
+
+  TryOnCompletedEvent({this.imageBytes});
 }
 
 class GlobalEventBus {
@@ -71,5 +83,54 @@ class GlobalEventBus {
 
   void dispose() {
     _profileUpdateController.close();
+  }
+
+  void _showGlobalTryOnNotification(TryOnCompletedEvent event) {
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+
+    final overlay = Overlay.of(context);
+
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 60,
+        left: 16,
+        right: 16,
+        child: GestureDetector(
+          onTap: () {
+            entry.remove();
+
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => TryOnScreen(),
+              ),
+            );
+          },
+          child: Material(
+            borderRadius: BorderRadius.circular(12),
+            elevation: 10,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                "Đã phối đồ xong! Nhấn để xem",
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(seconds: 4), () {
+      if (entry.mounted) entry.remove();
+    });
   }
 }

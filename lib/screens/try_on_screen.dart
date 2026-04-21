@@ -11,6 +11,7 @@ import '../constants/api_constants.dart';
 import 'dart:typed_data';
 import '../constants/notification_type.dart';
 import '../utils/app_notification.dart';
+import '../utils/global_event_bus.dart';
 import '../utils/model_manager.dart';
 import '../widgets/price_info_widget.dart';
 import '../utils/try_on_manager.dart';
@@ -250,6 +251,15 @@ class _TryOnScreenState extends State<TryOnScreen> {
       return;
     }
 
+    if (mounted) {
+      NotificationService.show(
+        context,
+        title: "Thành công",
+        message: "Hệ thống đang xử lý ngầm. Bạn có thể lướt xem các mục khác!",
+        type: NotificationType.success,
+      );
+    }
+
     await tryOnManager.startTryOn(
       context,
       modelAssetPath: _selectedModel.isAsset ? _selectedModel.assetPath : null,
@@ -258,6 +268,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
       category: _selectedCategoryId,
     );
     await _fetchWalletBalance();
+
+    // if (tryOnManager.resultImageBytes != null) {
+    //   GlobalEventBus().eventBus.fire(
+    //     TryOnCompletedEvent(
+    //       imageBytes: tryOnManager.resultImageBytes,
+    //     ),
+    //   );
+    // }
   }
 
   void _showFullWardrobeBottomSheet() {

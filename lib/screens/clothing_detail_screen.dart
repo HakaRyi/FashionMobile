@@ -142,15 +142,16 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
+      body: SafeArea(
+        maintainBottomViewPadding: true,
+        child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
-            _buildImageCard(),
+            RepaintBoundary(child: _buildImageCard()),
             const SizedBox(height: 30),
 
-            // Info Header
             Row(
               children: [
                 Container(width: 4, height: 20, decoration: BoxDecoration(color: Colors.pinkAccent, borderRadius: BorderRadius.circular(10))),
@@ -160,8 +161,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Attributes Grid/List
-            _buildInfoContainer(),
+            ..._buildInfoWidgets(),
 
             const SizedBox(height: 24),
             _buildTimelineSection(),
@@ -192,6 +192,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.contain,
+              gaplessPlayback: true,
             ),
           ),
           if (!_isEditing)
@@ -215,70 +216,64 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     );
   }
 
-  Widget _buildInfoContainer() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // NHÓM 1: THÔNG TIN CƠ BẢN
-        _buildGroupTitle("BASIC INFO"),
-        _buildTwoColumnRow([
-          _buildItemTile("Category", "category", Icons.category_outlined),
-          _buildItemTile("Sub Category", "subCategory", Icons.account_tree_outlined),
-        ]),
-        _buildTwoColumnRow([
-          _buildItemTile("Item Type", "itemType", Icons.merge_type_outlined),
-          _buildItemTile("Gender", "gender", Icons.wc),
-        ]),
-        _buildItemTile("Item Name", "itemName", Icons.shopping_bag_outlined),
+  List<Widget> _buildInfoWidgets() {
+    return [
+      _buildGroupTitle("BASIC INFO"),
+      _buildTwoColumnRow([
+        _buildItemTile("Category", "category", Icons.category_outlined),
+        _buildItemTile("Sub Category", "subCategory", Icons.account_tree_outlined),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile("Item Type", "itemType", Icons.merge_type_outlined),
+        _buildItemTile("Gender", "gender", Icons.wc),
+      ]),
+      _buildItemTile("Item Name", "itemName", Icons.shopping_bag_outlined),
 
-        const SizedBox(height: 20),
+      const SizedBox(height: 20),
 
-        // NHÓM 2: ĐẶC ĐIỂM THIẾT KẾ
-        _buildGroupTitle("DESIGN DETAILS"),
-        _buildTwoColumnRow([
-          _buildItemTile("Color", "mainColor", Icons.palette_outlined),
-          _buildItemTile("SubColor", "subColor", Icons.palette_outlined),
-          _buildItemTile("Size", "size", Icons.format_size),
-        ]),
-        _buildTwoColumnRow([
-          _buildItemTile("Style", "style", Icons.style_outlined),
-          _buildItemTile("Fit", "fit", Icons.accessibility_new_outlined),
-        ]),
-        _buildTwoColumnRow([
-          _buildItemTile("Material", "material", Icons.texture_outlined),
-          _buildItemTile("Pattern", "pattern", Icons.grid_view_rounded),
-        ]),
-        _buildTwoColumnRow([
-          _buildItemTile("Neckline", "neckline", Icons.line_weight),
-          _buildItemTile("Brand", "brand", Icons.branding_watermark_outlined),
-        ]),
-        _buildTwoColumnRow([
-          _buildItemTile("Length", "length", Icons.filter_tilt_shift_rounded),
-          _buildItemTile("Sleeve", "sleeveLength", Icons.type_specimen_outlined),
-        ]),
+      _buildGroupTitle("DESIGN DETAILS"),
+      _buildTwoColumnRow([
+        _buildItemTile("Color", "mainColor", Icons.palette_outlined),
+        _buildItemTile("SubColor", "subColor", Icons.palette_outlined),
+        _buildItemTile("Size", "size", Icons.format_size),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile("Style", "style", Icons.style_outlined),
+        _buildItemTile("Fit", "fit", Icons.accessibility_new_outlined),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile("Material", "material", Icons.texture_outlined),
+        _buildItemTile("Pattern", "pattern", Icons.grid_view_rounded),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile("Neckline", "neckline", Icons.line_weight),
+        _buildItemTile("Brand", "brand", Icons.branding_watermark_outlined),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile("Length", "length", Icons.filter_tilt_shift_rounded),
+        _buildItemTile("Sleeve", "sleeveLength", Icons.type_specimen_outlined),
+      ]),
 
-        const SizedBox(height: 20),
+      const SizedBox(height: 20),
 
-        // NHÓM 3: TRẠNG THÁI & MÔ TẢ
-        _buildGroupTitle("STATUS & SETTINGS"),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: Column(
-            children: [
-              _buildSwitchTile("Public Item", "isPublic", Icons.visibility_outlined),
-              const Divider(color: Colors.white, height: 1, indent: 50),
-              _buildStatusDropdownTile(),
-            ],
-          ),
+      _buildGroupTitle("STATUS & SETTINGS"),
+      Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
         ),
-        const SizedBox(height: 16),
-        _buildDescriptionField(),
-      ],
-    );
+        child: Column(
+          children: [
+            _buildSwitchTile("Public Item", "isPublic", Icons.visibility_outlined),
+            const Divider(color: Colors.white, height: 1, indent: 50),
+            _buildStatusDropdownTile(),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      _buildDescriptionField(),
+    ];
   }
   Widget _buildDescriptionField() {
     return Container(

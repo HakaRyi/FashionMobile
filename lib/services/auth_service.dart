@@ -139,4 +139,48 @@ class AuthService {
     } catch (e) {
     }
   }
+
+  Future<Map<String, dynamic>> register(String email, String password, String username, DateTime dob) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/auth/register'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email,
+          "password": password,
+          "username": username,
+          "dateOfBirth": dob.toIso8601String(),
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      }
+      return {'success': false, 'message': data['message'] ?? 'Đăng ký thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyAccount(String email, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/auth/verify'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email,
+          "code": code,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      }
+      return {'success': false, 'message': data['message'] ?? 'Xác thực thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ'};
+    }
+  }
 }
