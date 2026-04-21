@@ -97,7 +97,7 @@ class _CreatePostHeaderState extends State<CreatePostHeader> {
                             border: Border.all(color: AppColors.surface.withOpacity(0.1)),
                           ),
                           child: const Text(
-                            "Hôm nay bạn mặc gì?",
+                            "What are you wearing today?",
                             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                           ),
                         ),

@@ -14,9 +14,9 @@ class AIRangeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> ranges = [
-      {'id': 'My Wardrobe', 'label': 'Tủ đồ tôi', 'icon': Icons.inventory_2_outlined},
-      {'id': 'Others', 'label': 'Người khác', 'icon': Icons.people_outline},
-      {'id': 'Saved', 'label': 'Đã lưu', 'icon': Icons.bookmark_border},
+      {'id': 'My Wardrobe', 'label': 'My Wardrobe', 'icon': Icons.inventory_2_outlined},
+      {'id': 'Others', 'label': 'Others', 'icon': Icons.people_outline},
+      {'id': 'Saved', 'label': 'My Saved', 'icon': Icons.bookmark_border},
     ];
 
     return Row(

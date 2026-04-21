@@ -1,7 +1,8 @@
-// lib/widgets/comments/comment_item.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../constants/app_colors.dart';
 import '../../managers/comment_manager.dart';
 import '../../models/comment_model.dart';
 import 'reply_item.dart';
@@ -14,10 +15,41 @@ class CommentItem extends StatelessWidget {
     required this.comment,
   });
 
+  DateTime? _parseUtcToLocal(dynamic raw) {
+    if (raw == null) return null;
+
+    try {
+      String value = raw.toString().trim();
+      if (value.isEmpty) return null;
+
+      if (!value.endsWith('Z') && !value.contains('+')) {
+        value += 'Z';
+      }
+
+      return DateTime.parse(value).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatTime(dynamic rawCreatedAt) {
+    final localDate = _parseUtcToLocal(rawCreatedAt);
+    if (localDate == null) return '';
+
+    final now = DateTime.now();
+    final diff = now.difference(localDate);
+
+    if (diff.isNegative || diff.inSeconds < 30) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} m';
+    if (diff.inHours < 24) return '${diff.inHours} h';
+    if (diff.inDays < 7) return '${diff.inDays} d';
+
+    return DateFormat('dd/MM/yyyy • HH:mm').format(localDate);
+  }
+
   @override
   Widget build(BuildContext context) {
     final manager = context.watch<CommentManager>();
-    final theme = Theme.of(context);
 
     final bool repliesExpanded = manager.isRepliesExpanded(comment.commentId);
     final bool loadingReplies = manager.isLoadingReplies(comment.commentId);
@@ -31,8 +63,10 @@ class CommentItem extends StatelessWidget {
       expanded: repliesExpanded,
     );
 
+    final String timeText = _formatTime(comment.createdAt);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -41,13 +75,17 @@ class CommentItem extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 17,
-                backgroundColor: Colors.grey.shade300,
+                backgroundColor: AppColors.backgroundSecondary,
                 backgroundImage:
                 comment.avatarUrl != null && comment.avatarUrl!.isNotEmpty
                     ? NetworkImage(comment.avatarUrl!)
                     : null,
                 child: (comment.avatarUrl == null || comment.avatarUrl!.isEmpty)
-                    ? const Icon(Icons.person, size: 16)
+                    ? const Icon(
+                  Icons.person,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                )
                     : null,
               ),
               const SizedBox(width: 10),
@@ -62,10 +100,11 @@ class CommentItem extends StatelessWidget {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: theme.brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: 0.04)
-                            : Colors.grey.shade100,
+                        color: AppColors.backgroundSecondary,
                         borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: AppColors.divider.withOpacity(0.8),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,6 +114,7 @@ class CommentItem extends StatelessWidget {
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 13.5,
+                              color: AppColors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -83,6 +123,7 @@ class CommentItem extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 14.5,
                               height: 1.35,
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ],
@@ -96,6 +137,15 @@ class CommentItem extends StatelessWidget {
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
+                          if (timeText.isNotEmpty)
+                            Text(
+                              timeText,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           GestureDetector(
                             onTap: manager.isLikingComment(comment.commentId)
                                 ? null
@@ -107,7 +157,7 @@ class CommentItem extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                                 color: comment.isLiked
                                     ? Colors.redAccent
-                                    : Colors.grey.shade700,
+                                    : AppColors.textSecondary,
                               ),
                             ),
                           ),
@@ -117,10 +167,10 @@ class CommentItem extends StatelessWidget {
                                 : () => _showReplyInput(context, manager),
                             child: Text(
                               isSubmittingReply ? "Replying..." : "Reply",
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade700,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ),
@@ -129,10 +179,10 @@ class CommentItem extends StatelessWidget {
                               onTap: () => manager.toggleReplies(comment),
                               child: Text(
                                 replyLabel,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade700,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                             ),
@@ -171,9 +221,9 @@ class CommentItem extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           "${comment.likeCount}",
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.grey.shade700,
+                            color: AppColors.textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -184,7 +234,6 @@ class CommentItem extends StatelessWidget {
               ),
             ],
           ),
-
           if (loadingReplies && comment.replies.isEmpty)
             const Padding(
               padding: EdgeInsets.only(left: 44, top: 8),
@@ -194,7 +243,6 @@ class CommentItem extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
-
           if (repliesExpanded && comment.replies.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(left: 44, top: 2),
@@ -217,31 +265,31 @@ class CommentItem extends StatelessWidget {
                         child: loadingReplies
                             ? Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(
+                          children: const [
+                            SizedBox(
                               width: 14,
                               height: 14,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
                               "Loading more replies...",
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade700,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],
                         )
-                            : Text(
-                          "Load more replies",
+                            : const Text(
+                          "See more replies",
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade700,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -263,13 +311,13 @@ class CommentItem extends StatelessWidget {
     if (!hasReplies) return "Reply";
 
     if (expanded) {
-      if (replyCount <= 0) return "Hide replies";
+      if (replyCount <= 0) return "Hide reply";
       if (replyCount == 1) return "Hide reply";
-      return "Hide replies";
+      return "Hide reply";
     }
 
-    if (replyCount <= 0) return "View replies";
-    if (replyCount == 1) return "View 1 reply";
+    if (replyCount <= 0) return "View reply";
+    if (replyCount == 1) return "View reply";
     return "View $replyCount replies";
   }
 
@@ -279,7 +327,7 @@ class CommentItem extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -347,12 +395,10 @@ class _ReplyInputSheetState extends State<_ReplyInputSheet> {
                   constraints: const BoxConstraints(maxHeight: 120),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.grey.shade100,
+                    color: AppColors.backgroundSecondary,
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(
-                      color: Colors.grey.withValues(alpha: 0.15),
+                      color: AppColors.divider,
                     ),
                   ),
                   child: TextField(
@@ -366,7 +412,10 @@ class _ReplyInputSheetState extends State<_ReplyInputSheet> {
                     decoration: InputDecoration(
                       hintText: submitting
                           ? "Replying..."
-                          : "Reply to ${widget.comment.userName}...",
+                          : "Reply ${widget.comment.userName}...",
+                      hintStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
                       border: InputBorder.none,
                     ),
                   ),
@@ -379,7 +428,7 @@ class _ReplyInputSheetState extends State<_ReplyInputSheet> {
                 decoration: BoxDecoration(
                   color: submitting
                       ? Colors.grey.shade400
-                      : Theme.of(context).colorScheme.primary,
+                      : AppColors.textPink,
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
@@ -387,7 +436,10 @@ class _ReplyInputSheetState extends State<_ReplyInputSheet> {
                       ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                       : const Icon(Icons.send_rounded, color: Colors.white),
                   onPressed: submitting ? null : _submit,

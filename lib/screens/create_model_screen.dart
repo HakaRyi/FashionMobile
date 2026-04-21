@@ -48,10 +48,10 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Thêm Model Mới", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text("Thêm Model Mới", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
       ),
       body: ListenableBuilder(
         listenable: modelManager,
@@ -79,7 +79,7 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
                         children: [
                           Icon(Icons.add_photo_alternate_outlined, color: Colors.white54, size: 60),
                           SizedBox(height: 16),
-                          Text("Nhấn để chọn ảnh từ thư viện", style: TextStyle(color: Colors.white54)),
+                          Text("Nhấn để chọn ảnh từ thư viện", style: TextStyle(color: Colors.black54)),
                         ],
                       )
                           : null,

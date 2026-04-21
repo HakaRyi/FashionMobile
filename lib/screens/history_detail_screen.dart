@@ -26,7 +26,6 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Gọi API chi tiết mà anh em mình vừa thống nhất ở Back-end
     _detailsFuture = RecommendationService().getHistoryDetail(widget.historyId);
   }
 
@@ -37,7 +36,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("KẾT QUẢ GỢI Ý",
+        title: const Text("SUGGESTION DETAILS",
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.black)),
         centerTitle: true,
         leading: IconButton(
@@ -53,16 +52,23 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           }
 
           final items = snapshot.data ?? [];
-
+          if (items.isEmpty) {
+            return const Center(
+              child: Text(
+                "No suggested items found",
+                style: TextStyle(color: Colors.black54),
+              ),
+            );
+          }
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Header: Hiển thị lại món đồ gốc và prompt
+
               SliverToBoxAdapter(
                 child: _buildHeaderInfo(),
               ),
 
-              // Grid danh sách các món đồ gợi ý
+
               SliverPadding(
                 padding: const EdgeInsets.all(20),
                 sliver: SliverGrid(
@@ -76,16 +82,16 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
                         (context, index) {
                       final item = items[index];
                       return ClothingItem(
-                        title: item['itemName'] ?? "Không tên",
+                        title: item['itemName'] ?? "Unnamed Item",
                         imageUrl: item['primaryImageUrl'],
                         onTap: () {
-                          // Tái sử dụng ClothingDetailScreen nhưng tắt nút Edit
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ClothingDetailScreen(
                                 itemData: item,
-                                showEditButton: false, // Không cho sửa đồ trong lịch sử
+                                showEditButton: false,
                               ),
                             ),
                           );
@@ -111,7 +117,6 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-       // border: Border.all(color: AppColors.textPink.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -126,7 +131,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("PHỐI ĐỒ CÙNG", style: TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold)),
+                const Text("STYLING WITH", style: TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(widget.title, style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.bold)),
               ],

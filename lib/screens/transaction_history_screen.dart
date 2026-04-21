@@ -28,7 +28,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Biến động số dư'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Transaction History', style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
       body: FutureBuilder<List<TransactionModel>>(
@@ -52,8 +56,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           if (transactions.isEmpty) {
             return const Center(
               child: Text(
-                'Chưa có giao dịch nào',
-                style: TextStyle(color: Colors.white54),
+                'Not transaction yet.',
+                style: TextStyle(color: Colors.black54),
               ),
             );
           }
@@ -89,7 +93,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         Text(
                           item.description,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: Colors.black,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),

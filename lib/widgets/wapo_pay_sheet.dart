@@ -90,7 +90,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      "Số dư ví",
+                      "Wallet balance",
                       style: TextStyle(
                         color: AppColors.text,
                         fontSize: 16,
@@ -160,7 +160,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             child: const Text(
-              "Nạp Tiền",
+              "Top up",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,

@@ -1,7 +1,7 @@
-// lib/widgets/comments/comment_input.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../constants/app_colors.dart';
 import '../../managers/comment_manager.dart';
 
 class CommentInput extends StatefulWidget {
@@ -42,8 +42,6 @@ class _CommentInputState extends State<CommentInput> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Consumer<CommentManager>(
       builder: (_, manager, __) {
         final isSubmitting = manager.isSubmittingComment;
@@ -53,16 +51,16 @@ class _CommentInputState extends State<CommentInput> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
+              color: Colors.white,
               border: Border(
                 top: BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.12),
+                  color: AppColors.divider.withOpacity(0.9),
                 ),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
               ],
@@ -72,8 +70,12 @@ class _CommentInputState extends State<CommentInput> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: Colors.grey.shade300,
-                  child: const Icon(Icons.person, size: 18),
+                  backgroundColor: AppColors.backgroundSecondary,
+                  child: const Icon(
+                    Icons.person,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -84,12 +86,10 @@ class _CommentInputState extends State<CommentInput> {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: theme.brightness == Brightness.dark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.grey.shade100,
+                      color: AppColors.backgroundSecondary,
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
-                        color: Colors.grey.withValues(alpha: 0.14),
+                        color: AppColors.divider,
                       ),
                     ),
                     child: TextField(
@@ -100,10 +100,18 @@ class _CommentInputState extends State<CommentInput> {
                       enabled: !isSubmitting,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _submit(manager),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                      ),
                       decoration: InputDecoration(
                         hintText: isSubmitting
-                            ? "Posting..."
-                            : "Add a comment...",
+                            ? "Posting a comment..."
+                            : "Adding a comment...",
+                        hintStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
                         border: InputBorder.none,
                       ),
                     ),
@@ -117,7 +125,7 @@ class _CommentInputState extends State<CommentInput> {
                   decoration: BoxDecoration(
                     color: isSubmitting
                         ? Colors.grey.shade400
-                        : theme.colorScheme.primary,
+                        : AppColors.textPink,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -126,9 +134,16 @@ class _CommentInputState extends State<CommentInput> {
                         ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                        : const Icon(Icons.send_rounded, color: Colors.white),
+                        : const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ],

@@ -129,6 +129,17 @@ class _ChatScreenState extends State<ChatScreen> {
         if (match) removedCount++;
         return match;
       });
+      final rawSentAt = (msg['sentAt'] ?? msg['SentAt'])?.toString();
+      String formattedTime;
+      if (rawSentAt != null) {
+        String timeStr = rawSentAt;
+        if (!timeStr.endsWith('Z') && !timeStr.contains('+')) {
+          timeStr += 'Z';
+        }
+        formattedTime = DateTime.parse(timeStr).toLocal().toIso8601String();
+      } else {
+        formattedTime = DateTime.now().toIso8601String();
+      }
       print("DEBUG SIGNALR: Đã xóa $removedCount tin nhắn ảo khớp nội dung.");
       final normalizedMsg = {
         ...msg,
@@ -136,8 +147,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'photos': incomingPhotos,
         'senderName': msg['senderName'] ?? msg['SenderName'] ?? "Unknown",
         'senderAvatar': avatar,
-        'sentAt': msg['sentAt'] ?? msg['SentAt'] ?? DateTime.now().toIso8601String(),
-
+        'sentAt': formattedTime,
         'sharedPostId': msg['sharedPostId'] ?? msg['SharedPostId'],
         'sharedPostTitle': msg['sharedPostTitle'] ?? msg['SharedPostTitle'],
         'sharedPostContent': msg['sharedPostContent'] ?? msg['SharedPostContent'],
@@ -167,8 +177,19 @@ class _ChatScreenState extends State<ChatScreen> {
     if (mounted) {
       setState(() {
         _messages = history.map((m) {
+          final rawSentAt = m['sentAt'] ?? m['SentAt'];
+          String localSentAt = DateTime.now().toIso8601String();
+
+          if (rawSentAt != null) {
+            String timeStr = rawSentAt.toString();
+            if (!timeStr.endsWith('Z') && !timeStr.contains('+')) {
+              timeStr += 'Z';
+            }
+            localSentAt = DateTime.parse(timeStr).toLocal().toIso8601String();
+          }
           return {
             ...m,
+            'sentAt': localSentAt,
             'senderAvatar': m['senderAvatar'] ?? widget.avatarUrl,
             'sharedPostId': m['sharedPostId'],
             'sharedPostTitle': m['sharedPostTitle'],
@@ -352,8 +373,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     m['senderId']?.toString() == myId.toString();
 
                 final DateTime sentTime = m['sentAt'] != null
-                    ? DateTime.parse(m['sentAt'].toString()).toLocal()
+                    ? DateTime.parse(m['sentAt'].toString()) // Nếu đã sửa ở bước 1 thì parse ở đây là giờ chuẩn luôn
                     : DateTime.now();
+
 
                 return GestureDetector(
                   onLongPress: () => _showExtraMenu(m),

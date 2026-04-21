@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_colors.dart';
-import '../services/recommendation_service.dart'; // Giả sử service của ní tên này
+import '../services/recommendation_service.dart';
 import '../models/recommendation_history_model.dart';
-import 'history_detail_screen.dart'; // Model của ní
+import 'history_detail_screen.dart';
 
 class SuggestionScreen extends StatefulWidget {
   const SuggestionScreen({super.key});
@@ -70,8 +70,11 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
 
   Widget _buildHistoryCard(RecommendationHistoryModel history) { // Ép kiểu rõ ràng ở đây
     // Dùng dấu CHẤM (.) thay vì ngoặc vuông ([])
-    final DateTime date = history.createdAt;
-    final String prompt = history.prompt.isEmpty ? "Gợi ý tự động" : history.prompt;
+    final DateTime date = history.createdAt.isUtc
+        ? history.createdAt.toLocal()
+        : DateTime.parse('${history.createdAt.toIso8601String()}Z').toLocal();
+
+    final String prompt = history.prompt.isEmpty ? "Automatic Suggestion" : history.prompt;
     final String? refImage = history.referenceItemImage;
 
     return GestureDetector(
@@ -93,7 +96,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.black.withOpacity(0.05)),
         ),
         child: Row(
           children: [

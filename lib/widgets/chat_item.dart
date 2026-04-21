@@ -24,21 +24,24 @@ class ChatItem extends StatelessWidget {
   String _formatTime(String rawTime) {
     if (rawTime.isEmpty) return "";
     try {
-      DateTime dt = DateTime.parse(rawTime).toLocal();
+
+      String timeStr = rawTime;
+      if (!timeStr.endsWith('Z') && !timeStr.contains('+')) {
+        timeStr += 'Z';
+      }
+
+      DateTime dt = DateTime.parse(timeStr).toLocal();
       DateTime now = DateTime.now();
 
-      // Nếu là hôm nay: Chỉ hiện Giờ:Phút
       if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
         return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
       }
 
-      // Nếu là hôm qua: Hiện "Hôm qua"
       DateTime yesterday = now.subtract(const Duration(days: 1));
       if (dt.day == yesterday.day && dt.month == yesterday.month && dt.year == yesterday.year) {
-        return "Hôm qua";
+        return "Yesterday";
       }
 
-      // Còn lại hiện Ngày/Tháng
       return "${dt.day}/${dt.month}";
     } catch (e) {
       return "";

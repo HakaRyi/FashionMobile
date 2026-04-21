@@ -87,11 +87,17 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
   }
 
   String _formatDate(String? dateStr) {
-    if (dateStr == null) return "N/A";
+    if (dateStr == null || dateStr == "N/A") return "N/A";
     try {
-      final DateTime date = DateTime.parse(dateStr);
+      String timeStr = dateStr;
+      if (!timeStr.endsWith('Z') && !timeStr.contains('+')) {
+        timeStr += 'Z';
+      }
+      final DateTime date = DateTime.parse(timeStr).toLocal();
+
       return DateFormat('MMM dd, yyyy • HH:mm').format(date);
     } catch (e) {
+      debugPrint("Error parsing date: $e");
       return dateStr;
     }
   }

@@ -162,7 +162,7 @@ class _PostItemState extends State<PostItem> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Đã chia sẻ bài viết vào chat'),
+        content: Text('You have shared the post in the chat.'),
       ),
     );
   }
@@ -695,16 +695,16 @@ class _PostItemState extends State<PostItem> {
               ),
             ),
           ],
-          // if (shareCount > 0) ...[
-          //   const SizedBox(height: 4),
-          //   Text(
-          //     '$shareCount lượt chia sẻ',
-          //     style: const TextStyle(
-          //       color: AppColors.textSecondary,
-          //       fontSize: 13,
-          //     ),
-          //   ),
-          // ],
+          if (shareCount > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              '$shareCount shares',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -729,8 +729,8 @@ class _PostItemState extends State<PostItem> {
     );
   }
 
-  void _openComments() {
-    showModalBottomSheet(
+  Future<void> _openComments() async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -743,7 +743,7 @@ class _PostItemState extends State<PostItem> {
           builder: (_, controller) {
             return Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF121212),
+                color: Colors.white,
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(22),
                 ),
@@ -757,17 +757,23 @@ class _PostItemState extends State<PostItem> {
         );
       },
     );
+
+    try {
+      await postManager.refreshPostById(postId);
+      widget.onRefresh?.call();
+    } catch (e) {
+      debugPrint('Refresh post after comment sheet closed error: $e');
+    }
   }
 
   String _timeAgo(DateTime? date) {
     if (date == null) return '';
-
+    final utcDate = date.isUtc ? date : DateTime.parse('${date.toIso8601String()}Z');
     // Chuyển đổi sang giờ Local (nếu server trả về UTC)
-    final localDate = date.toLocal();
+    final localDate = utcDate.toLocal();
     final now = DateTime.now();
     final diff = now.difference(localDate);
 
-    // Trường hợp thời gian bị lệch nhẹ do đồng hồ hệ thống
     if (diff.isNegative || diff.inSeconds < 30) return 'Just now';
 
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';

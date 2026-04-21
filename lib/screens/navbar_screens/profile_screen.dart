@@ -359,8 +359,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           ),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.pinkAccent
-                                                .withOpacity(0.8),
+                                            backgroundColor: Colors.pinkAccent,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
