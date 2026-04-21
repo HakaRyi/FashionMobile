@@ -18,6 +18,7 @@ class AppColors {
   static const Color backgroundTertiary = Color(0xFFFD81A8);
   static final Color mainBackground = Colors.pink.withOpacity(0.3);
   static const Color surface = Color(0xFFE8E8E8);
+  static const Color surface2 = Color(0xFFF3F3F3);
   static const Color menu = Colors.white;
   static const Color textPrimary2 = Colors.white;
   static const Color textPink = Color(0xFFFC00A6);

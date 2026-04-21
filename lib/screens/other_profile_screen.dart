@@ -520,7 +520,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                           onPressed: () => _handleStartChat(name, avatar),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
-                                            Colors.pinkAccent.withOpacity(0.8),
+                                            Colors.pinkAccent,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                               BorderRadius.circular(12),
