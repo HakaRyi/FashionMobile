@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
 
-class CustomTextField extends StatelessWidget {
+import 'package:flutter/material.dart';
+
+class CustomTextField extends StatefulWidget {
   final String hintText;
   final IconData icon;
   final bool isPassword;
@@ -16,24 +16,51 @@ class CustomTextField extends StatelessWidget {
   });
 
   @override
+  State<CustomTextField> createState() => _CustomTextFieldState();
+}
+
+class _CustomTextFieldState extends State<CustomTextField> {
+  late bool _obscureText;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscureText = widget.isPassword;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.divider),
+        color: Colors.black.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withOpacity(0.08)),
       ),
       child: TextField(
-        controller: controller,
-        obscureText: isPassword,
-        style: const TextStyle(color: AppColors.textPrimary),
+        controller: widget.controller,
+        obscureText: _obscureText,
+        style: const TextStyle(color: Colors.black, fontSize: 15),
         decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          prefixIcon: Icon(icon, color: AppColors.textPink, size: 20),
+          hintText: widget.hintText,
+          hintStyle: const TextStyle(color: Colors.black45, fontSize: 14),
+          prefixIcon: Icon(widget.icon, color: Colors.black87, size: 20),
+          suffixIcon: widget.isPassword
+              ? IconButton(
+            icon: Icon(
+              _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: Colors.black54,
+              size: 20,
+            ),
+            onPressed: () {
+              setState(() {
+                _obscureText = !_obscureText;
+              });
+            },
+          )
+              : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         ),
       ),
     );
