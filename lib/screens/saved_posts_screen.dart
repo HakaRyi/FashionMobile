@@ -51,11 +51,11 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
   void _showUnsaveOptions(Map<String, dynamic> item) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       builder: (context) => Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: const BoxDecoration(
-          color: Color(0xFF1E1E1E),
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -67,15 +67,15 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
               decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
             ),
             Text(
-              item['itemName'] ?? "Món đồ này",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              item['itemName'] ?? "This item",
+              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             ListTile(
               leading: const Icon(Icons.bookmark_remove, color: Colors.redAccent),
-              title: const Text("Bỏ lưu món đồ", style: TextStyle(color: Colors.redAccent)),
+              title: const Text("Unsave the item", style: TextStyle(color: Colors.redAccent)),
               onTap: () async {
-                Navigator.pop(context); // Đóng bottom sheet
+                Navigator.pop(context);
                 _handleUnsave(item['itemId']);
               },
             ),
@@ -124,9 +124,9 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Color(0xFFF5F5F5),
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: Color(0xFFF5F5F5),
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
@@ -135,8 +135,8 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
           centerTitle: true,
           title: const Text('My saved', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
           bottom: const TabBar(
-            indicatorColor: Colors.pink,
-            labelColor: Colors.pink,
+            indicatorColor: Colors.black,
+            labelColor: Colors.black,
             unselectedLabelColor: Colors.black54,
             tabs: [
               Tab(text: "Posts"),

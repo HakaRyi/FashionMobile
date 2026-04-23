@@ -21,40 +21,40 @@ class ClothingItem extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.stroke, width: 2),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1), // Độ mờ của bóng (5%)
+              blurRadius: 10, // Độ nhòe của bóng
+              offset: const Offset(0, 4), // Hướng đổ bóng (xuống dưới 4px)
+              spreadRadius: 1, // Độ lan tỏa
+            ),
+          ],
+          // border: Border.all(
+          //   color: AppColors.stroke.withOpacity(0),
+          //   width: 1.5,
+          // ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                child: Container(
-                  width: double.infinity,
-                  color: Colors.white,
-                  child: (imageUrl != null && imageUrl!.startsWith('http'))
-                      ? Image.network(imageUrl!, fit: BoxFit.contain)
-                      : const Icon(Icons.checkroom, color: AppColors.textSecondary, size: 40),
-                ),
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(8), // Thêm chút padding để ảnh không chạm viền
+                child: (imageUrl != null && imageUrl!.startsWith('http'))
+                    ? Image.network(
+                  imageUrl!,
+                  fit: BoxFit.contain,
+                  // Khử răng cưa cho ảnh khi scale
+                  filterQuality: FilterQuality.medium,
+                )
+                    : const Icon(Icons.checkroom, color: AppColors.textSecondary, size: 30),
               ),
             ),
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
-            //   child: Text(
-            //     title,
-            //     style: const TextStyle(
-            //       color: AppColors.textPrimary,
-            //       fontSize: 13,
-            //       fontWeight: FontWeight.w600,
-            //       letterSpacing: 0.3,
-            //     ),
-            //     maxLines: 1,
-            //     overflow: TextOverflow.ellipsis,
-            //   ),
-            // ),
           ],
         ),
       ),
