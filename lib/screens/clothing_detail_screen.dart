@@ -9,7 +9,11 @@ class ClothingDetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
   final bool showEditButton;
 
-  const ClothingDetailScreen({super.key, required this.itemData,this.showEditButton = true,});
+  const ClothingDetailScreen({
+    super.key,
+    required this.itemData,
+    this.showEditButton = true,
+  });
 
   @override
   State<ClothingDetailScreen> createState() => _ClothingDetailScreenState();
@@ -23,27 +27,30 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _controllers = {
-      'itemName': TextEditingController(text: widget.itemData['itemName']),
-      'itemType': TextEditingController(text: widget.itemData['itemType']),
-      'category': TextEditingController(text: widget.itemData['category']),
-      'subCategory': TextEditingController(text: widget.itemData['subCategory']),
-      'gender': TextEditingController(text: widget.itemData['gender']),
-      'size': TextEditingController(text: widget.itemData['size']),
-      'mainColor': TextEditingController(text: widget.itemData['mainColor']),
-      'subColor': TextEditingController(text: widget.itemData['subColor']),
-      'material': TextEditingController(text: widget.itemData['material']),
-      'pattern': TextEditingController(text: widget.itemData['pattern']),
-      'style': TextEditingController(text: widget.itemData['style']),
-      'fit': TextEditingController(text: widget.itemData['fit']),
-      'neckline': TextEditingController(text: widget.itemData['neckline']),
-      'sleeveLength': TextEditingController(text: widget.itemData['sleeveLength']),
-      'length': TextEditingController(text: widget.itemData['length']),
-      'placement': TextEditingController(text: widget.itemData['placement']),
-      'brand': TextEditingController(text: widget.itemData['brand']),
-      'description': TextEditingController(text: widget.itemData['description']),
-      'texture': TextEditingController(text: widget.itemData['texture']),
+    _initControllers();
+  }
 
+  void _initControllers() {
+    _controllers = {
+      'itemName': TextEditingController(text: widget.itemData['itemName']?.toString() ?? ""),
+      'itemType': TextEditingController(text: widget.itemData['itemType']?.toString() ?? ""),
+      'category': TextEditingController(text: widget.itemData['category']?.toString() ?? ""),
+      'subCategory': TextEditingController(text: widget.itemData['subCategory']?.toString() ?? ""),
+      'gender': TextEditingController(text: widget.itemData['gender']?.toString() ?? ""),
+      'size': TextEditingController(text: widget.itemData['size']?.toString() ?? ""),
+      'mainColor': TextEditingController(text: widget.itemData['mainColor']?.toString() ?? ""),
+      'subColor': TextEditingController(text: widget.itemData['subColor']?.toString() ?? ""),
+      'material': TextEditingController(text: widget.itemData['material']?.toString() ?? ""),
+      'pattern': TextEditingController(text: widget.itemData['pattern']?.toString() ?? ""),
+      'style': TextEditingController(text: widget.itemData['style']?.toString() ?? ""),
+      'fit': TextEditingController(text: widget.itemData['fit']?.toString() ?? ""),
+      'neckline': TextEditingController(text: widget.itemData['neckline']?.toString() ?? ""),
+      'sleeveLength': TextEditingController(text: widget.itemData['sleeveLength']?.toString() ?? ""),
+      'length': TextEditingController(text: widget.itemData['length']?.toString() ?? ""),
+      'placement': TextEditingController(text: widget.itemData['placement']?.toString() ?? ""),
+      'brand': TextEditingController(text: widget.itemData['brand']?.toString() ?? ""),
+      'description': TextEditingController(text: widget.itemData['description']?.toString() ?? ""),
+      'texture': TextEditingController(text: widget.itemData['texture']?.toString() ?? ""),
       'isPublic': TextEditingController(text: widget.itemData['isPublic']?.toString() ?? "false"),
       'status': TextEditingController(text: widget.itemData['status']?.toString() ?? "1"),
     };
@@ -51,39 +58,72 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
 
   @override
   void dispose() {
-    _controllers.values.forEach((c) => c.dispose());
+    for (var c in _controllers.values) {
+      c.dispose();
+    }
     super.dispose();
+  }
+
+  // Chức năng Hủy: Khôi phục lại dữ liệu như ban đầu
+  void _handleCancel() {
+    setState(() {
+      _isEditing = false;
+      _controllers.forEach((key, controller) {
+        controller.text = widget.itemData[key]?.toString() ?? "";
+      });
+    });
   }
 
   Future<void> _handleSave() async {
     setState(() => _isSaving = true);
     final Map<String, dynamic> updateData = {};
+
     _controllers.forEach((key, controller) {
       updateData[key] = controller.text;
     });
 
     updateData["status"] = int.tryParse(_controllers['status']!.text) ?? 1;
     updateData["isPublic"] = _controllers['isPublic']!.text.toLowerCase() == "true";
-    print("DEBUG: Dữ liệu gửi đi -> $updateData");
+
     final success = await ItemService().updateItem(widget.itemData['itemId'], updateData);
 
     if (mounted) {
       setState(() => _isSaving = false);
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Updated successfully!"),backgroundColor: Colors.green),
-        );
+        _showModernSnackBar("Updated successfully!", Icons.check_circle, Colors.greenAccent);
         setState(() {
-          widget.itemData['isPublic'] = updateData["isPublic"];
-          widget.itemData['status'] = updateData["status"];
+          updateData.forEach((key, value) {
+            widget.itemData[key] = value;
+          });
           _isEditing = false;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Update failed!"), backgroundColor: Colors.redAccent),
-        );
+        _showModernSnackBar("Update failed!", Icons.error_outline, Colors.redAccent);
       }
     }
+  }
+
+  // Custom Snackbar đẹp mắt hơn
+  void _showModernSnackBar(String message, IconData icon, Color iconColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: 10),
+            Text(
+              message,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF2C2C2C), // Xám đen sang trọng
+        behavior: SnackBarBehavior.floating, // Làm snackbar nổi lên
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   String _formatDate(String? dateStr) {
@@ -94,10 +134,8 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         timeStr += 'Z';
       }
       final DateTime date = DateTime.parse(timeStr).toLocal();
-
       return DateFormat('MMM dd, yyyy • HH:mm').format(date);
     } catch (e) {
-      debugPrint("Error parsing date: $e");
       return dateStr;
     }
   }
@@ -107,37 +145,55 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.background,
         elevation: 0,
-        leading: IconButton(
+        // Chuyển nút Hủy sang vị trí Leading khi đang edit
+        leading: _isEditing
+            ? IconButton(
+          onPressed: _handleCancel,
+          icon: const Icon(Icons.close, color: AppColors.textPrimary, size: 24),
+          tooltip: "Cancel",
+        )
+            : IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
         ),
         centerTitle: true,
         title: Text(
           _isEditing ? "EDIT DETAILS" : "CLOTHING INFO",
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2, color: Colors.black),
+          style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+              color: AppColors.textPrimary
+          ),
         ),
         actions: [
           if (widget.showEditButton)
             _isSaving
                 ? const Center(
               child: Padding(
-                padding: EdgeInsets.only(right: 16),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pinkAccent)),
+                padding: EdgeInsets.only(right: 20),
+                child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)
+                ),
+              ),
+            )
+                : _isEditing
+                ? TextButton(
+              onPressed: _handleSave,
+              child: const Text(
+                "SAVE",
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0),
               ),
             )
                 : TextButton(
-              onPressed: () {
-                if (_isEditing) {
-                  _handleSave();
-                } else {
-                  setState(() => _isEditing = true);
-                }
-              },
-              child: Text(
-                _isEditing ? "SAVE" : "EDIT",
-                style: const TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold),
+              onPressed: () => setState(() => _isEditing = true),
+              child: const Text(
+                "EDIT",
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0),
               ),
             ),
         ],
@@ -150,16 +206,31 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
             RepaintBoundary(child: _buildImageCard()),
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
 
             Row(
               children: [
-                Container(width: 4, height: 20, decoration: BoxDecoration(color: Colors.pinkAccent, borderRadius: BorderRadius.circular(10))),
+                Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(4)
+                    )
+                ),
                 const SizedBox(width: 10),
-                const Text("Attributes", style: TextStyle(color: Colors.pinkAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                    "ATTRIBUTES",
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    )
+                ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
             ..._buildInfoWidgets(),
 
@@ -177,31 +248,42 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       width: double.infinity,
       height: 400,
       decoration: BoxDecoration(
-        color: AppColors.menu,
-        borderRadius: BorderRadius.circular(32),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.stroke),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8)
+          ),
         ],
       ),
       child: Stack(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(24),
             child: Image.network(
-              widget.itemData['primaryImageUrl'],
+              widget.itemData['primaryImageUrl'] ?? '',
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.contain,
               gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary, size: 40)
+              ),
             ),
           ),
           if (!_isEditing)
             Positioned(
-              bottom: 20,
-              right: 20,
+              bottom: 16,
+              right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.75),
+                    borderRadius: BorderRadius.circular(12)
+                ),
                 child: const Row(
                   children: [
                     Icon(Icons.auto_awesome, color: Colors.amber, size: 14),
@@ -229,7 +311,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       ]),
       _buildItemTile("Item Name", "itemName", Icons.shopping_bag_outlined),
 
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
 
       _buildGroupTitle("DESIGN DETAILS"),
       _buildTwoColumnRow([
@@ -254,19 +336,19 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         _buildItemTile("Sleeve", "sleeveLength", Icons.type_specimen_outlined),
       ]),
 
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
 
       _buildGroupTitle("STATUS & SETTINGS"),
       Container(
         decoration: BoxDecoration(
-          color: AppColors.surface.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _isEditing ? AppColors.textPrimary : AppColors.stroke),
         ),
         child: Column(
           children: [
             _buildSwitchTile("Public Item", "isPublic", Icons.visibility_outlined),
-            const Divider(color: Colors.white, height: 1, indent: 50),
+            const Divider(color: AppColors.divider, height: 1, indent: 50),
             _buildStatusDropdownTile(),
           ],
         ),
@@ -275,16 +357,17 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       _buildDescriptionField(),
     ];
   }
+
   Widget _buildDescriptionField() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        // NỀN CỦA CẢ KHỐI DESCRIPTION
-        color: _isEditing ? Colors.pinkAccent.withOpacity(0.02) : Colors.black.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(15),
+        color: _isEditing ? AppColors.background : AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: _isEditing ? Colors.pinkAccent.withOpacity(0.3) : Colors.black.withOpacity(0.1)
+          color: _isEditing ? AppColors.textPrimary : AppColors.stroke,
+          width: _isEditing ? 1.0 : 1.0,
         ),
       ),
       child: Column(
@@ -292,33 +375,37 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.notes_rounded, size: 18, color: _isEditing ? Colors.pinkAccent : Colors.black26),
+              Icon(Icons.notes_rounded, size: 18, color: _isEditing ? AppColors.textPrimary : AppColors.textSecondary),
               const SizedBox(width: 8),
               Text(
                   "Description",
-                  style: TextStyle(color: Colors.black.withOpacity(0.4), fontSize: 12, fontWeight: FontWeight.bold)
+                  style: TextStyle(
+                      color: _isEditing ? AppColors.textPrimary : AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700
+                  )
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           TextField(
             controller: _controllers['description'],
             enabled: _isEditing,
             maxLines: null,
-            style: const TextStyle(color: Colors.black, fontSize: 14, height: 1.5),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.5),
             decoration: const InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
                 hintText: "No description provided",
-                hintStyle: TextStyle(color: Colors.black26)
+                hintStyle: TextStyle(color: AppColors.textSecondary)
             ),
           ),
         ],
       ),
     );
   }
-  // Hàm bổ trợ chia 2 cột
+
   Widget _buildTwoColumnRow(List<Widget> children) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,28 +413,26 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     );
   }
 
-  // Tiêu đề nhóm cho chuyên nghiệp
   Widget _buildGroupTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12, top: 8),
+      padding: const EdgeInsets.only(left: 4, bottom: 12, top: 16),
       child: Text(
         title,
-        style: TextStyle(
-          color: Colors.pinkAccent.withOpacity(0.8),
+        style: const TextStyle(
+          color: AppColors.textPrimary,
           fontSize: 11,
           fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
+          letterSpacing: 0,
         ),
       ),
     );
   }
 
-  // Sửa lại _buildItemTile để tối ưu không gian khi chia cột
-  Widget _buildItemTile(String label, String key, IconData icon, {bool isLast = false}) {
+  Widget _buildItemTile(String label, String key, IconData icon) {
     if (!_controllers.containsKey(key)) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.all(4.0), // Giảm padding để khít hơn khi chia 2 cột
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
       child: FashionAutocompleteField(
         label: label,
         icon: icon,
@@ -358,73 +443,88 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     );
   }
 
-  // Giữ nguyên logic _buildSwitchTile của bạn nhưng tui căn chỉnh lại UI xíu cho đẹp
   Widget _buildSwitchTile(String label, String key, IconData icon) {
     bool val = _controllers[key]!.text.toLowerCase() == "true";
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      leading: Icon(icon, size: 20, color: Colors.pinkAccent.withOpacity(0.7)),
-      title: Text(label, style: TextStyle(color: Colors.black.withOpacity(0.5), fontSize: 13)),
+      leading: Icon(icon, size: 20, color: AppColors.textPrimary),
+      title: const Text("Public Item", style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
       trailing: _isEditing
           ? SizedBox(
         height: 30,
         child: Switch(
           value: val,
-          activeColor: Colors.pinkAccent,
+          activeColor: AppColors.background,
+          activeTrackColor: AppColors.primary,
+          inactiveThumbColor: AppColors.textSecondary,
+          inactiveTrackColor: AppColors.stroke,
           onChanged: (bool newValue) {
             setState(() => _controllers[key]!.text = newValue.toString());
           },
         ),
       )
-          : Text(val ? "YES" : "NO", style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold)),
+          : Text(
+          val ? "YES" : "NO",
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w800)
+      ),
     );
   }
 
-  // Giữ nguyên logic _buildStatusDropdownTile của bạn
   Widget _buildStatusDropdownTile() {
     final statusMap = { "0": "Draft", "1": "Active", "2": "Inactive", "3": "Archived", "4": "Deleted" };
     String currentStatus = _controllers['status']!.text;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      leading: Icon(Icons.check_box_outlined, size: 20, color: Colors.pinkAccent.withOpacity(0.7)),
-      title:  Text("Status", style: TextStyle(color: Colors.black.withOpacity(0.5), fontSize: 13)),
+      leading: const Icon(Icons.check_box_outlined, size: 20, color: AppColors.textPrimary),
+      title: const Text("Status", style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
       trailing: _isEditing
           ? DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: statusMap.containsKey(currentStatus) ? currentStatus : "1",
-          dropdownColor: AppColors.surface,
-          style: const TextStyle(color: Colors.black, fontSize: 14),
+          dropdownColor: AppColors.background,
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+          icon: const Icon(Icons.arrow_drop_down, color: AppColors.textPrimary),
           items: statusMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
           onChanged: (val) => setState(() => _controllers['status']!.text = val!),
         ),
       )
-          : Text(statusMap[currentStatus] ?? "Active", style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold)),
+          : Text(
+          statusMap[currentStatus] ?? "Active",
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w800)
+      ),
     );
   }
+
   Widget _buildTimelineSection() {
+    final String owner = widget.itemData['ownerUsername']?.toString() ?? "Unknown";
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface, // Nền xám nhạt
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
+          _buildTimeRow("Owned by", owner, isOwner: true),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: AppColors.divider, height: 1),
+          ),
           _buildTimeRow("Registered on", _formatDate(widget.itemData['createdAt'])),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildTimeRow("Last update", _formatDate(widget.itemData['updateAt'])),
         ],
       ),
     );
   }
 
-  Widget _buildTimeRow(String label, String value) {
+  Widget _buildTimeRow(String label, String value,{bool isOwner = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.black.withOpacity(0.3), fontSize: 12)),
-        Text(value, style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(value, style: TextStyle(color: isOwner ? AppColors.primary : AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
       ],
     );
   }

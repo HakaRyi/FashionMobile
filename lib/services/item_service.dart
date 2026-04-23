@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
@@ -25,32 +26,67 @@ class ItemService {
 
     return headers;
   }
-  // Lấy danh sách đồ của tôi
-  Future<List<dynamic>> getMyItems() async {
+  Future<Map<String, dynamic>> getMyItemsPaginated(int page, int pageSize,{String searchQuery = ''}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
-    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}");
+    final uri = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}")
+        .replace(queryParameters: {
+      'page': page.toString(),
+      'pageSize': pageSize.toString(),
+      if (searchQuery.isNotEmpty) 'search': searchQuery,
+    });
 
     try {
       final response = await http.get(
-        url,
+        uri,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': '69420',
         },
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
-        return decodedData['data'] ?? [];
+
+        if (decodedData['data'] != null) {
+          return decodedData['data'] as Map<String, dynamic>;
+        }
       }
-      return [];
+      // Trả về map rỗng nếu không có dữ liệu
+      return {'items': [], 'totalPages': 1};
     } catch (e) {
-      print("Lỗi getMyItems: $e");
-      return [];
+      debugPrint("Lỗi getMyItemsPaginated: $e");
+      return {'items': [], 'totalPages': 1};
     }
   }
+  // Lấy danh sách đồ của tôi
+  // Future<List<dynamic>> getMyItems() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('token');
+  //
+  //   final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}");
+  //
+  //   try {
+  //     final response = await http.get(
+  //       url,
+  //       headers: {
+  //         'Authorization': 'Bearer $token',
+  //         'Content-Type': 'application/json',
+  //       },
+  //     );
+  //
+  //     if (response.statusCode == 200) {
+  //       final Map<String, dynamic> decodedData = jsonDecode(response.body);
+  //       return decodedData['data'] ?? [];
+  //     }
+  //     return [];
+  //   } catch (e) {
+  //     print("Lỗi getMyItems: $e");
+  //     return [];
+  //   }
+  // }
 
   Future<Map<String, dynamic>?> getItemById(int id) async {
     final prefs = await SharedPreferences.getInstance();

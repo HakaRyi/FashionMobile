@@ -6,6 +6,7 @@ class ClothingItem extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+
   const ClothingItem({
     super.key,
     required this.title,
@@ -18,37 +19,42 @@ class ClothingItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      onLongPress: onLongPress, // Gắn vào đây
+      onLongPress: onLongPress,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.backgroundSecondary,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppColors.stroke),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.stroke, width: 2),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
                 child: Container(
                   width: double.infinity,
-                  color: Colors.white10,
+                  color: Colors.white,
                   child: (imageUrl != null && imageUrl!.startsWith('http'))
-                      ? Image.network(imageUrl!, fit: BoxFit.cover)
-                      : const Icon(Icons.checkroom, color: Colors.grey, size: 50),
+                      ? Image.network(imageUrl!, fit: BoxFit.contain)
+                      : const Icon(Icons.checkroom, color: AppColors.textSecondary, size: 40),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                title,
-                style: const TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+            //   child: Text(
+            //     title,
+            //     style: const TextStyle(
+            //       color: AppColors.textPrimary,
+            //       fontSize: 13,
+            //       fontWeight: FontWeight.w600,
+            //       letterSpacing: 0.3,
+            //     ),
+            //     maxLines: 1,
+            //     overflow: TextOverflow.ellipsis,
+            //   ),
+            // ),
           ],
         ),
       ),

@@ -1,6 +1,5 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
-
 import '../constants/app_colors.dart';
 import '../managers/post_manager.dart';
 import '../utils/notification_manager.dart';
@@ -126,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return RefreshIndicator(
             onRefresh: _handleRefresh,
             color: AppColors.textPink,
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.background,
             edgeOffset: 100,
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
@@ -157,23 +156,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: const [
                           Text(
-                            'Latest news',
+                            'Wapo Feed',
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
-                              letterSpacing: 0.5,
+                              letterSpacing: 0.2,
                             ),
                           ),
                           Icon(
                             Icons.tune_rounded,
-                            size: 20,
-                            color: AppColors.textSecondary,
+                            size: 22,
+                            color: AppColors.textPrimary,
                           ),
                         ],
                       ),
@@ -191,14 +190,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
                             Icon(
-                              Icons.feed_outlined,
-                              size: 50,
-                              color: Colors.white24,
+                              Icons.style_outlined,
+                              size: 60,
+                              color: AppColors.borderPrimary,
                             ),
                             SizedBox(height: 16),
                             Text(
-                              'Chưa có bài viết nào.',
-                              style: TextStyle(color: Colors.white38),
+                              'Chưa có outfit nào được chia sẻ.',
+                              style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 15),
                             ),
                           ],
                         ),
@@ -214,24 +215,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           return Column(
                             children: [
-                              const SizedBox(height: 4),
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
                                 decoration: BoxDecoration(
                                   color: isHighlighted
-                                      ? AppColors.textPink.withOpacity(0.08)
+                                      ? AppColors.textPink.withOpacity(0.05)
                                       : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: isHighlighted
-                                      ? Border.all(
-                                    color: AppColors.textPink,
-                                    width: 1.4,
-                                  )
-                                      : null,
                                 ),
                                 child: PostItem(
                                   key: ValueKey(post.postId),
@@ -240,11 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               if (index < postManager.posts.length - 1)
                                 const Divider(
-                                  color: Color(0xFFF6F6F6),
-                                  height: 1,
-                                  thickness: 8,
-                                  indent: 0,
-                                  endIndent: 0,
+                                  color: AppColors.divider,
+                                  height: 12,
+                                  thickness: 6, // Vạch phân cách tinh tế hơn
                                 ),
                             ],
                           );
@@ -255,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (postManager.isLoadingMore)
                     const SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(
                           child: CircularProgressIndicator(
                             color: AppColors.textPink,
@@ -281,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
     postManager.statusMessage.toLowerCase().contains('cập nhật');
 
     final progressColor = isFinishedUpload
-        ? Colors.orangeAccent
+        ? Colors.green
         : (isUpdating ? Colors.blueAccent : AppColors.textPink);
 
     return Container(
@@ -289,8 +276,8 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderPrimary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 postManager.statusMessage,
                 style: TextStyle(
-                  color: isFinishedUpload ? Colors.orangeAccent : Colors.white,
+                  color: isFinishedUpload ? Colors.green : AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -315,8 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               else
                 const Icon(
-                  Icons.hourglass_bottom,
-                  color: Colors.orangeAccent,
+                  Icons.check_circle,
+                  color: Colors.green,
                   size: 20,
                 ),
             ],
@@ -326,23 +313,11 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: postManager.uploadProgress,
-              backgroundColor: Colors.white10,
+              backgroundColor: AppColors.borderPrimary,
               color: progressColor,
-              minHeight: 8,
+              minHeight: 6,
             ),
           ),
-          if (isFinishedUpload)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Hệ thống đang xử lý...',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
         ],
       ),
     );

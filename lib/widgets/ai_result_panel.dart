@@ -59,7 +59,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(color: Colors.pinkAccent),
+          child: CircularProgressIndicator(color: Colors.black),
         ),
       );
     }
@@ -198,7 +198,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.pinkAccent),
+        border: Border.all(color: Colors.black),
       ),
       child: TextFormField(
         controller: _controllers['description'],
@@ -209,7 +209,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
         decoration: InputDecoration(
           hintText: "Thêm mô tả chi tiết...",
           hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
-          prefixIcon: const Icon(Icons.notes, color: Colors.pinkAccent, size: 20),
+          prefixIcon: const Icon(Icons.notes, color: Colors.black, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
         ),
@@ -225,13 +225,13 @@ class _AIResultPanelState extends State<AIResultPanel> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isTrue ? Colors.pinkAccent.withOpacity(0.3) : Colors.black12),
+        border: Border.all(color: isTrue ? Colors.black.withOpacity(0.3) : Colors.black12),
       ),
       child: Row(
         children: [
           Icon(
             isTrue ? Icons.public : Icons.public_off,
-            color: isTrue ? Colors.pinkAccent : Colors.black,
+            color: isTrue ? Colors.black : Colors.black54,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -249,7 +249,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
           ),
           Switch(
             value: isTrue,
-            activeColor: Colors.pinkAccent,
+            activeColor: Colors.blueAccent,
             onChanged: (val) {
               widget.onAttributeSelected('isPublic', val.toString());
             },
@@ -266,13 +266,13 @@ class _AIResultPanelState extends State<AIResultPanel> {
         Icon(
             isAI ? Icons.auto_awesome : Icons.edit_note,
             size: 13,
-            color: isAI ? Colors.pinkAccent : Colors.black45
+            color: isAI ? Colors.black : Colors.black45
         ),
         const SizedBox(width: 6),
         Text(
           key.toUpperCase(),
           style: TextStyle(
-              color: isAI ? Colors.pinkAccent : Colors.black45,
+              color: isAI ? Colors.black : Colors.black45,
               fontSize: 9,
               fontWeight: FontWeight.bold
           ),

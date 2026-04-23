@@ -59,7 +59,12 @@ class _EventListScreenState extends State<EventListScreen> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lỗi cập nhật dữ liệu")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Lỗi cập nhật dữ liệu", style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.black,
+          )
+      );
     }
   }
 
@@ -68,28 +73,32 @@ class _EventListScreenState extends State<EventListScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F8F8),
+        backgroundColor: const Color(0xFFF5F5F5), // Nền xám cực nhạt để nổi bật thẻ trắng
         appBar: AppBar(
           elevation: 0,
-          title: const Text("FASHION EVENTS",
-              style: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 2)),
-          centerTitle: true,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [Colors.white, Color(0xFFF8F8F8)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter),
-            ),
+          backgroundColor: const Color(0xFFF5F5F5),
+          titleSpacing: 20, // Canh lề trái cho chuẩn
+          title: const Text(
+              "Fashion Events",
+              style: TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 26,
+                  letterSpacing: -0.5
+              )
           ),
-          bottom: TabBar(
-            indicatorColor: Colors.pinkAccent,
+          centerTitle: false, // Tiêu đề nằm bên trái giống Wardrobe
+          bottom: const TabBar(
+            indicatorColor: Colors.black, // Đổi từ hồng sang đen
             indicatorSize: TabBarIndicatorSize.label,
-            indicatorWeight: 4,
-            labelColor: Colors.pinkAccent,
-            unselectedLabelColor: Colors.black26,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-            tabs: const [Tab(text: "EXPLORE"), Tab(text: "MY EVENTS")],
+            indicatorWeight: 3, // Giảm độ dày một xíu cho tinh tế
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.black45,
+            labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1.0),
+            tabs: [
+              Tab(text: "EXPLORE"),
+              Tab(text: "MY EVENTS")
+            ],
           ),
         ),
         body: _buildBody(),
@@ -98,14 +107,24 @@ class _EventListScreenState extends State<EventListScreen> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator(color: Colors.pinkAccent));
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: Colors.black));
+
     if (_error != null && _allEvents == null) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.error_outline, color: Colors.white24, size: 60),
-        const SizedBox(height: 16),
-        Text(_error!, style: const TextStyle(color: Colors.black54)),
-        TextButton(onPressed: _fetchInitialData, child: const Text("RETRY", style: TextStyle(color: Colors.pinkAccent)))
-      ]));
+      return Center(
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.black26, size: 60),
+                const SizedBox(height: 16),
+                Text(_error!, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextButton(
+                    onPressed: _fetchInitialData,
+                    child: const Text("RETRY", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
+                )
+              ]
+          )
+      );
     }
 
     final allEventsList = _allEvents ?? [];
@@ -115,16 +134,40 @@ class _EventListScreenState extends State<EventListScreen> {
     return TabBarView(
       physics: const BouncingScrollPhysics(),
       children: [
-        RefreshIndicator(color: Colors.pinkAccent, onRefresh: _handleRefresh, child: _buildEventList(discoveryEventsList)),
-        RefreshIndicator(color: Colors.pinkAccent, onRefresh: _handleRefresh, child: _buildEventList(joinedEventsList)),
+        RefreshIndicator(
+            color: Colors.black,
+            backgroundColor: Colors.white,
+            onRefresh: _handleRefresh,
+            child: _buildEventList(discoveryEventsList)
+        ),
+        RefreshIndicator(
+            color: Colors.black,
+            backgroundColor: Colors.white,
+            onRefresh: _handleRefresh,
+            child: _buildEventList(joinedEventsList)
+        ),
       ],
     );
   }
 
   Widget _buildEventList(List<EventModel> events) {
-    if (events.isEmpty) return ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 200), Center(child: Text("Hiện không có sự kiện nào", style: TextStyle(color: Colors.white24)))]);
+    if (events.isEmpty) {
+      return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 200),
+            Center(
+                child: Text(
+                    "Hiện không có sự kiện nào",
+                    style: TextStyle(color: Colors.black38, fontSize: 15, fontWeight: FontWeight.w500)
+                )
+            )
+          ]
+      );
+    }
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.only(top: 24, bottom: 40),
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: events.length,
       itemBuilder: (context, index) => EventCard(event: events[index]),
@@ -150,29 +193,29 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = event.themeColors;
-
     final String startTimeStr = DateFormat('HH:mm - dd/MM').format(event.startTime.toLocal());
     final String endTimeStr = DateFormat('HH:mm - dd/MM/yyyy').format(event.endTime.toLocal());
     final String timeRange = "$startTimeStr - $endTimeStr";
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+      margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24), // Bo góc mượt mà
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1), // Viền xám tinh tế
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))
+          // Bóng đổ cực nhẹ, không làm nặng mắt
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => _handleNavigation(context),
-            splashColor: Colors.pinkAccent.withOpacity(0.1),
-            highlightColor: Colors.pinkAccent.withOpacity(0.05),
+            splashColor: Colors.black.withOpacity(0.05),
+            highlightColor: Colors.black.withOpacity(0.02),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -185,53 +228,76 @@ class EventCard extends StatelessWidget {
                       Row(
                         children: [
                           CircleAvatar(
-                            radius: 16,
-                            backgroundColor: Colors.black.withOpacity(0.05),
+                            radius: 14,
+                            backgroundColor: const Color(0xFFF0F0F0),
                             backgroundImage: event.creatorAvatarUrl != null ? NetworkImage(event.creatorAvatarUrl!) : null,
-                            child: event.creatorAvatarUrl == null ? const Icon(Icons.person, color: Colors.white24, size: 16) : null,
+                            child: event.creatorAvatarUrl == null ? const Icon(Icons.person, color: Colors.black26, size: 16) : null,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(event.creatorName, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: Text(
+                                event.creatorName,
+                                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700, fontSize: 13)
+                            ),
                           ),
-                          _buildStatusBadge(event.status, colors.last,event.isJoined),
+                          _buildStatusBadge(event.status, event.isJoined),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Text(event.title,
-                          style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900, height: 1.2, letterSpacing: -0.5)),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 14),
+                      Text(
+                          event.title,
+                          style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              height: 1.3,
+                              letterSpacing: -0.3
+                          )
+                      ),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, color: Colors.pinkAccent, size: 12),
+                          const Icon(Icons.calendar_today_rounded, color: Colors.black54, size: 14), // Đổi màu icon
                           const SizedBox(width: 6),
-                          Expanded(child: Text(timeRange, style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w500))),
+                          Expanded(
+                              child: Text(
+                                  timeRange,
+                                  style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w600)
+                              )
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                // 2. PHẦN HÌNH ẢNH (Đã rộng ra và bo góc dưới mượt hơn)
+                // 2. PHẦN HÌNH ẢNH
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Stack(
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(16),
                         child: AspectRatio(
-                          aspectRatio: 1.5, // Giảm tỉ lệ để ảnh cao hơn, rộng hơn
-                          child: Image.network(event.imageUrl, fit: BoxFit.cover),
+                          aspectRatio: 1.6, // Tỉ lệ đẹp cho hình ảnh banner
+                          child: Image.network(
+                            event.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: const Color(0xFFF5F5F5),
+                              child: const Icon(Icons.image_not_supported_outlined, color: Colors.black26, size: 40),
+                            ),
+                          ),
                         ),
                       ),
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                              colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
                             ),
                           ),
                         ),
@@ -262,27 +328,27 @@ class EventCard extends StatelessWidget {
 
   Widget _buildOverlayStat(IconData icon, String value, String label) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            color: Colors.black.withOpacity(0.45),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withOpacity(0.15)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.pinkAccent, size: 14),
-              const SizedBox(width: 6),
+              Icon(icon, color: Colors.white, size: 16), // Chuyển từ hồng sang trắng
+              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
-                  Text(label, style: const TextStyle(color: Colors.white70, fontSize: 8, fontWeight: FontWeight.bold)),
+                  Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                  Text(label, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 9, fontWeight: FontWeight.w600)),
                 ],
               ),
             ],
@@ -292,40 +358,46 @@ class EventCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(String status, Color color, bool isJoined) {
+  Widget _buildStatusBadge(String status, bool isJoined) {
     String displayStatus;
-    Color displayColor;
+    Color textColor;
+    Color bgColor;
+    Color borderColor;
 
-    // 1. Nếu sự kiện đã kết thúc, ưu tiên hiện COMPLETED bất kể user có tham gia hay không
+    // Logic phối màu Monochrome chuẩn
     if (status.toUpperCase() == "COMPLETED") {
       displayStatus = "COMPLETED";
-      displayColor = Colors.orangeAccent; // Hoặc màu vàng/cam để phân biệt với Active
+      textColor = Colors.black45; // Xám nhạt cho sự kiện đã qua
+      bgColor = const Color(0xFFF5F5F5);
+      borderColor = const Color(0xFFEEEEEE);
     }
-    // 2. Nếu sự kiện đang chạy mà user đã tham gia thì hiện JOINED
     else if (isJoined) {
       displayStatus = "JOINED";
-      displayColor = Colors.lightGreen;
+      textColor = Colors.white; // Chữ trắng nền đen nổi bật việc đã tham gia
+      bgColor = Colors.black;
+      borderColor = Colors.black;
     }
-    // 3. Các trường hợp còn lại hiện status mặc định (ACTIVE, INVITING...)
     else {
       displayStatus = status.toUpperCase();
-      displayColor = color;
+      textColor = Colors.black; // Chữ đen viền đen cho sự kiện mới
+      bgColor = Colors.transparent;
+      borderColor = Colors.black26;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: displayColor.withOpacity(0.15),
+        color: bgColor,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: displayColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: borderColor, width: 1),
       ),
       child: Text(
         displayStatus,
         style: TextStyle(
-            color: displayColor,
+            color: textColor,
             fontWeight: FontWeight.w900,
             fontSize: 9,
-            letterSpacing: 0.5
+            letterSpacing: 0.8
         ),
       ),
     );

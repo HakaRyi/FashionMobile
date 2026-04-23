@@ -1,4 +1,3 @@
-// lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../services/account_service.dart';
@@ -13,86 +12,82 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5), // Nền xám nhạt đồng bộ toàn app
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "Cài đặt và Hoạt động",
+          "SETTINGS",
           style: TextStyle(
             color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.0, // Giãn chữ phong cách Fashion Magazine
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         children: [
-          _buildSectionTitle("Cách bạn sử dụng Fashion AI"),
-          _buildSettingItem(Icons.person_outline, "Chỉnh sửa hồ sơ", () async {
-            final profile = await AccountService().getMyProfile();
-            if (profile != null && context.mounted) {
-              final updated = await Navigator.push(
+          _buildSectionTitle("ACCOUNT"),
+          _buildSettingsGroup([
+            _buildSettingItem(Icons.person_outline, "Edit Profile", () async {
+              final profile = await AccountService().getMyProfile();
+              if (profile != null && context.mounted) {
+                final updated = await Navigator.push(
                   context,
-                  SlideRoute(
-                    page: EditProfileScreen(currentProfile: profile),
-                  ),
-              );
-              if (updated == true && context.mounted) {
-                Navigator.pop(context, true);
+                  SlideRoute(page: EditProfileScreen(currentProfile: profile)),
+                );
+                if (updated == true && context.mounted) {
+                  Navigator.pop(context, true);
+                }
               }
-            }
-          }),
-          _buildSettingItem(Icons.notifications_none, "Thông báo", () {}),
-          _buildSettingItem(Icons.lock_outline, "Quyền riêng tư", () {}),
+            }),
+            _buildSettingItem(Icons.notifications_none, "Notifications", () {}),
+            _buildSettingItem(Icons.lock_outline, "Privacy & Safety", () {}),
+          ]),
 
-          const SizedBox(height: 20),
+          _buildSectionTitle("YOUR ACTIVITY"),
+          _buildSettingsGroup([
+            _buildSettingItem(Icons.history, "Try-on History", () {}),
+            _buildSettingItem(Icons.favorite_border, "Saved Outfits", () {}),
+            _buildSettingItem(Icons.analytics_outlined, "Style Analytics", () {}),
+            _buildSettingItem(Icons.account_balance_wallet_outlined, "Expense Management", () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpenseManagementScreen()));
+            }),
+          ]),
 
-          _buildSectionTitle("Hoạt động của bạn"),
-          _buildSettingItem(Icons.history, "Nhật ký thử đồ", () {}),
-          _buildSettingItem(Icons.favorite_border, "Trang phục đã lưu", () {}),
-          _buildSettingItem(Icons.analytics_outlined, "Thống kê phong cách", () {}),
-          _buildSettingItem(
-            Icons.account_balance_wallet_outlined,
-            "Quản lý chi tiêu",
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ExpenseManagementScreen(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 20),
-
-          _buildSectionTitle("Thông tin thêm"),
-          _buildSettingItem(Icons.help_outline, "Trợ giúp", () {}),
-          _buildSettingItem(Icons.info_outline, "Về chúng tôi", () {}),
+          _buildSectionTitle("SUPPORT"),
+          _buildSettingsGroup([
+            _buildSettingItem(Icons.help_outline, "Help Center", () {}),
+            _buildSettingItem(Icons.info_outline, "About Wapo", () {}),
+          ]),
 
           const SizedBox(height: 40),
 
+          // Nút Đăng xuất thiết kế lại cho tinh tế
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: TextButton(
               onPressed: () => _showLogoutDialog(context),
               style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
                 foregroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Colors.redAccent, width: 1),
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.black.withOpacity(0.05)),
                 ),
               ),
               child: const Text(
-                "Đăng xuất",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                "LOG OUT",
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
               ),
             ),
           ),
@@ -104,15 +99,35 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      padding: const EdgeInsets.fromLTRB(8, 24, 20, 12),
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
-          color: Colors.grey,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1,
+          color: Colors.black45,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.5,
         ),
+      ),
+    );
+  }
+
+  // Group các item vào một Card trắng
+  Widget _buildSettingsGroup(List<Widget> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: items,
       ),
     );
   }
@@ -123,14 +138,18 @@ class SettingsScreen extends StatelessWidget {
       leading: Icon(icon, color: Colors.black, size: 22),
       title: Text(
         title,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
+        style: const TextStyle(
+            color: Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w600
+        ),
       ),
       trailing: const Icon(
         Icons.arrow_forward_ios,
-        color: Colors.black38,
+        color: Colors.black12,
         size: 14,
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     );
   }
 
@@ -138,20 +157,20 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.menu,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
-          "Đăng xuất?",
-          style: TextStyle(color: Colors.black),
+          "Log Out?",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900),
         ),
         content: const Text(
-          "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?",
-          style: TextStyle(color: Colors.black87),
+          "Are you sure you want to log out of your Wapo account?",
+          style: TextStyle(color: Colors.black54, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
+            child: const Text("CANCEL", style: TextStyle(color: Colors.black26, fontWeight: FontWeight.w900, fontSize: 12)),
           ),
           TextButton(
             onPressed: () {
@@ -163,10 +182,11 @@ class SettingsScreen extends StatelessWidget {
               );
             },
             child: const Text(
-              "Đăng xuất",
+              "LOG OUT",
               style: TextStyle(
                 color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
               ),
             ),
           ),

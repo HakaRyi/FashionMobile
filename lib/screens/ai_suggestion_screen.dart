@@ -256,8 +256,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
             ),
             const SizedBox(width: 12),
             GestureDetector(
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(
+              onTap: () async {
+                await Navigator.push(context, MaterialPageRoute(
                     builder: (context) => AIResultScreen(
                       baseItem: widget.selectedItem,
                       prompt: _promptController.text,
@@ -266,6 +266,10 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                       targetWardrobeIds: _selectedOthers.map((e) => e['id'] as int).toList(),
                     )
                 ));
+                if (mounted) {
+                  debugPrint("Đã quay lại trang Suggestion, đang load lại số dư...");
+                  _fetchBalance();
+                }
               },
               child: const CircleAvatar(
                 radius: 25,

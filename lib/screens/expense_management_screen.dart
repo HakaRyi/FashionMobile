@@ -1997,13 +1997,13 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    _buildDetailGroup(
-                      title: 'Reference source',
-                      children: [
-                        _detailRow('Source', detail.sourceName ?? '--'),
-                        _detailRow('Source code', detail.sourceCode ?? '--'),
-                      ],
-                    ),
+                    // _buildDetailGroup(
+                    //   title: 'Reference source',
+                    //   children: [
+                    //     _detailRow('Source', detail.sourceName ?? '--'),
+                    //     _detailRow('Source code', detail.sourceCode ?? '--'),
+                    //   ],
+                    // ),
                   ],
                 ),
               );

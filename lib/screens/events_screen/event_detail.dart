@@ -34,14 +34,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     super.initState();
     _scrollController = ScrollController();
     _tabController = TabController(length: 2, vsync: this);
+    // Vẫn giữ controller nhưng sẽ làm hiệu ứng nhẹ nhàng hơn
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
     _loadAllData();
   }
+
   Future<void> _handleRefreshPosts() async {
-    // Chỉ tải lại danh sách bài post
     final updatedPosts = await EventService().getEventPosts(widget.eventId);
     if (mounted) {
       setState(() {
@@ -49,6 +50,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       });
     }
   }
+
   Future<void> _loadAllData() async {
     final results = await Future.wait([
       EventService().getEventById(widget.eventId),
@@ -81,21 +83,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF8F8F8),
-        body: Center(child: CircularProgressIndicator(color: Colors.pinkAccent)),
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator(color: Colors.black)),
       );
     }
 
     if (_event == null) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF8F8F8),
-        body: Center(child: Text("Data loading failed", style: TextStyle(color: Color(0xFF1A1A1A)))),
+        backgroundColor: Colors.white,
+        body: Center(child: Text("Data loading failed", style: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w500))),
       );
     }
-    final bool isPastDeadline = _event!.submissionDeadline != null &&
-        DateTime.now().isAfter(_event!.submissionDeadline!);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: const Color(0xFFF5F5F5), // Nền xám cực nhẹ
       body: Stack(
         children: [
           NestedScrollView(
@@ -108,11 +109,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                   delegate: _SliverAppBarDelegate(
                     TabBar(
                       controller: _tabController,
-                      indicatorColor: Colors.pinkAccent,
-                      indicatorWeight: 3,
-                      labelColor: Colors.pinkAccent,
-                      unselectedLabelColor: Colors.black38,
-                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      indicatorColor: Colors.black, // Đổi sang đen
+                      indicatorWeight: 2.5,
+                      labelColor: Colors.black,
+                      unselectedLabelColor: Colors.black45,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1.0),
                       tabs: const [
                         Tab(text: "DETAILS"),
                         Tab(text: "SUBMISSIONS"),
@@ -138,26 +139,41 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 350,
+      expandedHeight: 380, // Tăng chiều cao banner lên một chút cho đẹp
       pinned: true,
       backgroundColor: Colors.white,
       leading: IconButton(
-        icon: const CircleAvatar(
-            backgroundColor: Colors.black26,
-            child: Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white)),
+        icon: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
+            ),
+          ),
+        ),
         onPressed: () => Navigator.maybePop(context),
       ),
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(_event!.imageUrl, fit: BoxFit.cover),
+            Image.network(
+              _event!.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFFE0E0E0)),
+            ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.1), Colors.black.withOpacity(0.6)],
+                  colors: [Colors.black.withOpacity(0.2), Colors.black.withOpacity(0.8)],
                 ),
               ),
             ),
@@ -173,9 +189,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2,
+                    height: 1.2,
                     shadows: [
-                      Shadow(color: Colors.pinkAccent, blurRadius: 25),
-                      Shadow(color: Colors.black, offset: Offset(2, 2)),
+                      Shadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, 4)),
                     ],
                   ),
                 ),
@@ -187,7 +203,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  // --- TAB 1: THÔNG TIN SỰ KIỆN ---
   Widget _buildInfoTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -195,26 +210,25 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildMainStats(),
-          const SizedBox(height: 32),
-          _buildSectionTitle("Event Description"),
+          const SizedBox(height: 36),
+          _buildSectionTitle("EVENT DESCRIPTION"),
           Text(
             _event!.description,
-            style: const TextStyle(color: Colors.black87, height: 1.6, fontSize: 15),
+            style: const TextStyle(color: Colors.black87, height: 1.6, fontSize: 14, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 32),
-          _buildSectionTitle("Scoring Criteria"),
+          const SizedBox(height: 36),
+          _buildSectionTitle("SCORING CRITERIA"),
           _buildWeightSection(),
 
-          const SizedBox(height: 32),
-          _buildSectionTitle("Event Timeline"),
+          const SizedBox(height: 36),
+          _buildSectionTitle("EVENT TIMELINE"),
           _buildTimelineSection(),
-          const SizedBox(height: 32),
-          _buildSectionTitle("Prize Structure"),
+          const SizedBox(height: 36),
+          _buildSectionTitle("PRIZE STRUCTURE"),
           _buildFlexiblePrizeUI(_event!.prizes),
 
-
-          const SizedBox(height: 32),
-          _buildSectionTitle("Expert Judges"),
+          const SizedBox(height: 36),
+          _buildSectionTitle("EXPERT JUDGES"),
           _buildExpertGrid(_event!.experts),
           const SizedBox(height: 120),
         ],
@@ -222,14 +236,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  // --- TAB 2: DANH SÁCH BÀI ĐĂNG ---
   Widget _buildPostsTab() {
     if (_isLoadingPosts) {
-      return const Center(child: CircularProgressIndicator(color: Colors.pinkAccent));
+      return const Center(child: CircularProgressIndicator(color: Colors.black));
     }
 
     return RefreshIndicator(
-      color: Colors.pinkAccent,
+      color: Colors.black,
       backgroundColor: Colors.white,
       onRefresh: _handleRefreshPosts,
       child: _eventPosts.isEmpty
@@ -241,10 +254,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.camera_alt_outlined, size: 64, color: Colors.black.withOpacity(0.05)),
+              Icon(Icons.camera_alt_outlined, size: 64, color: Colors.black.withOpacity(0.1)),
               const SizedBox(height: 16),
-              const Text("No submissions yet", style: TextStyle(color: Colors.black26)),
-              const Text("Pull down to refresh!", style: TextStyle(color: Colors.black12, fontSize: 12)),
+              const Text("No submissions yet", style: TextStyle(color: Colors.black45, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              const Text("Pull down to refresh!", style: TextStyle(color: Colors.black26, fontSize: 12)),
             ],
           ),
         ),
@@ -255,7 +269,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         itemCount: _eventPosts.length,
         itemBuilder: (context, index) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 0, top: 0),
+            padding: const EdgeInsets.only(bottom: 8),
             child: PostItem(post: _eventPosts[index]),
           );
         },
@@ -264,30 +278,39 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 
   Widget _buildMainStats() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildStatItem(Icons.people_alt_outlined, "${_event!.participantCount}", "Joined"),
-        _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "Prize Pool"),
-        _buildStatItem(Icons.verified_user_outlined, "Free", "Entry Fee"),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildStatItem(Icons.people_alt_outlined, "${_event!.participantCount}", "JOINED"),
+          Container(width: 1, height: 30, color: const Color(0xFFE0E0E0)),
+          _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "PRIZE POOL"),
+          Container(width: 1, height: 30, color: const Color(0xFFE0E0E0)),
+          _buildStatItem(Icons.verified_user_outlined, "Free", "ENTRY FEE"),
+        ],
+      ),
     );
   }
 
   Widget _buildWeightSection() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
       ),
       child: Row(
         children: [
-          _buildWeightItem("Expert Judges", _event!.expertWeight, Colors.amber),
-          Container(width: 1, height: 40, color: Colors.black.withOpacity(0.05)),
-          _buildWeightItem("Community", _event!.userWeight, Colors.blueAccent),
+          _buildWeightItem("EXPERT JUDGES", _event!.expertWeight, Colors.black),
+          Container(width: 1, height: 40, color: const Color(0xFFE0E0E0)),
+          _buildWeightItem("COMMUNITY", _event!.userWeight, Colors.black54),
         ],
       ),
     );
@@ -299,10 +322,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         children: [
           Text(
             "${(weight * 100).toInt()}%",
-            style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(color: color, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1),
           ),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.black45, fontSize: 12)),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(color: Colors.black45, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
         ],
       ),
     );
@@ -310,20 +333,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
   Widget _buildTimelineSection() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
       ),
       child: Column(
         children: [
-          _buildTimelineRow("Event Starts", _event!.startTime, Colors.green),
+          _buildTimelineRow("EVENT STARTS", _event!.startTime, Colors.black87),
           _buildTimelineDivider(),
-          _buildTimelineRow("Submission Deadline", _event!.submissionDeadline ?? _event!.endTime, Colors.orange),
+          _buildTimelineRow("SUBMISSION DEADLINE", _event!.submissionDeadline ?? _event!.endTime, Colors.black54),
           _buildTimelineDivider(),
-          _buildTimelineRow("Event Ends", _event!.endTime, Colors.pinkAccent),
+          _buildTimelineRow("EVENT ENDS", _event!.endTime, Colors.black26),
         ],
       ),
     );
@@ -333,22 +355,22 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     return Row(
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
-            color: color,
+            color: Colors.white,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 8)],
+            border: Border.all(color: color, width: 3),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 20),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: Colors.black45, fontSize: 13)),
+              Text(label, style: const TextStyle(color: Colors.black45, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
               const SizedBox(height: 4),
-              Text(_formatDateTime(time), style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold, fontSize: 15)),
+              Text(_formatDateTime(time), style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w700, fontSize: 14)),
             ],
           ),
         ),
@@ -358,20 +380,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
   Widget _buildTimelineDivider() {
     return Container(
-      margin: const EdgeInsets.only(left: 5, top: 4, bottom: 4),
-      height: 20,
+      margin: const EdgeInsets.only(left: 4, top: 4, bottom: 4),
+      height: 24,
       width: 2,
-      color: Colors.black.withOpacity(0.05),
+      color: const Color(0xFFEEEEEE),
     );
   }
 
   Widget _buildStatItem(IconData icon, String value, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.pinkAccent, size: 22),
-        const SizedBox(height: 6),
-        Text(value, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: Colors.black26, fontSize: 10)),
+        Icon(icon, color: Colors.black87, size: 20),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w900, fontSize: 16)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Colors.black45, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
       ],
     );
   }
@@ -384,39 +407,41 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   Widget _buildPrizeCard(PrizeModel p) {
     IconData prizeIcon;
     Color prizeColor;
+
+    // Giữ tông màu kim loại nhưng làm mờ đi cho sang (Muted tones)
     switch (p.ranked) {
       case 1:
         prizeIcon = Icons.emoji_events;
-        prizeColor = const Color(0xFFFFB300);
+        prizeColor = const Color(0xFFD4AF37); // Muted Gold
         break;
       case 2:
         prizeIcon = Icons.military_tech;
-        prizeColor = const Color(0xFF9E9E9E);
+        prizeColor = const Color(0xFF9E9E9E); // Silver
         break;
       case 3:
         prizeIcon = Icons.stars;
-        prizeColor = const Color(0xFF8D6E63);
+        prizeColor = const Color(0xFF8D6E63); // Bronze
         break;
       default:
         prizeIcon = Icons.card_giftcard;
-        prizeColor = Colors.pinkAccent.withOpacity(0.6);
+        prizeColor = Colors.black87;
     }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-        border: Border.all(color: prizeColor.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: prizeColor.withOpacity(0.05), shape: BoxShape.circle),
-            child: Icon(prizeIcon, color: prizeColor, size: 32),
+            decoration: BoxDecoration(color: const Color(0xFFF5F5F5), shape: BoxShape.circle),
+            child: Icon(prizeIcon, color: prizeColor, size: 28),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -424,10 +449,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("RANK ${p.ranked}",
-                    style: TextStyle(color: prizeColor, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 13)),
-                const SizedBox(height: 6),
+                    style: TextStyle(color: prizeColor, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 12)),
+                const SizedBox(height: 4),
                 Text("${NumberFormat.decimalPattern().format(p.rewardAmount)} VNĐ",
-                    style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
               ],
             ),
           ),
@@ -444,30 +469,37 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        childAspectRatio: 0.8,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
       ),
       itemCount: experts.length,
       itemBuilder: (context, index) {
         final exp = experts[index];
         return Column(
           children: [
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: Colors.black.withOpacity(0.05),
-              backgroundImage: exp.avatarUrl != null ? NetworkImage(exp.avatarUrl!) : null,
-              child: exp.avatarUrl == null ? const Icon(Icons.person, color: Colors.black12) : null,
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+              ),
+              child: CircleAvatar(
+                radius: 36,
+                backgroundColor: const Color(0xFFF5F5F5),
+                backgroundImage: exp.avatarUrl != null ? NetworkImage(exp.avatarUrl!) : null,
+                child: exp.avatarUrl == null ? const Icon(Icons.person, color: Colors.black26) : null,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               exp.fullName,
-              style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 12, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const Text("Expert", style: TextStyle(color: Colors.black26, fontSize: 10)),
+            const SizedBox(height: 2),
+            const Text("EXPERT", style: TextStyle(color: Colors.black45, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
           ],
         );
       },
@@ -478,18 +510,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     final bool joined = _event?.isJoined ?? false;
     final bool isPastDeadline = _event!.submissionDeadline != null &&
         DateTime.now().isAfter(_event!.submissionDeadline!);
+
     return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
+      bottom: 0, left: 0, right: 0,
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.85),
-              border: Border(top: BorderSide(color: Colors.black.withOpacity(0.05))),
+              color: Colors.white.withOpacity(0.9),
+              border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
             ),
             child: Row(
               children: [
@@ -498,20 +529,22 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text("Status", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                      const Text("STATUS", style: TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      const SizedBox(height: 4),
                       Text(
-                        isPastDeadline ? "Expired" : "Active",
+                        isPastDeadline ? "EXPIRED" : "ACTIVE",
                         style: TextStyle(
-                          color: isPastDeadline ? Colors.redAccent : Colors.lightGreen,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                            color: isPastDeadline ? Colors.black45 : Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5
                         ),
                       ),
                     ],
                   ),
                 ),
                 SizedBox(
-                  height: 54,
+                  height: 52,
                   width: 180,
                   child: (joined || isPastDeadline) ? _buildDisabledState(isPastDeadline) : _buildActiveState(),
                 ),
@@ -526,17 +559,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   Widget _buildDisabledState(bool isPastDeadline) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.black.withOpacity(0.05),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF5F5F5),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
-      child:  Center(
+      child: Center(
         child: Text(
           isPastDeadline ? "EXPIRED" : "JOINED",
           style: const TextStyle(
-            color: Colors.black26,
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
+            color: Colors.black45,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+            letterSpacing: 1.0,
           ),
         ),
       ),
@@ -549,22 +583,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       builder: (context, child) {
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFF4081), Color(0xFFFF80AB)],
-            ),
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.black, // Đen tuyền chuẩn Minimalist
             boxShadow: [
               BoxShadow(
-                color: Colors.pinkAccent.withOpacity(0.3 * _pulseController.value),
+                color: Colors.black.withOpacity(0.15 * _pulseController.value), // Hiệu ứng pulse đen mờ
                 blurRadius: 15,
-                spreadRadius: 1,
+                spreadRadius: 2,
               ),
             ],
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               onTap: () {
                 Navigator.push(
                   context,
@@ -581,8 +613,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                   "JOIN NOW",
                   style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    letterSpacing: 1.0,
                   ),
                 ),
               ),
@@ -599,19 +632,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       child: Row(
         children: [
           Container(
-            width: 4,
-            height: 20,
+            width: 3,
+            height: 16,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF4081), Color(0xFFFF80AB)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.black, // Vạch đen dọc làm điểm nhấn
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 10),
-          Text(title, style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(title, style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
         ],
       ),
     );
@@ -631,7 +660,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: const Color(0xFFF8F8F8),
+      color: Colors.white,
       child: _tabBar,
     );
   }
@@ -640,7 +669,6 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }
 
-// ParticleOverlay và Particle class giữ nguyên phần cuối...
 class ParticleOverlay extends StatefulWidget {
   const ParticleOverlay({super.key});
   @override
@@ -654,7 +682,7 @@ class _ParticleOverlayState extends State<ParticleOverlay> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 15))..repeat(); // Chạy chậm lại
   }
 
   @override
@@ -670,8 +698,8 @@ class _ParticleOverlayState extends State<ParticleOverlay> with SingleTickerProv
       builder: (context, child) {
         return Stack(
           children: _particles.map((p) {
-            double y = (p.initialY - _controller.value * p.speed * 500) % 400;
-            double opacity = (math.sin(_controller.value * 2 * math.pi * p.blinkSpeed) + 1) / 2 * 0.8;
+            double y = (p.initialY - _controller.value * p.speed * 300) % 400; // Bay chậm hơn
+            double opacity = (math.sin(_controller.value * 2 * math.pi * p.blinkSpeed) + 1) / 2 * 0.4; // Làm mờ đi
             return Positioned(
               top: y,
               left: p.initialX,
@@ -694,7 +722,7 @@ class _ParticleOverlayState extends State<ParticleOverlay> with SingleTickerProv
 class Particle {
   final double initialX = math.Random().nextDouble() * 400;
   final double initialY = math.Random().nextDouble() * 400;
-  final double size = math.Random().nextDouble() * 3 + 1;
-  final double speed = math.Random().nextDouble() * 0.5 + 0.2;
-  final double blinkSpeed = math.Random().nextDouble() * 2 + 1;
+  final double size = math.Random().nextDouble() * 2 + 1; // Hạt nhỏ lại
+  final double speed = math.Random().nextDouble() * 0.3 + 0.1;
+  final double blinkSpeed = math.Random().nextDouble() * 1.5 + 0.5;
 }

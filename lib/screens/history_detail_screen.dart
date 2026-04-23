@@ -22,6 +22,8 @@ class HistoryDetailScreen extends StatefulWidget {
 
 class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
   late Future<List<dynamic>> _detailsFuture;
+  // Lưu trữ các controller để quản lý hiệu ứng riêng cho từng hàng
+  final Map<String, PageController> _controllers = {};
 
   @override
   void initState() {
@@ -30,17 +32,47 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
   }
 
   @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  int _getCategoryPriority(String cat) {
+    cat = cat.toLowerCase();
+    if (cat.contains('accessory')) return 1;
+    if (cat.contains('upper')) return 2;
+    if (cat.contains('lower')) return 3;
+    if (cat.contains('full')) return 4;
+    if (cat.contains('footwear')) return 5;
+    return 6;
+  }
+
+  Map<String, List<dynamic>> _groupAndSortItems(List<dynamic> items) {
+    Map<String, List<dynamic>> grouped = {};
+    for (var item in items) {
+      String cat = item['category'] ?? "Others";
+      if (!grouped.containsKey(cat)) grouped[cat] = [];
+      grouped[cat]!.add(item);
+    }
+    var sortedKeys = grouped.keys.toList()
+      ..sort((a, b) => _getCategoryPriority(a).compareTo(_getCategoryPriority(b)));
+    return {for (var key in sortedKeys) key: grouped[key]!};
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
-        title: const Text("SUGGESTION DETAILS",
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.black)),
         centerTitle: true,
+        title: const Text("OUTFIT PREVIEW",
+            style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w900, )),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -48,95 +80,188 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
         future: _detailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.textPink));
+            return const Center(child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2));
           }
 
-          final items = snapshot.data ?? [];
-          if (items.isEmpty) {
-            return const Center(
-              child: Text(
-                "No suggested items found",
-                style: TextStyle(color: Colors.black54),
-              ),
-            );
-          }
-          return CustomScrollView(
+          final rawItems = snapshot.data ?? [];
+          if (rawItems.isEmpty) return _buildEmptyState();
+
+          final groupedData = _groupAndSortItems(rawItems);
+
+          return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            slivers: [
-
-              SliverToBoxAdapter(
-                child: _buildHeaderInfo(),
-              ),
-
-
-              SliverPadding(
-                padding: const EdgeInsets.all(20),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 15,
-                    mainAxisSpacing: 15,
-                    childAspectRatio: 0.75,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                      final item = items[index];
-                      return ClothingItem(
-                        title: item['itemName'] ?? "Unnamed Item",
-                        imageUrl: item['primaryImageUrl'],
-                        onTap: () {
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ClothingDetailScreen(
-                                itemData: item,
-                                showEditButton: false,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    childCount: items.length,
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 50)),
-            ],
+            child: Column(
+              children: [
+                _buildHeaderInfo(),
+                ...groupedData.entries.map((entry) => _buildSnapCarousel(entry.key, entry.value)).toList(),
+                const SizedBox(height: 40),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
+  Widget _buildSnapCarousel(String categoryName, List<dynamic> items) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final bool shouldLoop = items.length >= 3;
+    final int itemCount = shouldLoop ? 1000 : items.length;
+    final int initialPage = shouldLoop ? (itemCount ~/ 2) - ((itemCount ~/ 2) % items.length) : 0;
+
+    // Khởi tạo controller cho từng category nếu chưa có
+    final controller = _controllers.putIfAbsent(
+      categoryName,
+          () => PageController(viewportFraction: 0.45, initialPage: initialPage),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Padding(
+        //   padding: const EdgeInsets.fromLTRB(25, 10, 20, 0),
+        //   child: Text(
+        //     categoryName.toUpperCase(),
+        //     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black38),
+        //   ),
+        // ),
+        SizedBox(
+          height: 220,
+          child: PageView.builder(
+            controller: controller,
+            padEnds: true,
+            physics: items.length <= 1 ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+            itemCount: itemCount,
+            itemBuilder: (context, index) {
+              final item = items[index % items.length];
+
+              return AnimatedBuilder(
+                animation: controller,
+                builder: (context, child) {
+                  double value = 0.0;
+                  if (controller.position.hasContentDimensions) {
+                    value = (controller.page ?? initialPage.toDouble()) - index;
+                  } else {
+                    value = (initialPage.toDouble()) - index;
+                  }
+                  double scale = (1 - (value.abs() * 0.2)).clamp(0.8, 1.0);
+                  double opacity = (1 - (value.abs() * 0.5)).clamp(0.4, 1.0);
+
+                  return Transform.scale(
+                    scale: scale,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: _buildCarouselItem(item),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCarouselItem(dynamic item) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ClothingDetailScreen(itemData: item, showEditButton: false)));
+      },
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 0.75,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: ClothingItem(
+                title: item['itemName'] ?? "",
+                imageUrl: item['primaryImageUrl'],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeaderInfo() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(20, 5, 20, 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: widget.refImage != null
-                ? Image.network(widget.refImage!, width: 60, height: 70, fit: BoxFit.cover)
-                : Container(width: 60, height: 70, color: Colors.white10, child: const Icon(Icons.checkroom)),
+          _buildRefImage(),
+          const SizedBox(width: 15),
+          _buildHeaderText(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRefImage() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        //border: Border.all(color: Colors.black.withOpacity(0.05)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: widget.refImage != null
+            ? Image.network(widget.refImage!, width: 50, height: 65, fit: BoxFit.contain)
+            : Container(width: 50, height: 65, color: const Color(0xFFF9F9F9), child: const Icon(Icons.checkroom, color: Colors.black12, size: 20)),
+      ),
+    );
+  }
+
+  Widget _buildHeaderText() {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("REFERENCE", style: TextStyle(color: Colors.black26, fontSize: 10, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(widget.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)),
+            child: const Text("AI MATCH", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("STYLING WITH", style: TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(widget.title, style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.style_outlined, size: 48, color: Colors.black12),
+          SizedBox(height: 12),
+          Text("No suggestions available", style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w600, fontSize: 13)),
         ],
       ),
     );

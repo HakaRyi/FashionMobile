@@ -501,11 +501,13 @@ class _PostItemState extends State<PostItem> {
           _showError('Like post failed: $e');
         }
       },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Stack(
         alignment: Alignment.center,
         children: [
           AspectRatio(
-            aspectRatio: 1,
+            aspectRatio: 4 / 5,
             child: PageView.builder(
               controller: _pageController,
               itemCount: images.length,
@@ -617,6 +619,7 @@ class _PostItemState extends State<PostItem> {
             ),
         ],
       ),
+        ),
     );
   }
 

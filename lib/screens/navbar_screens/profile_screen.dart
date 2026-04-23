@@ -103,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final String name = user?['username'] ?? "User";
           final String email = user?['email'] ?? "unknown@gmail.com";
           final String bio =
-              user?['description'] ?? "Chưa có giới thiệu về bản thân.";
+              user?['description'] ?? "No bio yet.";
           final double balance = (user?['balance'] ?? 0.0).toDouble();
           final String followerCount =
           (user?['followerCount'] ?? user?['followers'] ?? 0).toString();

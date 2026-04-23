@@ -18,9 +18,11 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final ChatService _chatService = ChatService();
+  final TextEditingController _searchController = TextEditingController();
   late Future<List<dynamic>> _groupsFuture;
   bool _isLoading = true;
   List<dynamic> _groups = [];
+  List<dynamic> _filteredGroups = [];
   StreamSubscription? _msgSub;
   @override
   void initState() {
@@ -37,12 +39,28 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final data = await _chatService.getMyGroups();
     setState(() {
       _groups = data;
+      _filteredGroups = data;
       _isLoading = false;
     });
   }
   Future<void> _refreshGroups() async {
     setState(() {
       _groupsFuture = _chatService.getMyGroups();
+    });
+  }
+  void _runFilter(String enteredKeyword) {
+    List<dynamic> results = [];
+    if (enteredKeyword.isEmpty) {
+      results = _groups;
+    } else {
+      results = _groups
+          .where((group) =>
+          group["name"].toLowerCase().contains(enteredKeyword.toLowerCase()))
+          .toList();
+    }
+
+    setState(() {
+      _filteredGroups = results;
     });
   }
   void _handleNewMessageRealtime(dynamic msg) {
@@ -57,6 +75,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         updatedGroup['lastMessageAt'] = DateTime.now().toIso8601String();
         updatedGroup['unreadCount'] = (updatedGroup['unreadCount'] ?? 0) + 1;
         _groups.insert(0, updatedGroup);
+        _runFilter(_searchController.text);
       } else {
         _loadInitialGroups();
       }
@@ -65,13 +84,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
         title: const Text("MESSAGES",
-            style: TextStyle(color: Colors.black87,fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            style: TextStyle(color: Colors.black87,fontWeight: FontWeight.w900)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -87,31 +106,71 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadInitialGroups,
-        color: AppColors.textPink,
+        color: Colors.black,
+        backgroundColor: Colors.white,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.textPink))
-            : _groups.isEmpty
-            ? _buildEmptyState()
+            ? const Center(child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
             : Column(
           children: [
             _buildSearchField(),
-            // 1. Dòng avatar Online
             _buildActiveUsersList(),
-            // 2. Danh sách chat chính
+            // const Padding(
+            //   padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+            //   child: Align(
+            //     alignment: Alignment.centerLeft,
+            //     child: Text("CONVERSATIONS",
+            //         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.black38)),
+            //   ),
+            // ),
             Expanded(
-              child: ListView.separated(
-                itemCount: _groups.length,
-                separatorBuilder: (context, index) => const Divider(color: Colors.white10, indent: 85),
+              child: _filteredGroups.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                physics: const BouncingScrollPhysics(),
+                itemCount: _filteredGroups.length,
                 itemBuilder: (context, index) {
-                  final group = _groups[index];
-                  return ChatItem(
-                    name: group['name'],
-                    lastMessage: group['lastMessage'] ?? "Tap to start chatting",
-                    avatarUrl: group['avatar'] ?? "...",
-                    isOnline: group['isOnline'] == "Online",
-                    time: group['lastMessageAt'] ?? "",
-                    isUnread: (group['unreadCount'] ?? 0) > 0,
-                    onTap: () => _navigateToChat(group),
+                  final group = _filteredGroups[index];
+
+                  // THÊM HIỆU ỨNG POP & SLIDE TẠI ĐÂY
+                  return TweenAnimationBuilder<double>(
+                    // Mỗi item sẽ delay một chút tạo hiệu ứng sóng (staggered)
+                    duration: Duration(milliseconds: 400 + (index * 100).clamp(0, 500)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    curve: Curves.easeOutQuart,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          // Trượt từ trên xuống (-30px về 0)
+                          offset: Offset(0, -30 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            )
+                          ]
+                      ),
+                      child: ChatItem(
+                        name: group['name'],
+                        lastMessage: group['lastMessage'] ?? "Tap to start chatting",
+                        avatarUrl: group['avatar'] ?? "",
+                        isOnline: group['isOnline'] == "Online",
+                        time: group['lastMessageAt'] ?? "",
+                        isUnread: (group['unreadCount'] ?? 0) > 0,
+                        onTap: () => _navigateToChat(group),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -119,9 +178,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ],
         ),
       ),
-
     );
   }
+
+
   void _showCreateGroupDialog() async {
     List<Map<String, dynamic>> selectedMembers = [];
     TextEditingController nameController = TextEditingController();
@@ -130,85 +190,129 @@ class _ChatListScreenState extends State<ChatListScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.menu,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, top: 20, left: 20, right: 20),
+          // Chiều cao linh hoạt theo bàn phím
+          height: MediaQuery.of(context).size.height * 0.75,
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              top: 12, left: 20, right: 20
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Create New Group", style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
+              // Thanh cầm nắm (Handle bar)
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              const Text("NEW GROUP CHAT",
+                  style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+              const SizedBox(height: 24),
+
+              // Input Tên Nhóm
               TextField(
                   controller: nameController,
-                  style: const TextStyle(color: Colors.black),
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
-                      hintText: "Group name...",
+                      hintText: "Enter group name...",
+                      hintStyle: const TextStyle(color: Colors.black26),
                       filled: true,
-                      fillColor: Color(0xFFF1F1F1),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)
+                      fillColor: const Color(0xFFF5F5F5),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)
                   )
               ),
-              const SizedBox(height: 20),
-              const Align(alignment: Alignment.centerLeft, child: Text("Select members", style: TextStyle(color: Colors.black87))),
+              const SizedBox(height: 24),
 
-              SizedBox(
-                height: 200,
+              const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("SELECT MEMBERS",
+                      style: TextStyle(color: Colors.black45, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1))
+              ),
+              const SizedBox(height: 12),
+
+              // Danh sách thành viên kèm Avatar
+              Expanded(
                 child: ListView.builder(
-                  // Chỉ lấy những phòng chat 1-1 để mời
+                  physics: const BouncingScrollPhysics(),
                   itemCount: _groups.where((g) => g['isGroup'] == false).length,
                   itemBuilder: (context, index) {
                     final privateChats = _groups.where((g) => g['isGroup'] == false).toList();
                     final user = privateChats[index];
-
-                    // Logic lấy ID: Cần kiểm tra kĩ field ID của user trong group private của ní
-                    int userId = user['otherUserId']??0;
-
+                    int userId = user['otherUserId'] ?? 0;
                     bool isSelected = selectedMembers.any((m) => m['id'] == userId);
 
-                    return CheckboxListTile(
-                      title: Text(user['name'], style: const TextStyle(color: Colors.black87)),
-                      value: isSelected,
-                      activeColor: AppColors.textPink,
-                      onChanged: (val) {
+                    return InkWell(
+                      onTap: () {
                         setModalState(() {
-                          if (val == true) {
+                          if (!isSelected) {
                             selectedMembers.add({'id': userId, 'name': user['name']});
                           } else {
                             selectedMembers.removeWhere((m) => m['id'] == userId);
                           }
                         });
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          children: [
+                            // Avatar User
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: const Color(0xFFF5F5F5),
+                              backgroundImage: NetworkImage(user['avatar'] ?? "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg"),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                user['name'],
+                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700, fontSize: 15),
+                              ),
+                            ),
+                            // Custom Checkbox Đen
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected ? Colors.black : Colors.transparent,
+                                border: Border.all(color: isSelected ? Colors.black : Colors.black12, width: 2),
+                              ),
+                              child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),
               ),
 
-              ElevatedButton(
-                onPressed: (selectedMembers.isEmpty || isCreating) ? null : () async {
-                  setModalState(() => isCreating = true);
-
-                  String groupName = nameController.text.trim();
-                  if (groupName.isEmpty) groupName = "New Group";
-                  List<int> ids = selectedMembers.map((m) => m['id'] as int).toList();
-
-                  // FIX LỖI Ở ĐÂY: Bây giờ hàm này trả về Future nên await được
-                  await _handleActualCreateGroup(groupName, ids);
-
-                  if (mounted) {
-                    Navigator.pop(context); // Đóng BottomSheet
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.textPink,
-                  minimumSize: const Size(double.infinity, 50),
+              // Nút Tạo Nhóm màu Đen chuẩn Chic
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: ElevatedButton(
+                  onPressed: (selectedMembers.isEmpty || isCreating) ? null : () async {
+                    setModalState(() => isCreating = true);
+                    String groupName = nameController.text.trim();
+                    if (groupName.isEmpty) groupName = "New Group";
+                    List<int> ids = selectedMembers.map((m) => m['id'] as int).toList();
+                    await _handleActualCreateGroup(groupName, ids);
+                    if (mounted) Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: isCreating
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text("CREATE GROUP", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
                 ),
-                child: isCreating
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text("CREATE GROUP",style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -284,20 +388,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
   Widget _buildSearchField() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 15.0), // Căn chỉnh lề giống Wardrobe
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(15),
+          color: Colors.white, // Chuyển từ black12 sang trắng tinh khôi
+          borderRadius: BorderRadius.circular(12), // Bo góc 12 đồng bộ
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03), // Bóng đổ siêu nhẹ chuẩn Chic
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: const TextField(
-          style: TextStyle(color: Colors.black87),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (value) => _runFilter(value),
+          style: TextStyle(color: Colors.black),
+          cursorColor: Colors.black, // Con trỏ màu đen cho sang
           decoration: InputDecoration(
-            icon: Icon(Icons.search, color: Colors.grey),
-            hintText: "Search conversations...",
-            hintStyle: TextStyle(color: Colors.grey),
+            hintText: 'Search conversations...',
+            hintStyle: TextStyle(color: Colors.black26, fontSize: 14),
+            prefixIcon: Icon(Icons.search, color: Colors.black87), // Icon đen đậm hơn chút
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+              icon: const Icon(Icons.close, size: 18, color: Colors.black26),
+              onPressed: () {
+                _searchController.clear();
+                _runFilter('');
+              },
+            )
+                : null,
             border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(vertical: 14),
           ),
         ),
       ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
 
 class ActiveUserAvatar extends StatelessWidget {
   final String avatarUrl;
@@ -7,65 +6,55 @@ class ActiveUserAvatar extends StatelessWidget {
   final bool isOnline;
   final VoidCallback? onTap;
 
-  const ActiveUserAvatar({
-    super.key,
-    required this.avatarUrl,
-    required this.name,
-    this.isOnline = false,
-    this.onTap,
-  });
+  const ActiveUserAvatar({super.key, required this.avatarUrl, required this.name, this.isOnline = false, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.only(right: 20),
+        padding: const EdgeInsets.only(right: 18),
         child: Column(
           children: [
             Stack(
+              alignment: Alignment.center,
               children: [
-                // Vòng viền trang trí nếu đang Online (giống Instagram/Messenger)
+                // Vòng ngoài gradient đen trắng cực sang
                 Container(
-                  padding: const EdgeInsets.all(2),
+                  width: 66, height: 66,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isOnline ? AppColors.textPink.withOpacity(0.5) : Colors.transparent,
-                      width: 1.5,
+                    gradient: LinearGradient(
+                        colors: isOnline ? [Colors.black, Colors.black26] : [Colors.transparent, Colors.transparent],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight
                     ),
                   ),
+                ),
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
                   child: CircleAvatar(
-                    radius: 30,
+                    radius: 28,
                     backgroundImage: NetworkImage(avatarUrl),
                   ),
                 ),
-                // Chấm trạng thái
                 if (isOnline)
                   Positioned(
-                    right: 4,
-                    bottom: 4,
+                    right: 2, bottom: 2,
                     child: Container(
-                      height: 12,
-                      width: 12,
+                      height: 14, width: 14,
                       decoration: BoxDecoration(
-                        color: Colors.greenAccent,
+                        color: const Color(0xFF00FF00), // Xanh Neon
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.background, width: 2),
+                        border: Border.all(color: Colors.white, width: 2.5),
                       ),
                     ),
                   ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              name.split(" ")[0], // Chỉ lấy phần tên đầu tiên
-              style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500
-              ),
-            ),
+            Text(name.split(" ")[0],
+                style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
