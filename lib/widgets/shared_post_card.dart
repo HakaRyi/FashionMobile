@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
 
 class SharedPostCard extends StatelessWidget {
   final Map<String, dynamic> sharedPost;
@@ -16,10 +15,14 @@ class SharedPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String title = (sharedPost['sharedPostTitle'] ?? '').toString().trim();
-    final String content = (sharedPost['sharedPostContent'] ?? '').toString().trim();
+    final String title =
+    (sharedPost['sharedPostTitle'] ?? '').toString().trim();
+
+    final String content =
+    (sharedPost['sharedPostContent'] ?? '').toString().trim();
+
     final String ownerName =
-    (sharedPost['sharedPostOwnerName'] ?? 'Người dùng').toString().trim();
+    (sharedPost['sharedPostOwnerName'] ?? 'User').toString().trim();
 
     final List<String> images =
     ((sharedPost['sharedPostImages'] as List?) ?? const [])
@@ -35,10 +38,10 @@ class SharedPostCard extends StatelessWidget {
       child: Container(
         width: 240,
         decoration: BoxDecoration(
-          color: isMe ? AppColors.backgroundSecondary : Colors.white,
+          color: isMe ? const Color(0xFFF7F7F7) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.textPink.withOpacity(0.18),
+            color: Colors.black.withOpacity(0.06),
           ),
           boxShadow: [
             BoxShadow(
@@ -61,25 +64,49 @@ class SharedPostCard extends StatelessWidget {
                   width: double.infinity,
                   height: 160,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    height: 160,
-                    color: AppColors.backgroundSecondary,
-                    alignment: Alignment.center,
-                    child: const CircularProgressIndicator(
-                      color: AppColors.textPink,
-                      strokeWidth: 2,
-                    ),
+                  placeholder: (_, __) {
+                    return Container(
+                      height: 160,
+                      color: const Color(0xFFF1F1F1),
+                      alignment: Alignment.center,
+                      child: const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    );
+                  },
+                  errorWidget: (_, __, ___) {
+                    return Container(
+                      height: 160,
+                      color: const Color(0xFFF1F1F1),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.black26,
+                        size: 30,
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Container(
+                height: 120,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF1F1F1),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(16),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 160,
-                    color: AppColors.backgroundSecondary,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.broken_image_outlined,
-                      color: AppColors.textSecondary,
-                      size: 30,
-                    ),
-                  ),
+                ),
+                child: const Icon(
+                  Icons.article_outlined,
+                  color: Colors.black26,
+                  size: 34,
                 ),
               ),
             Padding(
@@ -93,17 +120,17 @@ class SharedPostCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.textPink.withOpacity(0.08),
+                      color: Colors.black,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      ownerName.isNotEmpty ? ownerName : 'Người dùng',
+                      ownerName.isNotEmpty ? ownerName : 'User',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppColors.textPink,
+                        color: Colors.white,
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -114,9 +141,9 @@ class SharedPostCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppColors.textPrimary,
+                        color: Colors.black,
                         fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         height: 1.3,
                       ),
                     ),
@@ -128,9 +155,10 @@ class SharedPostCard extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppColors.textSecondary,
+                        color: Colors.black54,
                         fontSize: 12,
                         height: 1.35,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

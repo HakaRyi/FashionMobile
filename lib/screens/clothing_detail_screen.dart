@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../constants/app_colors.dart';
-import '../../services/item_service.dart';
+import '../constants/app_colors.dart';
 import '../constants/fashion_constants.dart';
+import '../services/item_service.dart';
 import '../widgets/fashion_autocomplete_field.dart';
 
 class ClothingDetailScreen extends StatefulWidget {
@@ -34,7 +34,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     super.initState();
 
     _itemData = Map<String, dynamic>.from(widget.itemData);
+    _initControllers();
+  }
 
+  void _initControllers() {
     _controllers = {
       'itemName': TextEditingController(
         text: _itemData['itemName']?.toString() ?? '',
@@ -110,6 +113,23 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     super.dispose();
   }
 
+  void _resetControllersFromItemData() {
+    _controllers.forEach((key, controller) {
+      controller.text = _itemData[key]?.toString() ?? '';
+    });
+
+    _controllers['isPublic']!.text =
+        _itemData['isPublic']?.toString() ?? 'false';
+    _controllers['status']!.text = _itemData['status']?.toString() ?? '1';
+  }
+
+  void _handleCancel() {
+    setState(() {
+      _isEditing = false;
+      _resetControllersFromItemData();
+    });
+  }
+
   Future<void> _handleSave() async {
     setState(() {
       _isSaving = true;
@@ -126,10 +146,9 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         _controllers['isPublic']!.text.toLowerCase() == 'true';
 
     try {
-      await _itemService.updateItem(
-        int.tryParse(_itemData['itemId'].toString()) ?? 0,
-        updateData,
-      );
+      final itemId = int.tryParse(_itemData['itemId'].toString()) ?? 0;
+
+      await _itemService.updateItem(itemId, updateData);
 
       if (!mounted) {
         return;
@@ -144,11 +163,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         _isEditing = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Updated successfully!"),
-          backgroundColor: Colors.green,
-        ),
+      _showModernSnackBar(
+        'Updated successfully!',
+        Icons.check_circle,
+        Colors.greenAccent,
       );
     } catch (e) {
       if (!mounted) {
@@ -159,35 +177,75 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         _isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_normalizeError(e)),
-          backgroundColor: Colors.redAccent,
-        ),
+      _showModernSnackBar(
+        _normalizeError(e),
+        Icons.error_outline,
+        Colors.redAccent,
       );
     }
   }
 
   String _normalizeError(Object error) {
     final text = error.toString();
+
     if (text.startsWith('Exception: ')) {
-      return text.replaceFirst('Exception: ', '');
+      return text.replaceFirst('Exception: ', '').trim();
     }
+
     return text;
+  }
+
+  void _showModernSnackBar(String message, IconData icon, Color iconColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              icon,
+              color: iconColor,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF2C2C2C),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   String _formatDate(dynamic rawDate) {
     if (rawDate == null) {
-      return "N/A";
+      return 'N/A';
     }
 
     final dateStr = rawDate.toString().trim();
-    if (dateStr.isEmpty || dateStr == "N/A") {
-      return "N/A";
+
+    if (dateStr.isEmpty || dateStr == 'N/A') {
+      return 'N/A';
     }
 
     try {
       String timeStr = dateStr;
+
       if (!timeStr.endsWith('Z') && !timeStr.contains('+')) {
         timeStr = '${timeStr}Z';
       }
@@ -199,39 +257,54 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     }
   }
 
-  Widget _buildImageCard() {
-    final imageUrl = _itemData['imageUrl']?.toString();
+  String get _imageUrl {
+    final primaryImageUrl = _itemData['primaryImageUrl']?.toString().trim();
+    final imageUrl = _itemData['imageUrl']?.toString().trim();
 
+    if (primaryImageUrl != null && primaryImageUrl.isNotEmpty) {
+      return primaryImageUrl;
+    }
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return imageUrl;
+    }
+
+    return '';
+  }
+
+  Widget _buildImageCard() {
     return Container(
       width: double.infinity,
       height: 400,
       decoration: BoxDecoration(
-        color: AppColors.menu,
-        borderRadius: BorderRadius.circular(32),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.stroke),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Stack(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: imageUrl != null && imageUrl.isNotEmpty
+            borderRadius: BorderRadius.circular(24),
+            child: _imageUrl.isNotEmpty
                 ? Image.network(
-              imageUrl,
+              _imageUrl,
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.contain,
+              gaplessPlayback: true,
               errorBuilder: (_, __, ___) {
                 return const Center(
                   child: Icon(
                     Icons.image_not_supported_outlined,
-                    size: 64,
-                    color: Colors.black38,
+                    color: AppColors.textSecondary,
+                    size: 40,
                   ),
                 );
               },
@@ -239,23 +312,23 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
                 : const Center(
               child: Icon(
                 Icons.image_not_supported_outlined,
-                size: 64,
-                color: Colors.black38,
+                color: AppColors.textSecondary,
+                size: 40,
               ),
             ),
           ),
           if (!_isEditing)
             Positioned(
-              bottom: 20,
-              right: 20,
+              bottom: 16,
+              right: 16,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                  horizontal: 12,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.black.withOpacity(0.75),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Row(
                   children: [
@@ -266,7 +339,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
                     ),
                     SizedBox(width: 6),
                     Text(
-                      "AI Tagged",
+                      'AI Tagged',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -282,29 +355,173 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     );
   }
 
+  List<Widget> _buildInfoWidgets() {
+    return [
+      _buildGroupTitle('BASIC INFO'),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Category',
+          'category',
+          Icons.category_outlined,
+        ),
+        _buildItemTile(
+          'Sub Category',
+          'subCategory',
+          Icons.account_tree_outlined,
+        ),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Item Type',
+          'itemType',
+          Icons.merge_type_outlined,
+        ),
+        _buildItemTile(
+          'Gender',
+          'gender',
+          Icons.wc,
+        ),
+      ]),
+      _buildItemTile(
+        'Item Name',
+        'itemName',
+        Icons.shopping_bag_outlined,
+      ),
+      const SizedBox(height: 16),
+      _buildGroupTitle('DESIGN DETAILS'),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Color',
+          'mainColor',
+          Icons.palette_outlined,
+        ),
+        _buildItemTile(
+          'Sub Color',
+          'subColor',
+          Icons.palette_outlined,
+        ),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Size',
+          'size',
+          Icons.format_size,
+        ),
+        _buildItemTile(
+          'Style',
+          'style',
+          Icons.style_outlined,
+        ),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Fit',
+          'fit',
+          Icons.accessibility_new_outlined,
+        ),
+        _buildItemTile(
+          'Material',
+          'material',
+          Icons.texture_outlined,
+        ),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Pattern',
+          'pattern',
+          Icons.grid_view_rounded,
+        ),
+        _buildItemTile(
+          'Neckline',
+          'neckline',
+          Icons.line_weight,
+        ),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Brand',
+          'brand',
+          Icons.branding_watermark_outlined,
+        ),
+        _buildItemTile(
+          'Length',
+          'length',
+          Icons.filter_tilt_shift_rounded,
+        ),
+      ]),
+      _buildTwoColumnRow([
+        _buildItemTile(
+          'Sleeve',
+          'sleeveLength',
+          Icons.type_specimen_outlined,
+        ),
+        _buildItemTile(
+          'Texture',
+          'texture',
+          Icons.layers_outlined,
+        ),
+      ]),
+      _buildItemTile(
+        'Placement',
+        'placement',
+        Icons.place_outlined,
+      ),
+      const SizedBox(height: 16),
+      _buildGroupTitle('STATUS & SETTINGS'),
+      Container(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _isEditing ? AppColors.textPrimary : AppColors.stroke,
+          ),
+        ),
+        child: Column(
+          children: [
+            _buildSwitchTile(
+              'Public Item',
+              'isPublic',
+              Icons.visibility_outlined,
+            ),
+            const Divider(
+              color: AppColors.divider,
+              height: 1,
+              indent: 50,
+            ),
+            _buildStatusDropdownTile(),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      _buildDescriptionField(),
+    ];
+  }
+
+  Widget _buildTwoColumnRow(List<Widget> children) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children.map((widget) {
+        return Expanded(child: widget);
+      }).toList(),
+    );
+  }
+
   Widget _buildGroupTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(
         left: 4,
         bottom: 12,
-        top: 8,
+        top: 16,
       ),
       child: Text(
         title,
-        style: TextStyle(
-          color: Colors.pinkAccent.withOpacity(0.8),
+        style: const TextStyle(
+          color: AppColors.textPrimary,
           fontSize: 11,
           fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
+          letterSpacing: 0,
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoRow(List<Widget> children) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children.map((widget) => Expanded(child: widget)).toList(),
     );
   }
 
@@ -318,7 +535,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(4.0),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 4,
+      ),
       child: FashionAutocompleteField(
         label: label,
         icon: icon,
@@ -334,20 +554,21 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       String key,
       IconData icon,
       ) {
-    final bool value = _controllers[key]!.text.toLowerCase() == "true";
+    final value = _controllers[key]!.text.toLowerCase() == 'true';
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       leading: Icon(
         icon,
         size: 20,
-        color: Colors.pinkAccent.withOpacity(0.7),
+        color: AppColors.textPrimary,
       ),
       title: Text(
         label,
-        style: TextStyle(
-          color: Colors.black.withOpacity(0.5),
+        style: const TextStyle(
+          color: AppColors.textPrimary,
           fontSize: 13,
+          fontWeight: FontWeight.w500,
         ),
       ),
       trailing: _isEditing
@@ -355,7 +576,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         height: 30,
         child: Switch(
           value: value,
-          activeColor: Colors.pinkAccent,
+          activeColor: AppColors.background,
+          activeTrackColor: AppColors.primary,
+          inactiveThumbColor: AppColors.textSecondary,
+          inactiveTrackColor: AppColors.stroke,
           onChanged: (newValue) {
             setState(() {
               _controllers[key]!.text = newValue.toString();
@@ -364,11 +588,11 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         ),
       )
           : Text(
-        value ? "YES" : "NO",
+        value ? 'YES' : 'NO',
         style: const TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -376,27 +600,28 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
 
   Widget _buildStatusDropdownTile() {
     const statusMap = {
-      "0": "Draft",
-      "1": "Active",
-      "2": "Inactive",
-      "3": "Archived",
-      "4": "Deleted",
+      '0': 'Draft',
+      '1': 'Active',
+      '2': 'Inactive',
+      '3': 'Archived',
+      '4': 'Deleted',
     };
 
     final currentStatus = _controllers['status']!.text;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      leading: Icon(
+      leading: const Icon(
         Icons.check_box_outlined,
         size: 20,
-        color: Colors.pinkAccent.withOpacity(0.7),
+        color: AppColors.textPrimary,
       ),
-      title: Text(
-        "Status",
+      title: const Text(
+        'Status',
         style: TextStyle(
-          color: Colors.black.withOpacity(0.5),
+          color: AppColors.textPrimary,
           fontSize: 13,
+          fontWeight: FontWeight.w500,
         ),
       ),
       trailing: _isEditing
@@ -404,24 +629,28 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         child: DropdownButton<String>(
           value: statusMap.containsKey(currentStatus)
               ? currentStatus
-              : "1",
-          dropdownColor: AppColors.surface,
+              : '1',
+          dropdownColor: AppColors.background,
           style: const TextStyle(
-            color: Colors.black,
+            color: AppColors.textPrimary,
             fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-          items: statusMap.entries
-              .map(
-                (entry) => DropdownMenuItem<String>(
+          icon: const Icon(
+            Icons.arrow_drop_down,
+            color: AppColors.textPrimary,
+          ),
+          items: statusMap.entries.map((entry) {
+            return DropdownMenuItem<String>(
               value: entry.key,
               child: Text(entry.value),
-            ),
-          )
-              .toList(),
+            );
+          }).toList(),
           onChanged: (value) {
             if (value == null) {
               return;
             }
+
             setState(() {
               _controllers['status']!.text = value;
             });
@@ -429,11 +658,11 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
         ),
       )
           : Text(
-        statusMap[currentStatus] ?? "Active",
+        statusMap[currentStatus] ?? 'Active',
         style: const TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -444,14 +673,10 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _isEditing
-            ? Colors.pinkAccent.withOpacity(0.02)
-            : Colors.black.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(15),
+        color: _isEditing ? AppColors.background : AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _isEditing
-              ? Colors.pinkAccent.withOpacity(0.3)
-              : Colors.black.withOpacity(0.1),
+          color: _isEditing ? AppColors.textPrimary : AppColors.stroke,
         ),
       ),
       child: Column(
@@ -463,27 +688,29 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
                 Icons.notes_rounded,
                 size: 18,
                 color: _isEditing
-                    ? Colors.pinkAccent
-                    : Colors.black26,
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
               const SizedBox(width: 8),
               Text(
-                "Description",
+                'Description',
                 style: TextStyle(
-                  color: Colors.black.withOpacity(0.4),
+                  color: _isEditing
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           TextField(
             controller: _controllers['description'],
             enabled: _isEditing,
             maxLines: null,
             style: const TextStyle(
-              color: Colors.black,
+              color: AppColors.textPrimary,
               fontSize: 14,
               height: 1.5,
             ),
@@ -491,8 +718,8 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
               border: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,
-              hintText: "No description provided",
-              hintStyle: TextStyle(color: Colors.black26),
+              hintText: 'No description provided',
+              hintStyle: TextStyle(color: AppColors.textSecondary),
             ),
           ),
         ],
@@ -500,155 +727,36 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     );
   }
 
-  Widget _buildInfoContainer() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildGroupTitle("BASIC INFO"),
-        _buildInfoRow([
-          _buildItemTile(
-            "Category",
-            "category",
-            Icons.category_outlined,
-          ),
-          _buildItemTile(
-            "Sub Category",
-            "subCategory",
-            Icons.account_tree_outlined,
-          ),
-        ]),
-        _buildInfoRow([
-          _buildItemTile(
-            "Item Type",
-            "itemType",
-            Icons.merge_type_outlined,
-          ),
-          _buildItemTile(
-            "Gender",
-            "gender",
-            Icons.wc,
-          ),
-        ]),
-        _buildItemTile(
-          "Item Name",
-          "itemName",
-          Icons.shopping_bag_outlined,
-        ),
-        const SizedBox(height: 20),
-        _buildGroupTitle("DESIGN DETAILS"),
-        _buildInfoRow([
-          _buildItemTile(
-            "Color",
-            "mainColor",
-            Icons.palette_outlined,
-          ),
-          _buildItemTile(
-            "Sub Color",
-            "subColor",
-            Icons.palette_outlined,
-          ),
-          _buildItemTile(
-            "Size",
-            "size",
-            Icons.format_size,
-          ),
-        ]),
-        _buildInfoRow([
-          _buildItemTile(
-            "Style",
-            "style",
-            Icons.style_outlined,
-          ),
-          _buildItemTile(
-            "Fit",
-            "fit",
-            Icons.accessibility_new_outlined,
-          ),
-        ]),
-        _buildInfoRow([
-          _buildItemTile(
-            "Material",
-            "material",
-            Icons.texture_outlined,
-          ),
-          _buildItemTile(
-            "Pattern",
-            "pattern",
-            Icons.grid_view_rounded,
-          ),
-        ]),
-        _buildInfoRow([
-          _buildItemTile(
-            "Neckline",
-            "neckline",
-            Icons.line_weight,
-          ),
-          _buildItemTile(
-            "Brand",
-            "brand",
-            Icons.branding_watermark_outlined,
-          ),
-        ]),
-        _buildInfoRow([
-          _buildItemTile(
-            "Length",
-            "length",
-            Icons.filter_tilt_shift_rounded,
-          ),
-          _buildItemTile(
-            "Sleeve",
-            "sleeveLength",
-            Icons.type_specimen_outlined,
-          ),
-        ]),
-        const SizedBox(height: 20),
-        _buildGroupTitle("STATUS & SETTINGS"),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.05),
-            ),
-          ),
-          child: Column(
-            children: [
-              _buildSwitchTile(
-                "Public Item",
-                "isPublic",
-                Icons.visibility_outlined,
-              ),
-              const Divider(
-                color: Colors.white,
-                height: 1,
-                indent: 50,
-              ),
-              _buildStatusDropdownTile(),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildDescriptionField(),
-      ],
-    );
-  }
-
   Widget _buildTimelineSection() {
+    final owner = _itemData['ownerUsername']?.toString() ?? 'Unknown';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           _buildTimeRow(
-            "Registered on",
+            'Owned by',
+            owner,
+            isOwner: true,
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(
+              color: AppColors.divider,
+              height: 1,
+            ),
+          ),
+          _buildTimeRow(
+            'Registered on',
             _formatDate(_itemData['createdAt']),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildTimeRow(
-            "Last update",
+            'Last update',
             _formatDate(_itemData['updateAt']),
           ),
         ],
@@ -656,23 +764,31 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     );
   }
 
-  Widget _buildTimeRow(String label, String value) {
+  Widget _buildTimeRow(
+      String label,
+      String value, {
+        bool isOwner = false,
+      }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: Colors.black.withOpacity(0.3),
-            fontSize: 12,
-          ),
-        ),
-        Text(
-          value,
           style: const TextStyle(
-            color: Colors.black,
+            color: AppColors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w500,
+          ),
+        ),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              color: isOwner ? AppColors.primary : AppColors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -684,23 +800,34 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.background,
         elevation: 0,
-        leading: IconButton(
+        leading: _isEditing
+            ? IconButton(
+          onPressed: _handleCancel,
+          icon: const Icon(
+            Icons.close,
+            color: AppColors.textPrimary,
+            size: 24,
+          ),
+          tooltip: 'Cancel',
+        )
+            : IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(
             Icons.arrow_back_ios,
-            color: Colors.black,
+            color: AppColors.textPrimary,
+            size: 20,
           ),
         ),
         centerTitle: true,
         title: Text(
-          _isEditing ? "EDIT DETAILS" : "CLOTHING INFO",
+          _isEditing ? 'EDIT DETAILS' : 'CLOTHING INFO',
           style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 2,
-            color: Colors.black,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+            color: AppColors.textPrimary,
           ),
         ),
         actions: [
@@ -708,67 +835,83 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
             _isSaving
                 ? const Center(
               child: Padding(
-                padding: EdgeInsets.only(right: 16),
+                padding: EdgeInsets.only(right: 20),
                 child: SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.pinkAccent,
+                    color: AppColors.primary,
                   ),
+                ),
+              ),
+            )
+                : _isEditing
+                ? TextButton(
+              onPressed: _handleSave,
+              child: const Text(
+                'SAVE',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  letterSpacing: 0,
                 ),
               ),
             )
                 : TextButton(
               onPressed: () {
-                if (_isEditing) {
-                  _handleSave();
-                } else {
-                  setState(() {
-                    _isEditing = true;
-                  });
-                }
+                setState(() {
+                  _isEditing = true;
+                });
               },
-              child: Text(
-                _isEditing ? "SAVE" : "EDIT",
-                style: const TextStyle(
-                  color: Colors.pinkAccent,
+              child: const Text(
+                'EDIT',
+                style: TextStyle(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  letterSpacing: 0,
                 ),
               ),
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
+      body: SafeArea(
+        maintainBottomViewPadding: true,
+        child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
-            _buildImageCard(),
-            const SizedBox(height: 30),
+            RepaintBoundary(
+              child: _buildImageCard(),
+            ),
+            const SizedBox(height: 32),
             Row(
               children: [
                 Container(
                   width: 4,
-                  height: 20,
+                  height: 18,
                   decoration: BoxDecoration(
-                    color: Colors.pinkAccent,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  "Attributes",
+                  'ATTRIBUTES',
                   style: TextStyle(
-                    color: Colors.pinkAccent,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _buildInfoContainer(),
+            const SizedBox(height: 8),
+            ..._buildInfoWidgets(),
             const SizedBox(height: 24),
             _buildTimelineSection(),
             const SizedBox(height: 50),

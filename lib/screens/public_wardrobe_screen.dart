@@ -1,7 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../constants/app_colors.dart';
 import '../models/public_wardrobe_item_model.dart';
 import '../models/try_on_source_item.dart';
 import '../screens/ai_suggestion_screen.dart';
@@ -27,7 +28,8 @@ class PublicWardrobeScreen extends StatefulWidget {
   State<PublicWardrobeScreen> createState() => _PublicWardrobeScreenState();
 }
 
-class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
+class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
+    with SingleTickerProviderStateMixin {
   final WardrobeService _wardrobeService = WardrobeService();
   final ItemService _itemService = ItemService();
 
@@ -37,10 +39,26 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
   Map<String, dynamic>? _profile;
   List<PublicWardrobeItemModel> _items = [];
 
+  String _selectedFilter = 'All';
+
+  late AnimationController _fabricController;
+
   @override
   void initState() {
     super.initState();
+
+    _fabricController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat();
+
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _fabricController.dispose();
+    super.dispose();
   }
 
   String _normalizeError(Object error) {
@@ -51,6 +69,20 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
     }
 
     return text;
+  }
+
+  List<String> _getDynamicFilters() {
+    final filters = <String>{'All'};
+
+    for (final item in _items) {
+      final category = item.category?.trim();
+
+      if (category != null && category.isNotEmpty) {
+        filters.add(category);
+      }
+    }
+
+    return filters.toList();
   }
 
   Future<void> _loadData() async {
@@ -156,19 +188,25 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
   String get _title {
     if (widget.isOwnerView) {
-      return 'My Wardrobe';
+      return 'MY WARDROBE';
     }
 
-    return "$_userName's Wardrobe";
+    return "$_userName's Wardrobe".toUpperCase();
   }
 
   bool _isOwnItem(PublicWardrobeItemModel item) {
     return widget.isOwnerView || (item.isOwner ?? false);
   }
 
-  Future<void> _toggleSaveItem(int index) async {
-    final item = _items[index];
+  List<PublicWardrobeItemModel> get _filteredItems {
+    if (_selectedFilter == 'All') {
+      return _items;
+    }
 
+    return _items.where((item) => item.category == _selectedFilter).toList();
+  }
+
+  Future<void> _toggleSaveItem(PublicWardrobeItemModel item) async {
     if (_isOwnItem(item)) {
       AppToast.show(context, 'You cannot save your own item.');
       return;
@@ -185,12 +223,14 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         return;
       }
 
-      final bool newSavedState = !(item.isSaved ?? false);
+      final newSavedState = !(item.isSaved ?? false);
 
       setState(() {
-        _items[index] = item.copyWith(
-          isSaved: newSavedState,
-        );
+        final index = _items.indexWhere((i) => i.itemId == item.itemId);
+
+        if (index != -1) {
+          _items[index] = item.copyWith(isSaved: newSavedState);
+        }
       });
 
       AppToast.show(
@@ -202,7 +242,11 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         return;
       }
 
-      AppToast.show(context, _normalizeError(e));
+      AppToast.show(
+        context,
+        _normalizeError(e),
+        isError: true,
+      );
     }
   }
 
@@ -211,38 +255,45 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.menu,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
+          top: Radius.circular(24),
         ),
       ),
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  item.itemName?.trim().isNotEmpty == true
-                      ? item.itemName!
-                      : 'Unnamed item',
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 12,
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                const SizedBox(height: 10),
-                ListTile(
-                  leading: const Icon(
-                    Icons.auto_awesome,
-                    color: AppColors.text,
+                const SizedBox(height: 18),
+                Text(
+                  item.itemName?.trim().isNotEmpty == true
+                      ? item.itemName!.toUpperCase()
+                      : 'UNNAMED ITEM',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
                   ),
-                  title: const Text(
-                    'AI outfit suggestion',
-                    style: TextStyle(color: AppColors.text),
-                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSheetAction(
+                  icon: Icons.auto_awesome,
+                  title: 'AI Mix & Match',
+                  subtitle: 'Find outfits that match this item',
                   onTap: () {
                     Navigator.pop(sheetContext);
                     Navigator.push(
@@ -253,15 +304,10 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
                     );
                   },
                 ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.face,
-                    color: AppColors.text,
-                  ),
-                  title: const Text(
-                    'Virtual try-on',
-                    style: TextStyle(color: AppColors.text),
-                  ),
+                _buildSheetAction(
+                  icon: Icons.face,
+                  title: 'Virtual Try-on',
+                  subtitle: 'Preview this item on your model',
                   onTap: () {
                     Navigator.pop(sheetContext);
                     Navigator.push(
@@ -288,6 +334,55 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
     );
   }
 
+  Widget _buildSheetAction({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 4,
+      ),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.black,
+          size: 22,
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w900,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          color: Colors.black45,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: Colors.black12,
+        size: 14,
+      ),
+    );
+  }
+
   void _openItemDetail(PublicWardrobeItemModel item) {
     Navigator.push(
       context,
@@ -302,159 +397,240 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filters = _getDynamicFilters();
+    final filteredItems = _filteredItems;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _isLoading
-          ? const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.textPink,
-        ),
-      )
-          : _error != null
-          ? _buildError()
-          : RefreshIndicator(
-        onRefresh: _loadData,
-        color: AppColors.textPink,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 240,
-              pinned: true,
-              backgroundColor: AppColors.background,
-              leading: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios,
-                  color: Colors.white,
-                ),
-                onPressed: () => Navigator.pop(context),
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _fabricController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: FabricPainter(_fabricController.value),
+                );
+              },
+            ),
+          ),
+          Positioned.fill(
+            child: _isLoading
+                ? const Center(
+              child: CircularProgressIndicator(
+                color: Colors.black,
               ),
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  _title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
+            )
+                : _error != null
+                ? _buildError()
+                : RefreshIndicator(
+              onRefresh: _loadData,
+              color: Colors.black,
+              backgroundColor: Colors.white,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _avatarUrl != null
-                        ? Image.network(
-                      _avatarUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
-                        return _buildHeaderPlaceholder();
-                      },
+                slivers: [
+                  _buildSliverAppBar(),
+                  SliverToBoxAdapter(
+                    child: _buildProfileSummary(),
+                  ),
+                  if (widget.isOwnerView)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding:
+                        const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: _buildOwnerNotice(),
+                      ),
+                    ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _CategoryHeaderDelegate(
+                      child: _buildCategoryTabs(filters),
+                    ),
+                  ),
+                  if (_items.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(
+                        widget.isOwnerView
+                            ? 'You have no public wardrobe items yet.'
+                            : 'This user has no public items yet.',
+                      ),
                     )
-                        : _buildHeaderPlaceholder(),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            AppColors.background,
-                          ],
+                  else if (filteredItems.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(
+                        'No items found in this category.',
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding:
+                      const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.72,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                            final item = filteredItems[index];
+
+                            return PublicClothingItem(
+                              itemId: item.itemId,
+                              title: item.itemName ?? '',
+                              imageUrl: item.thumbnailUrl ?? '',
+                              isSaved: item.isSaved ?? false,
+                              showSaveButton: !_isOwnItem(item),
+                              likes: 0,
+                              isForSale: item.isForSale,
+                              listedPrice: item.listedPrice,
+                              onTap: () => _openItemDetail(item),
+                              onSave: () => _toggleSaveItem(item),
+                              onLongPress: () {
+                                _showActionMenu(context, item);
+                              },
+                            );
+                          },
+                          childCount: filteredItems.length,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildStatItem(
-                      '$_totalPublicItems',
-                      widget.isOwnerView
-                          ? 'Public items'
-                          : 'Public items',
-                    ),
-                    _buildStatItem(
-                      '$_countFollower',
-                      'Followers',
-                    ),
-                    _buildStatItem(
-                      '$_countFollowing',
-                      'Following',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (widget.isOwnerView)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-                  child: _buildOwnerNotice(),
-                ),
-              ),
-            if (_items.isEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 40,
-                  ),
-                  child: Center(
-                    child: Text(
-                      widget.isOwnerView
-                          ? 'You have no public wardrobe items yet.'
-                          : 'This user has no public wardrobe items yet.',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverGrid(
-                  gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.72,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                      final item = _items[index];
-                      final isOwnItem = _isOwnItem(item);
+          ),
+        ],
+      ),
+    );
+  }
 
-                      return PublicClothingItem(
-                        itemId: item.itemId,
-                        title: item.itemName ?? '',
-                        imageUrl: item.thumbnailUrl ?? '',
-                        isSaved: item.isSaved ?? false,
-                        showSaveButton: !isOwnItem,
-                        likes: 0,
-                        isForSale: item.isForSale,
-                        listedPrice: item.listedPrice,
-                        onTap: () => _openItemDetail(item),
-                        onSave: () => _toggleSaveItem(index),
-                        onLongPress: () =>
-                            _showActionMenu(context, item),
-                      );
-                    },
-                    childCount: _items.length,
-                  ),
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 260,
+      pinned: true,
+      backgroundColor: const Color(0xFFF5F5F5),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.black,
+          size: 20,
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        _title,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.8,
+        ),
+      ),
+      centerTitle: true,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            _avatarUrl != null
+                ? Image.network(
+              _avatarUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) {
+                return _buildPlaceholderCover();
+              },
+            )
+                : _buildPlaceholderCover(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0.25),
+                    Colors.white.withOpacity(0.75),
+                    const Color(0xFFF5F5F5),
+                  ],
                 ),
               ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 30),
+            ),
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 24,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 78,
+                    height: 78,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: _avatarUrl != null
+                          ? Image.network(
+                        _avatarUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) {
+                          return _avatarPlaceholderIcon();
+                        },
+                      )
+                          : _avatarPlaceholderIcon(),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _userName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.isOwnerView
+                                ? 'Public wardrobe preview'
+                                : 'Public wardrobe collection',
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -462,13 +638,150 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
     );
   }
 
-  Widget _buildHeaderPlaceholder() {
+  Widget _buildProfileSummary() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
+        decoration: _cardDecoration(),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildStatItem(
+                '$_totalPublicItems',
+                'ITEMS',
+              ),
+            ),
+            _verticalDivider(),
+            Expanded(
+              child: _buildStatItem(
+                '$_countFollower',
+                'FOLLOWERS',
+              ),
+            ),
+            _verticalDivider(),
+            Expanded(
+              child: _buildStatItem(
+                '$_countFollowing',
+                'FOLLOWING',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _verticalDivider() {
     return Container(
-      color: Colors.black26,
+      width: 1,
+      height: 34,
+      color: const Color(0xFFEDEDED),
+    );
+  }
+
+  Widget _buildCategoryTabs(List<String> filters) {
+    return Container(
+      color: const Color(0xFFF5F5F5),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: SizedBox(
+        height: 40,
+        child: filters.length <= 1
+            ? Align(
+          alignment: Alignment.centerLeft,
+          child: _categoryChip(
+            name: 'All',
+            isSelected: true,
+          ),
+        )
+            : ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: filters.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            final name = filters[index];
+            final isSelected = _selectedFilter == name;
+
+            return _categoryChip(
+              name: name,
+              isSelected: isSelected,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryChip({
+    required String name,
+    required bool isSelected,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = name;
+        });
+        HapticFeedback.selectionClick();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? Colors.black : Colors.black.withOpacity(0.06),
+          ),
+          boxShadow: isSelected
+              ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ]
+              : null,
+        ),
+        child: Text(
+          name.toUpperCase(),
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black54,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderCover() {
+    return Container(
+      color: const Color(0xFFEDEDED),
+      child: const Center(
+        child: Icon(
+          Icons.checkroom,
+          color: Colors.black26,
+          size: 84,
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarPlaceholderIcon() {
+    return Container(
+      color: const Color(0xFFF1F1F1),
       child: const Icon(
         Icons.person,
-        color: Colors.white,
-        size: 80,
+        color: Colors.black26,
+        size: 36,
       ),
     );
   }
@@ -476,18 +789,14 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
   Widget _buildOwnerNotice() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
+      padding: const EdgeInsets.all(15),
+      decoration: _cardDecoration(),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.info_outline,
-            color: AppColors.textPink,
+            color: Colors.black,
             size: 22,
           ),
           SizedBox(width: 10),
@@ -495,9 +804,10 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
             child: Text(
               'This is your public wardrobe view. Other users can see these public items, but owner-only actions are hidden here.',
               style: TextStyle(
-                color: AppColors.text,
+                color: Colors.black54,
                 fontSize: 13,
                 height: 1.4,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -510,37 +820,88 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: _cardDecoration(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.black,
+                size: 48,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Failed to load public wardrobe',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error ?? 'An unknown error occurred',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loadData,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'TRY AGAIN',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.error_outline,
-              color: Colors.white,
-              size: 48,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Failed to load wardrobe',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error ?? 'Something went wrong',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
+              Icons.inventory_2_outlined,
+              size: 72,
+              color: Colors.black12,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.textPink,
-                foregroundColor: Colors.white,
+            Text(
+              message.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black26,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -554,20 +915,129 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> {
         Text(
           value,
           style: const TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(
-            color: AppColors.text,
-            fontSize: 12,
+            color: Colors.black45,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
         ),
       ],
     );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _CategoryHeaderDelegate({
+    required this.child,
+  });
+
+  @override
+  double get minExtent => 60;
+
+  @override
+  double get maxExtent => 60;
+
+  @override
+  Widget build(
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _CategoryHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child;
+  }
+}
+
+class FabricPainter extends CustomPainter {
+  final double animationValue;
+
+  FabricPainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint1 = Paint()
+      ..color = Colors.black.withOpacity(0.025)
+      ..style = PaintingStyle.fill;
+    final paint2 = Paint()
+      ..color = Colors.black.withOpacity(0.035)
+      ..style = PaintingStyle.fill;
+    final paint3 = Paint()
+      ..color = Colors.black.withOpacity(0.02)
+      ..style = PaintingStyle.fill;
+
+    final path1 = Path()
+      ..moveTo(0, size.height * 0.12)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * 0.2 + math.sin(animationValue * 2 * math.pi) * 50,
+        size.width,
+        size.height * 0.08,
+      )
+      ..lineTo(size.width, 0)
+      ..lineTo(0, 0)
+      ..close();
+
+    final path2 = Path()
+      ..moveTo(0, size.height * 0.8)
+      ..quadraticBezierTo(
+        size.width * 0.4,
+        size.height * 0.7 + math.cos(animationValue * 2 * math.pi) * 70,
+        size.width,
+        size.height * 0.88,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final path3 = Path()
+      ..moveTo(size.width, size.height * 0.24)
+      ..quadraticBezierTo(
+        size.width * 0.72 + math.sin(animationValue * 2 * math.pi) * 60,
+        size.height * 0.54,
+        size.width,
+        size.height * 0.72,
+      )
+      ..close();
+
+    canvas.drawPath(path1, paint1);
+    canvas.drawPath(path2, paint2);
+    canvas.drawPath(path3, paint3);
+  }
+
+  @override
+  bool shouldRepaint(covariant FabricPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }

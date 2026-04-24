@@ -175,14 +175,28 @@ class _UploadScreenState extends State<UploadScreen> {
         },
         body: jsonEncode(body),
       );
-
+      print("🔥 HTTP STATUS: ${response.statusCode}");
+      print("🔥 HTTP BODY: ${response.body}");
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showToast("Added to wardrobe successfully!");
         Navigator.pop(context, true);
       } else {
-        _showToast("Server Error: ${response.body}");
+        String errorMsg = response.body;
+        try {
+          final jsonError = jsonDecode(response.body);
+          if (jsonError is Map) {
+            if (jsonError.containsKey('message')) {
+              errorMsg = jsonError['message'];
+            } else if (jsonError.containsKey('errors')) {
+              errorMsg = jsonError['errors'].toString();
+            }
+          }
+        } catch (_) {}
+
+        _showToast("Lỗi server (${response.statusCode}): $errorMsg");
       }
     } catch (e) {
+      print("🔥 EXCEPTION: $e");
       _showToast("Connection Error");
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
@@ -191,7 +205,25 @@ class _UploadScreenState extends State<UploadScreen> {
 
   void _showToast(String msg) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            msg,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          backgroundColor: Colors.black,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -212,12 +244,12 @@ class _UploadScreenState extends State<UploadScreen> {
           if (_aiResult != null && !_isAnalyzing)
             IconButton(
               onPressed: _saveToDatabase,
-              icon: const Icon(Icons.cloud_upload_outlined, color: Colors.pinkAccent),
+              icon: const Icon(Icons.cloud_upload_outlined, color: Colors.black),
             )
         ],
       ),
       body: _image == null
-          ? const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
@@ -275,7 +307,7 @@ class _UploadScreenState extends State<UploadScreen> {
         icon: const Icon(Icons.auto_awesome, size: 20),
         label: const Text("START ANALYSIS", style: TextStyle(fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.pinkAccent,
+          backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
@@ -290,7 +322,7 @@ class _AnalyzingLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const CircularProgressIndicator(color: Colors.pinkAccent),
+        const CircularProgressIndicator(color: Colors.black),
         const SizedBox(height: 16),
         Text("AI is analyzing & removing background...",
             style: TextStyle(color: Colors.black.withOpacity(0.6), fontSize: 13)),

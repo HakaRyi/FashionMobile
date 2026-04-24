@@ -13,39 +13,43 @@ class SuggestionScreen extends StatefulWidget {
 }
 
 class _SuggestionScreenState extends State<SuggestionScreen> {
-  // Thay thế bằng hàm gọi API thực tế của Đăng
   late Future<List<RecommendationHistoryModel>> _historyFuture;
 
   @override
   void initState() {
     super.initState();
-
     _historyFuture = RecommendationService().getMyHistory();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5), // Nền xám nhạt đồng bộ app
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
-
         centerTitle: true,
         title: const Text(
-          "SUGGESTION HISTORY",
-          style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 2),
+          "HISTORY",
+          style: TextStyle(
+              color: Colors.black,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: FutureBuilder<List<dynamic>>(
+      body: FutureBuilder<List<RecommendationHistoryModel>>(
         future: _historyFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.textPink));
+            return const Center(
+                child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)
+            );
           }
 
           final historyList = snapshot.data ?? [];
@@ -55,11 +59,11 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             physics: const BouncingScrollPhysics(),
             itemCount: historyList.length,
             itemBuilder: (context, index) {
-              final history = snapshot.data![index];
+              final history = historyList[index];
               return _buildHistoryCard(history);
             },
           );
@@ -68,8 +72,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
     );
   }
 
-  Widget _buildHistoryCard(RecommendationHistoryModel history) { // Ép kiểu rõ ràng ở đây
-    // Dùng dấu CHẤM (.) thay vì ngoặc vuông ([])
+  Widget _buildHistoryCard(RecommendationHistoryModel history) {
     final DateTime date = history.createdAt.isUtc
         ? history.createdAt.toLocal()
         : DateTime.parse('${history.createdAt.toIso8601String()}Z').toLocal();
@@ -94,27 +97,35 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black.withOpacity(0.05)),
+          color: Colors.white, // Card trắng tinh khôi
+          borderRadius: BorderRadius.circular(24), // Bo góc sâu cho sang
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            )
+          ],
         ),
         child: Row(
           children: [
-
+            // Ảnh tham chiếu
             Container(
-              width: 70,
-              height: 85,
+              width: 75,
+              height: 90,
               decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
                 image: refImage != null
-                    ? DecorationImage(image: NetworkImage(refImage), fit: BoxFit.cover)
+                    ? DecorationImage(image: NetworkImage(refImage), fit: BoxFit.contain)
                     : null,
               ),
-              child: refImage == null ? const Icon(Icons.inventory_2_outlined, color: Colors.white10) : null,
+              child: refImage == null
+                  ? const Icon(Icons.style_outlined, color: Colors.black12, size: 30)
+                  : null,
             ),
             const SizedBox(width: 16),
-
+            // Thông tin text
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,28 +133,53 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        DateFormat('dd/MM • HH:mm').format(date),
-                        style: const TextStyle(color: AppColors.textPink, fontSize: 10, fontWeight: FontWeight.bold),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          DateFormat('dd MMM, yyyy').format(date).toUpperCase(),
+                          style: const TextStyle(
+                              color: Colors.black45,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0
+                          ),
+                        ),
                       ),
-                      const Icon(Icons.chevron_right, color: Colors.black, size: 18),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.black12, size: 12),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 10),
                   Text(
                     prompt,
-                    style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
-                    maxLines: 2,
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2
+                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.auto_awesome, color: Colors.amber, size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        history.referenceItemName ?? "Outfit Suggestion",
-                        style: TextStyle(color: Colors.black.withOpacity(0.4), fontSize: 11),
+                    //  const Icon(Icons.auto_awesome_outlined, color: Colors.amber, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          history.referenceItemName ?? "Style Match",
+                          style: TextStyle(
+                              color: Colors.black.withOpacity(0.3),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -161,9 +197,24 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history_toggle_off, size: 64, color: Colors.white.withOpacity(0.1)),
-          const SizedBox(height: 16),
-          const Text("No recommendation history", style: TextStyle(color: Colors.black)),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.02),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.history_outlined, size: 48, color: Colors.black12),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            "NO HISTORY YET",
+            style: TextStyle(
+                color: Colors.black38,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2
+            ),
+          ),
         ],
       ),
     );

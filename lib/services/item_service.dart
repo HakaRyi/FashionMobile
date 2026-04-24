@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,6 +58,43 @@ class ItemService {
         return Exception('Server error. Please try again later.');
       default:
         return Exception('Request failed with status ${response.statusCode}.');
+    }
+  }
+
+  Future<Map<String, dynamic>> getMyItemsPaginated(
+      int page,
+      int pageSize, {
+        String searchQuery = '',
+      }) async {
+    final uri = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}",
+    ).replace(
+      queryParameters: {
+        'page': page.toString(),
+        'pageSize': pageSize.toString(),
+        if (searchQuery.isNotEmpty) 'search': searchQuery,
+      },
+    );
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: await _buildHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decodedData = jsonDecode(response.body);
+
+        if (decodedData['data'] != null &&
+            decodedData['data'] is Map<String, dynamic>) {
+          return decodedData['data'] as Map<String, dynamic>;
+        }
+      }
+
+      return {'items': [], 'totalPages': 1};
+    } catch (e) {
+      debugPrint("Error getMyItemsPaginated: $e");
+      return {'items': [], 'totalPages': 1};
     }
   }
 
@@ -168,6 +206,8 @@ class ItemService {
     required String prompt,
     required bool useMyWardrobe,
     required bool useSavedItems,
+    required bool useMyStylePreferences,
+    required bool useMyPhysicalProfile,
     required List<int> targetWardrobeIds,
     int limit = 10,
   }) async {
@@ -175,22 +215,38 @@ class ItemService {
       "${ApiConstants.baseUrl}${ApiConstants.smartMatchEndpoint}",
     );
 
+    final payload = {
+      'prompt': prompt,
+      'referenceItemId': referenceItemId,
+      'targetWardrobeIds': targetWardrobeIds,
+      'includeMyWardrobe': useMyWardrobe,
+      'includeSavedItems': useSavedItems,
+      'useMyStylePreferences': useMyStylePreferences,
+      'useMyPhysicalProfile': useMyPhysicalProfile,
+      'limit': limit,
+    };
+
+    debugPrint("Sending smart match payload: ${jsonEncode(payload)}");
+
     final response = await http.post(
       url,
       headers: await _buildHeaders(withAuth: true),
-      body: jsonEncode({
-        'prompt': prompt,
-        'referenceItemId': referenceItemId,
-        'targetWardrobeIds': targetWardrobeIds,
-        'includeMyWardrobe': useMyWardrobe,
-        'includeSavedItems': useSavedItems,
-        'limit': limit,
-      }),
+      body: jsonEncode(payload),
     );
 
+    debugPrint("Smart match status: ${response.statusCode}");
+    debugPrint("Smart match body: ${response.body}");
+
     if (response.statusCode == 200) {
-      final decodedData = jsonDecode(response.body);
-      return decodedData['data'] ?? [];
+      final decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (decodedData is Map<String, dynamic> &&
+          decodedData['data'] != null &&
+          decodedData['data'] is List) {
+        return decodedData['data'] as List<dynamic>;
+      }
+
+      return [];
     }
 
     throw _buildExceptionFromResponse(response);

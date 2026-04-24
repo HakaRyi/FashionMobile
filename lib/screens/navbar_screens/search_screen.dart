@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:fashion_mobile/services/follow_service.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
@@ -18,7 +17,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final SearchService _searchService = SearchService();
-  final FollowService _followService = FollowService() ;
+  final FollowService _followService = FollowService();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 
@@ -124,11 +123,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _onSubmitSearch(String query) async {
     if (query.trim().isEmpty) return;
-
     FocusScope.of(context).unfocus();
-
     await _searchService.addSearchHistory(query.trim());
-
     final updatedHistory = await _searchService.getSearchHistory();
     if (mounted) {
       setState(() {
@@ -165,7 +161,7 @@ class _SearchScreenState extends State<SearchScreen> {
         user.isFollowing = currentFollowState;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể thực hiện, vui lòng thử lại!')),
+        const SnackBar(content: Text('Failed to update, please try again!')),
       );
     }
   }
@@ -173,19 +169,21 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5), // Nền xám nhạt cho đồng bộ Minimalist
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
+        titleSpacing: 20,
         title: const Text(
           "Search",
           style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 26,
+            letterSpacing: -0.5,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -197,27 +195,27 @@ class _SearchScreenState extends State<SearchScreen> {
               const Padding(
                 padding: EdgeInsets.only(top: 40),
                 child: Center(
-                  child: CircularProgressIndicator(color: Colors.pinkAccent),
+                  child: CircularProgressIndicator(color: Colors.black),
                 ),
               )
             else if (_searchQuery.isEmpty) ...[
               if (_history.isNotEmpty) ...[
                 _buildSectionTitleWithAction(
-                    "Search history",
-                    "Delete",
+                    "RECENT SEARCHES",
+                    "Clear",
                     _clearHistory
                 ),
                 _buildSearchHistory(),
               ],
-              _buildSectionTitle("Here are some suggestions for you."),
+              _buildSectionTitle("SUGGESTIONS FOR YOU"),
               _buildSuggestedProfiles(_suggestions),
             ] else ...[
-              _buildSectionTitle("Search results"),
+              _buildSectionTitle("SEARCH RESULTS"),
               if (_isLoadingSearch)
                 const Padding(
                   padding: EdgeInsets.only(top: 20),
                   child: Center(
-                    child: CircularProgressIndicator(color: Colors.pinkAccent),
+                    child: CircularProgressIndicator(color: Colors.black),
                   ),
                 )
               else if (_searchResults.isEmpty)
@@ -225,6 +223,7 @@ class _SearchScreenState extends State<SearchScreen> {
               else
                 _buildSuggestedProfiles(_searchResults),
             ],
+            const SizedBox(height: 100),
           ],
         ),
       ),
@@ -236,23 +235,23 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.pink.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.pink.withOpacity(0.1)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black.withOpacity(0.05)),
         ),
         child: TextField(
           controller: _searchController,
           onChanged: _onSearchChanged,
           onSubmitted: _onSubmitSearch,
           textInputAction: TextInputAction.search,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: const TextStyle(color: Colors.black),
           decoration: InputDecoration(
-            hintText: "Searching for users ...",
-            hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-            prefixIcon: const Icon(Icons.search, color: Colors.pinkAccent),
+            hintText: "Search by username or name...",
+            hintStyle: TextStyle(color: Colors.black.withOpacity(0.3), fontSize: 14),
+            prefixIcon: const Icon(Icons.search, color: Colors.black),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-              icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+              icon: const Icon(Icons.close, color: Colors.black, size: 20),
               onPressed: () {
                 _searchController.clear();
                 _onSearchChanged("");
@@ -277,20 +276,19 @@ class _SearchScreenState extends State<SearchScreen> {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-              letterSpacing: 0.5,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
             ),
           ),
           GestureDetector(
             onTap: onAction,
             child: Text(
               actionTitle,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black.withOpacity(0.4),
               ),
             ),
           ),
@@ -304,13 +302,13 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Wrap(
         spacing: 8,
-        runSpacing: 8,
+        runSpacing: 0,
         children: _history.map((item) => ActionChip(
           label: Text(item.keyword),
-          avatar: const Icon(Icons.history, size: 16, color: AppColors.textPrimary),
-          backgroundColor: Colors.grey[800],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          labelStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+          backgroundColor: Colors.white,
+          side: BorderSide(color: Colors.black.withOpacity(0.08)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          labelStyle: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500),
           onPressed: () {
             _searchController.text = item.keyword;
             _onSearchChanged(item.keyword);
@@ -321,147 +319,141 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildSuggestedProfiles(List<UserSuggestionModel> users) {
-    return Column(
-      children: [
-        const Divider(
-          height: 1,
-          thickness: 1,
-          color: Color(0xFFFD9FBB),
-        ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: users.length,
-          padding: EdgeInsets.zero,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            return Column(
-              children: [
-                _buildProfileCard(
-                  user: user,
-                ),
-                if (index < users.length - 1)
-                  const Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: 90,
-                    color: Color(0xFFFD9FBB),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: users.length,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildProfileCard(user: users[index]),
+        );
+      },
     );
   }
 
   Widget _buildProfileCard({required UserSuggestionModel user}) {
-    final avatar= user.avatarUrl.isNotEmpty
+    final avatar = user.avatarUrl.isNotEmpty
         ? NetworkImage(user.avatarUrl)
         : const AssetImage('assets/images/default_avatar.png') as ImageProvider;
 
-    return InkWell(
-      onTap: () => _navigateToProfile(user.accountId),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.pinkAccent.withOpacity(0.3), width: 2),
-              ),
-              child: CircleAvatar(
-                radius: 28,
-                backgroundColor: Colors.white10,
-                backgroundImage: avatar,
-                onBackgroundImageError: (_, __) {},
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.fullName.isNotEmpty ? user.fullName : user.username,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "@${user.username}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.pinkAccent,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "${user.followerCount} Followers",
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => _handleToggleFollow(user),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: user.isFollowing ? AppColors.backgroundSecondary : Colors.pinkAccent.withOpacity(0.1),
-                foregroundColor: user.isFollowing ? AppColors.textPink : Colors.pinkAccent,
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _navigateToProfile(user.accountId),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppColors.surface,
+                  backgroundImage: avatar,
+                ),
               ),
-              child: Text(
-                user.isFollowing ? "Following" : "Follow",
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.fullName.isNotEmpty ? user.fullName : user.username,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "@${user.username}",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.black.withOpacity(0.5),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "${user.followerCount} followers",
+                      style: TextStyle(
+                        color: Colors.black.withOpacity(0.3),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              _buildFollowButton(user),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // HÀM NÀY LÀ HÀM BỊ THIẾU Ở TRÊN ĐÂY ÔNG ƠI
+  Widget _buildFollowButton(UserSuggestionModel user) {
+    final bool following = user.isFollowing;
+    return GestureDetector(
+      onTap: () => _handleToggleFollow(user),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: following ? Colors.white : Colors.black,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: following ? Colors.black.withOpacity(0.1) : Colors.black),
+        ),
+        child: Text(
+          following ? "Following" : "Follow",
+          style: TextStyle(
+            color: following ? Colors.black : Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.search_off_rounded, size: 60, color: Colors.white24),
-            const SizedBox(height: 16),
-            const Text(
+            Icon(Icons.search_off_rounded, size: 60, color: Colors.black12),
+            SizedBox(height: 16),
+            Text(
               "No user found",
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: Colors.black,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Try searching with a different keyword.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
               ),
             ),
           ],
@@ -472,14 +464,13 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 20, top: 20, bottom: 12),
+      padding: const EdgeInsets.only(left: 20, top: 32, bottom: 12),
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary,
-          letterSpacing: 0.5,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          color: Colors.black,
         ),
       ),
     );

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../constants/app_colors.dart';
 import '../services/order_service.dart';
 import '../utils/app_toast.dart';
 
@@ -68,28 +67,32 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
           _proofImage2 = File(pickedFile.path);
         }
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
-      AppToast.show(context, 'Cannot pick image.');
+      AppToast.show(
+        context,
+        'Cannot pick image.',
+        isError: true,
+      );
     }
   }
 
   void _showImageSourceSheet(int slot) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.backgroundSecondary,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(22),
+          top: Radius.circular(28),
         ),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -97,39 +100,39 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.divider,
+                    color: Colors.black12,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(
-                    Icons.photo_library_outlined,
-                    color: AppColors.textPink,
+                const SizedBox(height: 18),
+                const Text(
+                  'SELECT IMAGE SOURCE',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.6,
                   ),
-                  title: const Text(
-                    'Choose from gallery',
-                    style: TextStyle(color: AppColors.text),
-                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildSheetAction(
+                  icon: Icons.photo_library_outlined,
+                  title: 'Choose from gallery',
+                  subtitle: 'Select an image from your device',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     _pickImage(
                       slot: slot,
                       source: ImageSource.gallery,
                     );
                   },
                 ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.photo_camera_outlined,
-                    color: AppColors.textPink,
-                  ),
-                  title: const Text(
-                    'Take a photo',
-                    style: TextStyle(color: AppColors.text),
-                  ),
+                _buildSheetAction(
+                  icon: Icons.photo_camera_outlined,
+                  title: 'Take a photo',
+                  subtitle: 'Use your camera to capture proof',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     _pickImage(
                       slot: slot,
                       source: ImageSource.camera,
@@ -141,6 +144,55 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSheetAction({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 4,
+      ),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.black,
+          size: 22,
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w900,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          color: Colors.black45,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: Colors.black12,
+        size: 14,
+      ),
     );
   }
 
@@ -205,34 +257,39 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
   void _showProofGuide() {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor: AppColors.backgroundSecondary,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(24),
           ),
           title: const Text(
             'Proof image guide',
             style: TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontWeight: FontWeight.w900,
             ),
           ),
           content: const Text(
-            'Please upload clear images that show the problem, such as wrong item, damaged item, missing item, or mismatch with the description.',
+            'Please upload clear images that show the problem, such as a wrong item, damaged item, missing item, or mismatch with the description.',
             style: TextStyle(
-              color: Colors.white70,
+              color: Colors.black54,
               height: 1.45,
+              fontWeight: FontWeight.w500,
             ),
           ),
           actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.textPink,
-                foregroundColor: Colors.white,
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                'GOT IT',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
               ),
-              child: const Text('Got it'),
             ),
           ],
         );
@@ -253,27 +310,38 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       style: const TextStyle(
-        color: AppColors.text,
+        color: Colors.black,
         fontSize: 14,
+        fontWeight: FontWeight.w600,
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Colors.white60),
-        hintStyle: const TextStyle(color: Colors.white30),
+        labelStyle: const TextStyle(
+          color: Colors.black45,
+          fontWeight: FontWeight.w600,
+        ),
+        hintStyle: const TextStyle(
+          color: Colors.black26,
+          fontWeight: FontWeight.w500,
+        ),
         prefixIcon: Icon(
           icon,
-          color: AppColors.textPink,
+          color: Colors.black,
         ),
         filled: true,
-        fillColor: AppColors.backgroundSecondary,
+        fillColor: const Color(0xFFF7F7F7),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(
+            color: Colors.black.withOpacity(0.06),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.textPink),
+          borderSide: const BorderSide(
+            color: Colors.black,
+          ),
         ),
       ),
     );
@@ -281,28 +349,25 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
 
   Widget _buildInfoCard() {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.info_outline,
-            color: AppColors.textPink,
+            color: Colors.black,
             size: 22,
           ),
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Refund can only be requested when the order is Delivered. After submitting, the order will move to Refunding and wait for admin review.',
+              'Refunds can only be requested when the order is Delivered. After submission, the order will move to Refunding and wait for admin review.',
               style: TextStyle(
-                color: Colors.white70,
+                color: Colors.black54,
                 fontSize: 13,
                 height: 1.45,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -319,12 +384,8 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
     required bool requiredImage,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -332,15 +393,15 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
             children: [
               Icon(
                 Icons.image_outlined,
-                color: requiredImage ? AppColors.textPink : AppColors.textSecondary,
+                color: requiredImage ? Colors.black : Colors.black38,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   requiredImage ? '$title *' : title,
                   style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
                     fontSize: 14,
                   ),
                 ),
@@ -367,9 +428,10 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
           Text(
             subtitle,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: Colors.black45,
               fontSize: 12,
               height: 1.35,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 12),
@@ -391,11 +453,10 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
                 width: double.infinity,
                 height: 138,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: const Color(0xFFF7F7F7),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: AppColors.divider,
-                    style: BorderStyle.solid,
+                    color: Colors.black.withOpacity(0.06),
                   ),
                 ),
                 child: const Column(
@@ -403,15 +464,16 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
                   children: [
                     Icon(
                       Icons.add_photo_alternate_outlined,
-                      color: AppColors.textPink,
+                      color: Colors.black,
                       size: 34,
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Tap to select image',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: Colors.black45,
                         fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -423,13 +485,21 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: _isSubmitting ? null : () => _showImageSourceSheet(slot),
+                onPressed:
+                _isSubmitting ? null : () => _showImageSourceSheet(slot),
                 icon: const Icon(Icons.swap_horiz),
-                label: const Text('Change image'),
+                label: const Text(
+                  'CHANGE IMAGE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPink,
-                  side: const BorderSide(color: AppColors.textPink),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  foregroundColor: Colors.black,
+                  side: const BorderSide(color: Colors.black),
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -445,18 +515,27 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F5F5),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.text),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
-          'Request Refund',
+          'REQUEST REFUND',
           style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+            letterSpacing: 0.4,
           ),
         ),
         actions: [
@@ -464,40 +543,33 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
             onPressed: _showProofGuide,
             icon: const Icon(
               Icons.help_outline,
-              color: AppColors.text,
+              color: Colors.black,
             ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           _buildInfoCard(),
           const SizedBox(height: 18),
-          const Text(
-            'Refund Reason',
-            style: TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
+          _sectionTitle(
+            'REFUND REASON',
+            Icons.description_outlined,
           ),
           const SizedBox(height: 10),
           _buildTextField(
             controller: _reasonController,
             label: 'Reason',
-            hint: 'Example: Item is damaged or not as described',
+            hint: 'Example: The item is damaged or not as described',
             icon: Icons.description_outlined,
             maxLines: 4,
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Proof Images',
-            style: TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
+          _sectionTitle(
+            'PROOF IMAGES',
+            Icons.image_outlined,
           ),
           const SizedBox(height: 10),
           _buildProofPicker(
@@ -531,16 +603,19 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
               )
                   : const Icon(Icons.assignment_return_outlined),
               label: Text(
-                _isSubmitting ? 'Submitting...' : 'Submit Refund Request',
+                _isSubmitting ? 'SUBMITTING...' : 'SUBMIT REFUND REQUEST',
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 0.4,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.textPink,
+                backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.white10,
-                disabledForegroundColor: Colors.white38,
+                disabledBackgroundColor: const Color(0xFFEDEDED),
+                disabledForegroundColor: Colors.black38,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -550,6 +625,45 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _sectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.black,
+          size: 18,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
     );
   }
 }

@@ -7,7 +7,6 @@ import '../constants/post_status_values.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_reaction_result.dart';
-import '../models/post_share_result.dart';
 import '../models/shareable_user_model.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
@@ -27,11 +26,11 @@ class PostManager extends ChangeNotifier {
 
   List<ShareableUserModel> get shareableUsers =>
       List.unmodifiable(_shareableUsers);
+
   List<PostFeedModel> get posts => List.unmodifiable(_posts);
 
   bool isLoadingShareableUsers = false;
 
-  final Set<int> _sharingPosts = {};
   final Set<int> _sharingPostsToChat = {};
 
   DateTime? _cursor;
@@ -124,17 +123,17 @@ class PostManager extends ChangeNotifier {
   String getMyPostStatusText(String? status) {
     switch (status) {
       case PostStatusValues.draft:
-        return 'Nháp';
+        return 'Draft';
       case PostStatusValues.verifying:
-        return 'Đang duyệt';
+        return 'Reviewing';
       case PostStatusValues.pendingAdmin:
-        return 'Chờ admin duyệt';
+        return 'Pending Admin Review';
       case PostStatusValues.published:
-        return 'Đã đăng';
+        return 'Published';
       case PostStatusValues.rejected:
-        return 'Bị từ chối';
+        return 'Rejected';
       default:
-        return status ?? 'Không rõ';
+        return status ?? 'Unknown';
     }
   }
 
@@ -157,14 +156,19 @@ class PostManager extends ChangeNotifier {
     int page = 1,
     int pageSize = 10,
   }) async {
-    if (isLoadingSaved || isLoadingMoreSaved) return;
+    if (isLoadingSaved || isLoadingMoreSaved) {
+      return;
+    }
 
     if (refresh) {
       isLoadingSaved = true;
       _savedPage = 1;
       hasMoreSaved = true;
     } else {
-      if (!hasMoreSaved) return;
+      if (!hasMoreSaved) {
+        return;
+      }
+
       isLoadingMoreSaved = true;
     }
 
@@ -206,12 +210,17 @@ class PostManager extends ChangeNotifier {
     required List<int> receiverAccountIds,
     String? caption,
   }) async {
-    if (_sharingPostsToChat.contains(post.postId)) return;
+    if (_sharingPostsToChat.contains(post.postId)) {
+      return;
+    }
 
-    final validReceiverIds = receiverAccountIds.where((id) => id > 0).toSet().toList();
+    final validReceiverIds = receiverAccountIds
+        .where((id) => id > 0)
+        .toSet()
+        .toList();
 
     if (validReceiverIds.isEmpty) {
-      throw Exception('Vui lòng chọn ít nhất một người nhận');
+      throw Exception('Please select at least one receiver.');
     }
 
     _sharingPostsToChat.add(post.postId);
@@ -240,7 +249,9 @@ class PostManager extends ChangeNotifier {
   }
 
   Future<void> loadMoreSavedPosts({int pageSize = 10}) async {
-    if (isLoadingSaved || isLoadingMoreSaved || !hasMoreSaved) return;
+    if (isLoadingSaved || isLoadingMoreSaved || !hasMoreSaved) {
+      return;
+    }
 
     await fetchSavedPosts(
       refresh: false,
@@ -264,7 +275,9 @@ class PostManager extends ChangeNotifier {
     int page = 1,
     int pageSize = 10,
   }) async {
-    if (isLoadingMyPosts) return;
+    if (isLoadingMyPosts) {
+      return;
+    }
 
     isLoadingMyPosts = true;
     notifyListeners();
@@ -288,7 +301,10 @@ class PostManager extends ChangeNotifier {
   }
 
   Future<void> toggleLikePost(int postId) async {
-    if (_likingPosts.contains(postId)) return;
+    if (_likingPosts.contains(postId)) {
+      return;
+    }
+
     _likingPosts.add(postId);
 
     final post = _findPostAnywhere(postId);
@@ -329,7 +345,10 @@ class PostManager extends ChangeNotifier {
   }
 
   Future<void> toggleSavePost(int postId) async {
-    if (_savingPosts.contains(postId)) return;
+    if (_savingPosts.contains(postId)) {
+      return;
+    }
+
     _savingPosts.add(postId);
 
     final post = _findPostAnywhere(postId);
@@ -372,7 +391,9 @@ class PostManager extends ChangeNotifier {
 
   Future<void> hideMyPost(int postId) async {
     final index = _myPosts.indexWhere((p) => p.postId == postId);
-    if (index == -1) return;
+    if (index == -1) {
+      return;
+    }
 
     final oldPost = _myPosts[index];
     if (oldPost.status != PostStatusValues.published ||
@@ -396,7 +417,9 @@ class PostManager extends ChangeNotifier {
 
   Future<void> unhideMyPost(int postId) async {
     final index = _myPosts.indexWhere((p) => p.postId == postId);
-    if (index == -1) return;
+    if (index == -1) {
+      return;
+    }
 
     final oldPost = _myPosts[index];
     if (oldPost.status != PostStatusValues.published ||
@@ -434,11 +457,13 @@ class PostManager extends ChangeNotifier {
         String? title,
         int? eventId,
       }) async {
-    if (isUploading) return;
+    if (isUploading) {
+      return;
+    }
 
     isUploading = true;
     uploadProgress = 0;
-    statusMessage = 'Đang tải lên...';
+    statusMessage = 'Uploading...';
     notifyListeners();
 
     _startFakeProgress();
@@ -472,7 +497,7 @@ class PostManager extends ChangeNotifier {
 
       uploadProgress = 1;
       statusMessage =
-      success ? 'Đã gửi! Bài đang chờ duyệt...' : 'Đăng bài thất bại';
+      success ? 'Submitted! Waiting for review...' : 'Post upload failed.';
       notifyListeners();
 
       await Future.delayed(const Duration(milliseconds: 600));
@@ -522,7 +547,9 @@ class PostManager extends ChangeNotifier {
 
   void increaseCommentCount(int postId) {
     final post = _findPostAnywhere(postId);
-    if (post == null) return;
+    if (post == null) {
+      return;
+    }
 
     final updated = post.copyWith(
       commentCount: post.commentCount + 1,
@@ -534,7 +561,9 @@ class PostManager extends ChangeNotifier {
 
   void decreaseCommentCount(int postId) {
     final post = _findPostAnywhere(postId);
-    if (post == null) return;
+    if (post == null) {
+      return;
+    }
 
     final updated = post.copyWith(
       commentCount: post.commentCount > 0 ? post.commentCount - 1 : 0,
@@ -562,7 +591,9 @@ class PostManager extends ChangeNotifier {
     required bool isLiked,
   }) {
     final post = _findPostAnywhere(postId);
-    if (post == null) return;
+    if (post == null) {
+      return;
+    }
 
     final updated = post.copyWith(
       likeCount: likeCount,
@@ -652,7 +683,7 @@ class PostManager extends ChangeNotifier {
           uploadProgress += 0.05;
         } else if (uploadProgress < 0.95) {
           uploadProgress += 0.01;
-          statusMessage = 'Đang gửi dữ liệu...';
+          statusMessage = 'Sending data...';
         } else {
           timer.cancel();
         }
@@ -670,16 +701,23 @@ class PostManager extends ChangeNotifier {
     rootScaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(
-          success ? 'Đã gửi, bài đang chờ duyệt!' : 'Đăng bài thất bại',
+          success
+              ? 'Submitted! Your post is waiting for review.'
+              : 'Post upload failed.',
         ),
-        backgroundColor: success ? Colors.green : Colors.red,
+        backgroundColor: success ? Colors.green : Colors.redAccent,
         duration: const Duration(seconds: 3),
       ),
     );
   }
 
-  Future<void> fetchFeed({bool refresh = false, int pageSize = 10}) async {
-    if (isLoading || isLoadingMore) return;
+  Future<void> fetchFeed({
+    bool refresh = false,
+    int pageSize = 10,
+  }) async {
+    if (isLoading || isLoadingMore) {
+      return;
+    }
 
     if (refresh) {
       _cursor = null;
@@ -688,13 +726,16 @@ class PostManager extends ChangeNotifier {
       _postIds.clear();
     }
 
-    if (!hasMore) return;
+    if (!hasMore) {
+      return;
+    }
 
     if (_posts.isEmpty) {
       isLoading = true;
     } else {
       isLoadingMore = true;
     }
+
     notifyListeners();
 
     try {
@@ -730,7 +771,9 @@ class PostManager extends ChangeNotifier {
   }
 
   Future<void> fetchShareableUsers({bool refresh = false}) async {
-    if (isLoadingShareableUsers) return;
+    if (isLoadingShareableUsers) {
+      return;
+    }
 
     if (!refresh && _shareableUsers.isNotEmpty) {
       return;
@@ -759,7 +802,10 @@ class PostManager extends ChangeNotifier {
   }
 
   Future<void> loadMore() async {
-    if (!hasMore || isLoading || isLoadingMore) return;
+    if (!hasMore || isLoading || isLoadingMore) {
+      return;
+    }
+
     await fetchFeed();
   }
 

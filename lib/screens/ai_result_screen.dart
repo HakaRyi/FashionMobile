@@ -1,15 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 import '../models/wardrobe_item_model.dart';
+import '../widgets/animated_fabric_background.dart';
 import '../widgets/clothing_item.dart';
 import '../services/item_service.dart';
-import 'clothing_detail_screen.dart'; // Đảm bảo đã import trang chi tiết
+import 'clothing_detail_screen.dart';
 
 class AIResultScreen extends StatefulWidget {
   final dynamic baseItem;
   final String prompt;
   final bool useMyWardrobe;
   final bool includeSavedItems;
+  final bool useMyStylePreferences;
+  final bool useMyPhysicalProfile;
   final List<int> targetWardrobeIds;
 
   const AIResultScreen({
@@ -18,6 +23,8 @@ class AIResultScreen extends StatefulWidget {
     required this.prompt,
     required this.useMyWardrobe,
     required this.includeSavedItems,
+    required this.useMyStylePreferences,
+    required this.useMyPhysicalProfile,
     required this.targetWardrobeIds,
   });
 
@@ -27,22 +34,23 @@ class AIResultScreen extends StatefulWidget {
 
 class _AIResultScreenState extends State<AIResultScreen> {
   late Future<List<dynamic>> _recommendationsFuture;
+  final Map<String, PageController> _controllers = {};
+
   int get _baseItemId {
     if (widget.baseItem is WardrobeItemModel) return widget.baseItem.itemId;
     return widget.baseItem['itemId'] ?? 0;
   }
 
-  // Hàm lấy tên an toàn
   String get _baseItemName {
     if (widget.baseItem is WardrobeItemModel) return widget.baseItem.itemName;
     return widget.baseItem['itemName'] ?? "Item";
   }
 
-  // Hàm lấy ảnh an toàn (Fix luôn vụ lệch key primaryImageUrl/imageUrl)
   String? get _baseItemImage {
     if (widget.baseItem is WardrobeItemModel) return widget.baseItem.imageUrl;
     return widget.baseItem['primaryImageUrl'] ?? widget.baseItem['imageUrl'];
   }
+
   @override
   void initState() {
     super.initState();
@@ -51,192 +59,249 @@ class _AIResultScreenState extends State<AIResultScreen> {
       prompt: widget.prompt,
       useMyWardrobe: widget.useMyWardrobe,
       useSavedItems: widget.includeSavedItems,
+      useMyStylePreferences: widget.useMyStylePreferences,
+      useMyPhysicalProfile: widget.useMyPhysicalProfile,
       targetWardrobeIds: widget.targetWardrobeIds,
-      limit: 15,
+      limit: 20,
     );
   }
 
-  Map<String, List<dynamic>> _groupItems(List<dynamic> items) {
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  // Thứ tự ưu tiên sắp xếp danh mục
+  int _getCategoryPriority(String cat) {
+    cat = cat.toUpperCase();
+    if (cat.contains('ACCESSORY')) return 1;
+    if (cat.contains('UPPER_BODY')) return 2;
+    if (cat.contains('LOWER_BODY')) return 3;
+    if (cat.contains('FULL_BODY')) return 4;
+    if (cat.contains('FOOTWEAR')) return 5;
+    return 6;
+  }
+
+  Map<String, List<dynamic>> _groupAndSortItems(List<dynamic> items) {
     Map<String, List<dynamic>> grouped = {};
     for (var item in items) {
-      String cat = item['category']?.toString().toUpperCase() ?? "KHÁC";
-      if (cat == "UPPER_BODY") cat = "ÁO & ÁO KHOÁC";
-      if (cat == "LOWER_BODY") cat = "QUẦN & VÁY";
-      if (cat == "FOOTWEAR") cat = "GIÀY DÉP";
-      if (cat == "ACCESSORY") cat = "PHỤ KIỆN";
-
+      String cat = item['category']?.toString().toUpperCase() ?? "OTHERS";
       if (!grouped.containsKey(cat)) grouped[cat] = [];
       grouped[cat]!.add(item);
     }
-    return grouped;
+    var sortedKeys = grouped.keys.toList()
+      ..sort((a, b) => _getCategoryPriority(a).compareTo(_getCategoryPriority(b)));
+
+    return {for (var key in sortedKeys) key: grouped[key]!};
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text("AI Stylist Gợi Ý",
-            style: TextStyle(color: Colors.black, fontSize: 16)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-
+        centerTitle: true,
+        title: const Text("AI STYLIST RESULT",
+            style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 0)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text("Xong",
-                style: TextStyle(
-                    color: AppColors.textPink,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
+            onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+            child: const Text("DONE", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12)),
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: FutureBuilder<List<dynamic>>(
+      extendBodyBehindAppBar: true,
+      body: AnimatedFabricBackground(
+          child: SafeArea(
+            child: FutureBuilder<List<dynamic>>(
         future: _recommendationsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: AppColors.textPink),
-                  SizedBox(height: 16),
-                  Text("AI đang tìm đồ phù hợp...",
-                      style: TextStyle(color: AppColors.textPrimary)),
-                ],
-              ),
-            );
+            return const Center(child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2));
           }
 
           if (snapshot.hasError) {
-            return Center(
-                child: Text("Lỗi: ${snapshot.error}",
-                    style: const TextStyle(color: Colors.redAccent)));
+            return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.redAccent)));
           }
 
           final results = snapshot.data ?? [];
           if (results.isEmpty) {
-            return const Center(
-                child: Text("Không tìm thấy món đồ phù hợp.",
-                    style: TextStyle(color: AppColors.textPrimary)));
+            return const Center(child: Text("No items found matching your request.", style: TextStyle(color: Colors.black38)));
           }
 
-          final groupedData = _groupItems(results);
+          final groupedData = _groupAndSortItems(results);
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildResultHeader(),
-              const SizedBox(height: 24),
-              ...groupedData.entries
-                  .map((entry) => _buildCategorySection(entry.key, entry.value))
-                  .toList(),
-              const SizedBox(height: 40),
-            ],
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                _buildResultHeader(),
+                ...groupedData.entries.map((entry) => _buildSnapCarousel(entry.key, entry.value)).toList(),
+                const SizedBox(height: 60),
+              ],
+            ),
           );
         },
+            ),
+          ),
       ),
     );
   }
 
   Widget _buildResultHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(20, 5, 20, 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.stroke,
-        borderRadius: BorderRadius.circular(16),
-       // border: Border.all(color: AppColors.textPink.withOpacity(0.3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
           Hero(
             tag: 'item_$_baseItemId',
             child: Container(
-              width: 60,
-              height: 70,
               decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black.withOpacity(0.05)),
+              ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(11),
                 child: _baseItemImage != null
-                    ? Image.network(_baseItemImage!,
-                    fit: BoxFit.cover)
-                    : const Icon(Icons.checkroom, color: Colors.grey),
+                    ? Image.network(_baseItemImage!, width: 50, height: 65, fit: BoxFit.contain)
+                    : Container(width: 50, height: 65, color: const Color(0xFFF9F9F9), child: const Icon(Icons.checkroom, color: Colors.black12, size: 20)),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Phối đồ cùng:",
-                    style: TextStyle(color: Colors.black54, fontSize: 12)),
-                Text(_baseItemName,
-                    style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15)),
-                if (widget.prompt.isNotEmpty)
-                  Text("Yêu cầu: ${widget.prompt}",
-                      style: const TextStyle(
-                          color: AppColors.textPink,
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic)),
+                const Text("STYLING WITH", style: TextStyle(color: Colors.black26, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0)),
+                const SizedBox(height: 2),
+                Text(_baseItemName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w800)),
+                if (widget.prompt.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text("“${widget.prompt}”", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textPink, fontSize: 10, fontStyle: FontStyle.italic, fontWeight: FontWeight.w600)),
+                ]
               ],
             ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
+            child: const Text("AI MATCH", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCategorySection(String title, List<dynamic> items) {
+  Widget _buildSnapCarousel(String categoryName, List<dynamic> items) {
+    String displayTitle = categoryName;
+    if (displayTitle == "UPPER_BODY") displayTitle = "TOPS & JACKETS";
+    if (displayTitle == "LOWER_BODY") displayTitle = "PANTS & SKIRTS";
+    if (displayTitle == "FOOTWEAR") displayTitle = "SHOES";
+    if (displayTitle == "ACCESSORY") displayTitle = "ACCESSORIES";
+
+    final bool shouldLoop = items.length >= 3;
+    final int itemCount = shouldLoop ? 1000 : items.length;
+    final int initialPage = shouldLoop ? (itemCount ~/ 2) - ((itemCount ~/ 2) % items.length) : 0;
+
+    final controller = _controllers.putIfAbsent(
+      categoryName,
+          () => PageController(viewportFraction: 0.45, initialPage: initialPage),
+    );
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 20, bottom: 12),
-          child: Text(title,
-              style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
-        ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.8,
+          padding: const EdgeInsets.fromLTRB(25, 10, 20, 0),
+          child: Text(
+            displayTitle.toUpperCase(),
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing:0, color: Colors.black),
           ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return ClothingItem(
-              title: item['itemName'] ?? "Unnamed",
-              imageUrl: item['primaryImageUrl'],
-              // --- XỬ LÝ XEM CHI TIẾT KHI CHẠM ---
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ClothingDetailScreen(itemData: item,showEditButton: false,),
-                  ),
-                );
-              },
-            );
-          },
+        ),
+        SizedBox(
+          height: 210,
+          child: PageView.builder(
+            controller: controller,
+            padEnds: true,
+            physics: items.length <= 1 ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+            itemCount: itemCount,
+            itemBuilder: (context, index) {
+              final item = items[index % items.length];
+              return AnimatedBuilder(
+                animation: controller,
+                builder: (context, child) {
+                  double value = 0.0;
+                  if (controller.position.hasContentDimensions) {
+                    value = (controller.page ?? initialPage.toDouble()) - index;
+                  } else {
+                    value = (initialPage.toDouble()) - index;
+                  }
+                  double scale = (1 - (value.abs() * 0.2)).clamp(0.8, 1.0);
+                  double opacity = (1 - (value.abs() * 0.5)).clamp(0.4, 1.0);
+
+                  return Transform.scale(
+                    scale: scale,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: _buildCarouselItem(item),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCarouselItem(dynamic item) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ClothingDetailScreen(itemData: item, showEditButton: false)));
+      },
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 0.75,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: ClothingItem(
+                itemData: item,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -16,7 +16,7 @@ class GoogleLoginButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.backgroundSecondary,
+          color: Colors.black,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
@@ -29,7 +29,7 @@ class GoogleLoginButton extends StatelessWidget {
             const SizedBox(width: 12),
             const Text(
               "Tiếp tục với Google",
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ],
         ),

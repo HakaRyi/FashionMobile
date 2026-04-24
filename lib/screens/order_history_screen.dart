@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../constants/app_colors.dart';
 import '../models/order_model.dart';
 import '../services/order_service.dart';
 import 'order_detail_screen.dart';
@@ -149,23 +148,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   Color _statusColor(String status) {
     switch (_normalizeStatus(status)) {
       case 'pendingpayment':
-        return Colors.orange;
+        return const Color(0xFFE29400);
       case 'processing':
-        return Colors.blueAccent;
+        return const Color(0xFF2563EB);
       case 'shipping':
-        return Colors.lightBlue;
+        return const Color(0xFF0284C7);
       case 'delivered':
-        return Colors.purple;
+        return const Color(0xFF7C3AED);
       case 'completed':
-        return Colors.green;
+        return const Color(0xFF16A34A);
       case 'cancelled':
-        return Colors.redAccent;
+        return const Color(0xFFDC2626);
       case 'refunding':
-        return Colors.amber;
+        return const Color(0xFFD97706);
       case 'refunded':
-        return Colors.cyan;
+        return const Color(0xFF0891B2);
       default:
-        return AppColors.textSecondary;
+        return Colors.black54;
     }
   }
 
@@ -191,18 +190,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.text),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
-          'Order History',
+          'ORDERS',
           style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+            letterSpacing: 0,
           ),
         ),
         actions: [
@@ -214,31 +221,59 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.textPink,
+                color: Colors.black,
               ),
             )
-                : const Icon(Icons.refresh),
+                : const Icon(
+              Icons.refresh_rounded,
+              color: Colors.black,
+            ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.textPink,
-          labelColor: AppColors.textPink,
-          unselectedLabelColor: AppColors.textSecondary,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            height: 44,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.black.withOpacity(0.05),
+              ),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.black54,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 0,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                letterSpacing: 0,
+              ),
+              tabs: const [
+                Tab(text: 'Purchases'),
+                Tab(text: 'Sales'),
+              ],
+            ),
           ),
-          tabs: const [
-            Tab(text: 'Purchases'),
-            Tab(text: 'Sales'),
-          ],
         ),
       ),
       body: _isLoading
           ? const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.textPink,
-        ),
+        child: CircularProgressIndicator(color: Colors.black),
       )
           : _error != null
           ? _buildError()
@@ -262,42 +297,74 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: AppColors.text,
-              size: 48,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.black.withOpacity(0.05),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Failed to load orders',
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error ?? 'An unexpected error occurred.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                height: 1.4,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.black,
+                size: 48,
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _loadOrders(showFullLoading: true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.textPink,
-                foregroundColor: Colors.white,
+              const SizedBox(height: 12),
+              const Text(
+                'Failed to load orders',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-              child: const Text('Retry'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                _error ?? 'An unexpected error occurred.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _loadOrders(showFullLoading: true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'TRY AGAIN',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -310,27 +377,42 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     if (orders.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refreshOrders,
-        color: AppColors.textPink,
+        color: Colors.black,
+        backgroundColor: Colors.white,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            const SizedBox(height: 160),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.22),
             Icon(
               isPurchase
                   ? Icons.shopping_bag_outlined
                   : Icons.storefront_outlined,
-              color: AppColors.textSecondary,
-              size: 68,
+              color: Colors.black12,
+              size: 76,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Text(
               isPurchase
-                  ? 'You have no purchase orders.'
-                  : 'You have no sales orders.',
+                  ? 'NO PURCHASE ORDERS YET'
+                  : 'NO SALES ORDERS YET',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 15,
+                color: Colors.black26,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isPurchase
+                  ? 'Your bought items will appear here.'
+                  : 'Your sold items will appear here.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black38,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -340,12 +422,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
     return RefreshIndicator(
       onRefresh: _refreshOrders,
-      color: AppColors.textPink,
+      color: Colors.black,
+      backgroundColor: Colors.white,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         itemCount: orders.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
           final order = orders[index];
 
@@ -366,6 +449,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     order.orderDetails.isNotEmpty ? order.orderDetails.first : null;
 
     final itemCount = order.orderDetails.length;
+    final statusColor = _statusColor(order.status);
 
     return InkWell(
       onTap: () {
@@ -374,97 +458,142 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           isPurchase: isPurchase,
         );
       },
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.backgroundSecondary,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.divider),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.black.withOpacity(0.05),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            _buildOrderImage(firstDetail?.imageUrl),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.orderCode,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    firstDetail?.itemName ?? 'Unknown item',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (itemCount > 1) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      '+ ${itemCount - 1} more item(s)',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 7),
-                  Text(
-                    isPurchase
-                        ? 'Seller: ${order.sellerName}'
-                        : 'Buyer: ${order.buyerName}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    _formatPrice(order.totalAmount),
-                    style: const TextStyle(
-                      color: AppColors.textPink,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildStatusChip(order.status),
-                      const Spacer(),
-                      if (order.createdAt != null)
+            Row(
+              children: [
+                _buildOrderImage(firstDetail?.imageUrl),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 86,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          _formatDate(order.createdAt),
+                          order.orderCode,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            letterSpacing: 0,
                           ),
                         ),
-                    ],
+                        const SizedBox(height: 5),
+                        Text(
+                          firstDetail?.itemName ?? 'Unknown item',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (itemCount > 1) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            '+ ${itemCount - 1} more item(s)',
+                            style: const TextStyle(
+                              color: Colors.black38,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        Text(
+                          isPurchase
+                              ? 'Seller: ${order.sellerName}'
+                              : 'Buyer: ${order.buyerName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.black12,
+                  size: 14,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F7F7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.black.withOpacity(0.04),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _formatPrice(order.totalAmount),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  _buildStatusChip(order.status, statusColor),
                 ],
               ),
             ),
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.chevron_right,
-              color: AppColors.textSecondary,
-            ),
+            if (order.createdAt != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: Colors.black26,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    _formatDate(order.createdAt),
+                    style: const TextStyle(
+                      color: Colors.black38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -477,11 +606,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: Image.network(
         imageUrl,
-        width: 78,
-        height: 78,
+        width: 86,
+        height: 86,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) {
           return _buildImagePlaceholder();
@@ -492,16 +621,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           }
 
           return Container(
-            width: 78,
-            height: 78,
-            color: AppColors.surface,
+            width: 86,
+            height: 86,
+            color: Colors.white,
             alignment: Alignment.center,
             child: const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.textPink,
+                color: Colors.black,
               ),
             ),
           );
@@ -512,35 +641,42 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
 
   Widget _buildImagePlaceholder() {
     return Container(
-      width: 78,
-      height: 78,
+      width: 86,
+      height: 86,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFFF1F1F1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.black.withOpacity(0.04),
+        ),
       ),
       child: const Icon(
         Icons.checkroom_outlined,
-        color: AppColors.textSecondary,
+        color: Colors.black26,
       ),
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    final color = _statusColor(status);
-
+  Widget _buildStatusChip(String status, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.16),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.35)),
+        border: Border.all(
+          color: color.withOpacity(0.25),
+        ),
       ),
       child: Text(
-        _displayStatus(status),
+        _displayStatus(status).toUpperCase(),
         style: TextStyle(
           color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          fontSize: 9,
+          letterSpacing: 0.4,
         ),
       ),
     );

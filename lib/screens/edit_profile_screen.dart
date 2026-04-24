@@ -1,4 +1,3 @@
-// lib/screens/edit_profile_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -29,58 +28,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: widget.currentProfile['email']);
     _bioController = TextEditingController(text: widget.currentProfile['description']);
   }
+
   void _removeToast() {
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
+
   void _showSuccessToast() {
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: MediaQuery.of(context).padding.top + 10,
-        left: 20,
-        right: 20,
+        left: 20, right: 20,
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E), // Nền tối chuyên nghiệp
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.greenAccent.withOpacity(0.5), width: 1),
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
+                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
               ],
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.greenAccent.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 22),
-                ),
+                const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "CẬP NHẬT THÀNH CÔNG",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
-                      ),
-                      Text(
-                        "Hồ sơ của bạn đã được lưu lại.",
-                        style: TextStyle(color: Colors.white60, fontSize: 11),
-                      ),
-                    ],
-                  ),
+                const Text(
+                  "PROFILE UPDATED",
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
                 ),
               ],
             ),
@@ -94,6 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (_overlayEntry != null) _removeToast();
     });
   }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
@@ -119,50 +96,68 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (mounted) Navigator.pop(context, true);
       });
     } else {
-      String msg = "Có lỗi xảy ra";
-      if (result == -2) msg = "Email đã tồn tại";
-      if (result == -3) msg = "Tên người dùng đã tồn tại";
+      String msg = "Something went wrong";
+      if (result == -2) msg = "Email already exists";
+      if (result == -3) msg = "Username already taken";
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(msg),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        )
-      );
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.black,
+        behavior: SnackBarBehavior.floating,
+      ));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text("CHỈNH SỬA HỒ SƠ", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: Colors.black)),
-        centerTitle: true,
-        actions: [
-          _isSaving
-              ? const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pinkAccent))))
-              : TextButton(onPressed: _handleSave, child: const Text("XONG", style: TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold))),
-        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black, size: 20),
+          icon: const Icon(Icons.close, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          "EDIT PROFILE",
+          style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 0),
+        ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: _isSaving
+                ? const SizedBox(width: 40, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))))
+                : ElevatedButton(
+              onPressed: _handleSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              child: const Text("DONE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0)),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildAvatarSection(),
-              const SizedBox(height: 32),
-              _buildInputField("Tên người dùng", _nameController, Icons.person_outline),
-              const SizedBox(height: 20),
-              _buildInputField("Email", _emailController, Icons.email_outlined, isEmail: true),
-              const SizedBox(height: 20),
-              _buildInputField("Tiểu sử", _bioController, Icons.notes_rounded, maxLines: 3,isRequired: false),
+              Center(child: _buildAvatarSection()),
+              const SizedBox(height: 50),
+              _buildInputField("Full Name", _nameController, Icons.person_outline),
+              const SizedBox(height: 30),
+              _buildInputField("Email Address", _emailController, Icons.alternate_email),
+              const SizedBox(height: 30),
+              _buildInputField("About You", _bioController, Icons.account_box_outlined, maxLines: 3, isRequired: false),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -174,24 +169,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return GestureDetector(
       onTap: _pickImage,
       child: Stack(
+        alignment: Alignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Colors.purpleAccent, Colors.pinkAccent])),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.black, width: 1.5),
+            ),
+            padding: const EdgeInsets.all(6),
             child: CircleAvatar(
-              radius: 60,
-              backgroundColor: AppColors.surface,
+              radius: 65,
+              backgroundColor: const Color(0xFFF5F5F5),
               backgroundImage: _selectedImage != null
                   ? FileImage(_selectedImage!)
                   : (widget.currentProfile['avatar'] != null ? NetworkImage(widget.currentProfile['avatar']) : null) as ImageProvider?,
             ),
           ),
           Positioned(
-            bottom: 0, right: 0,
+            bottom: 5,
+            right: 5,
             child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(color: Colors.pinkAccent, shape: BoxShape.circle),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
             ),
           )
         ],
@@ -203,22 +210,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: const TextStyle(color: Colors.black38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-        const SizedBox(height: 8),
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0),
+        ),
+        const SizedBox(height: 12),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.black, fontSize: 15),
+          cursorColor: Colors.black,
+          style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w600),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: Colors.black, size: 20),
             filled: true,
-            fillColor: Colors.black.withOpacity(0.05),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            fillColor: const Color(0xFFF9F9F9),
+            hintText: "Enter ${label.toLowerCase()}...",
+            hintStyle: const TextStyle(color: Colors.black26, fontSize: 14),
+            contentPadding: const EdgeInsets.all(20),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.black, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+            ),
           ),
           validator: (val) {
             if (!isRequired) return null;
-            if (val == null || val.isEmpty) return "Không được để trống";
+            if (val == null || val.isEmpty) return "This field is required";
             return null;
           },
         ),

@@ -1,11 +1,8 @@
-// lib/screens/navbar_screens/profile_screen.dart
 import 'dart:async';
 
 import 'package:fashion_mobile/screens/order_history_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../constants/app_colors.dart';
 import '../../models/post_feed_model.dart';
 import '../../screens/create_post_screens.dart';
 import '../../screens/expense_management_screen.dart';
@@ -30,8 +27,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _profileFuture;
-  late Future<List<PostFeedModel>> _postsFuture;
-  late Future<double> _walletFuture;
+  late Future<List<PostFeedModel>?> _postsFuture;
+  late Future<double?> _walletFuture;
 
   StreamSubscription? _eventSubscription;
 
@@ -56,8 +53,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _refreshData() async {
     setState(() {
       _profileFuture = AccountService().getMyProfile();
-      _postsFuture = PostService().fetchMyPosts();
-      _walletFuture = WalletService().getMyWalletBalance();
+      _postsFuture = PostService().fetchMyPosts().catchError(
+            (_) => <PostFeedModel>[],
+      );
+      _walletFuture = WalletService().getMyWalletBalance().catchError(
+            (_) => 0.0,
+      );
     });
   }
 
@@ -170,13 +171,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const double profileOverlap = 80.0;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _profileFuture,
         builder: (context, profileSnapshot) {
           if (profileSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.pink),
+              child: CircularProgressIndicator(color: Colors.black),
             );
           }
 
@@ -221,7 +222,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           return RefreshIndicator(
             onRefresh: _refreshData,
-            color: Colors.pink,
+            color: Colors.black,
+            backgroundColor: Colors.white,
             child: Stack(
               children: [
                 Positioned(
@@ -246,9 +248,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.4),
+                            Colors.black.withOpacity(0.5),
                             Colors.transparent,
-                            Colors.black.withOpacity(0.9),
+                            Colors.white,
                           ],
                         ),
                       ),
@@ -269,11 +271,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 18,
+                          letterSpacing: 1.2,
                           shadows: [
                             Shadow(
-                              color: Colors.black45,
-                              blurRadius: 5,
+                              color: Colors.black87,
+                              blurRadius: 10,
                             ),
                           ],
                         ),
@@ -282,7 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       actions: [
                         IconButton(
                           icon: const Icon(
-                            Icons.more_horiz,
+                            Icons.settings_outlined,
                             color: Colors.white,
                           ),
                           onPressed: _openSettings,
@@ -301,19 +304,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(3),
+                                padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
                                     colors: [
-                                      Colors.purpleAccent,
-                                      Colors.pinkAccent,
+                                      Colors.black87,
+                                      Colors.black45,
                                     ],
                                   ),
                                 ),
                                 child: CircleAvatar(
                                   radius: 42,
-                                  backgroundColor: AppColors.surface,
+                                  backgroundColor: Colors.white,
                                   backgroundImage: avatar.isNotEmpty
                                       ? NetworkImage(avatar)
                                       : const AssetImage(
@@ -321,7 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ) as ImageProvider,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 16),
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
@@ -329,7 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      FutureBuilder<List<PostFeedModel>>(
+                                      FutureBuilder<List<PostFeedModel>?>(
                                         future: _postsFuture,
                                         builder: (context, snapshot) {
                                           if (snapshot.connectionState ==
@@ -337,23 +340,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             return const StatSkeletonItem();
                                           }
 
-                                          final postCount = snapshot.hasData
-                                              ? snapshot.data!.length.toString()
-                                              : '0';
+                                          final postCount =
+                                          (snapshot.data?.length ?? 0)
+                                              .toString();
 
                                           return _buildStatItem(
                                             postCount,
-                                            'Posts',
+                                            'POSTS',
                                           );
                                         },
                                       ),
                                       _buildStatItem(
                                         followerCount,
-                                        'Followers',
+                                        'FOLLOWERS',
                                       ),
                                       _buildStatItem(
                                         followingCount,
-                                        'Following',
+                                        'FOLLOWING',
                                       ),
                                     ],
                                   ),
@@ -367,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     SliverToBoxAdapter(
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: AppColors.background,
+                          color: Colors.white,
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(30),
                           ),
@@ -381,13 +384,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 width: 40,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: Colors.white24,
+                                  color: Colors.black12,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(20),
+                              padding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 10),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -395,134 +399,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     name,
                                     style: const TextStyle(
                                       color: Colors.black,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.2,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     email,
                                     style: const TextStyle(
-                                      color: Colors.black38,
+                                      color: Colors.black54,
                                       fontSize: 14,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 16),
                                   Text(
                                     bio,
                                     style: const TextStyle(
-                                      color: Colors.black,
+                                      color: Colors.black87,
                                       fontSize: 14,
-                                      height: 1.4,
+                                      height: 1.5,
                                     ),
                                   ),
-                                  const SizedBox(height: 20),
-
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFilledButton(
-                                          text: 'Create Post',
-                                          onPressed: _openCreatePost,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: _buildFilledButton(
-                                          text: 'Order History',
-                                          onPressed: _openOrderHistory,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFilledButton(
-                                          text: 'Wardrobe',
-                                          onPressed: () =>
-                                              _openMyWardrobe(accountId),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: FutureBuilder<double>(
-                                          future: _walletFuture,
-                                          builder: (context, walletSnapshot) {
-                                            if (walletSnapshot
-                                                .connectionState ==
-                                                ConnectionState.waiting) {
-                                              return _buildLoadingButton();
-                                            }
-
-                                            final double currentBalance =
-                                            walletSnapshot.hasData
-                                                ? walletSnapshot.data!
-                                                : balance;
-
-                                            return _buildFilledButton(
-                                              text: 'Wapo Wallet',
-                                              icon: Icons
-                                                  .account_balance_wallet_outlined,
-                                              onPressed: () =>
-                                                  _showWapoPaySheet(
-                                                    context,
-                                                    currentBalance,
-                                                  ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFilledButton(
-                                          text: 'Spending',
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                const ExpenseManagementScreen(),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: _buildFilledButton(
-                                          text: 'Saved',
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                const SavedPostsScreen(),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 20),
                                 ],
                               ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 10,
+                                bottom: 20,
+                              ),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.only(
+                                  left: 20,
+                                  right: 20,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildHangerButton(
+                                      title: 'Create\nPost',
+                                      icon: Icons.add_a_photo_outlined,
+                                      onTap: _openCreatePost,
+                                    ),
+                                    _buildHangerButton(
+                                      title: 'Wardrobe',
+                                      icon: Icons.door_sliding_outlined,
+                                      onTap: () => _openMyWardrobe(accountId),
+                                    ),
+                                    FutureBuilder<double?>(
+                                      future: _walletFuture,
+                                      builder: (context, walletSnapshot) {
+                                        final isLoading =
+                                            walletSnapshot.connectionState ==
+                                                ConnectionState.waiting;
+
+                                        final currentBalance =
+                                            walletSnapshot.data ?? balance;
+
+                                        return _buildHangerButton(
+                                          title: isLoading ? '...' : 'Wallet',
+                                          icon: Icons
+                                              .account_balance_wallet_outlined,
+                                          onTap: isLoading
+                                              ? () {}
+                                              : () => _showWapoPaySheet(
+                                            context,
+                                            currentBalance,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    _buildHangerButton(
+                                      title: 'Orders',
+                                      icon: Icons.receipt_long_outlined,
+                                      onTap: _openOrderHistory,
+                                    ),
+                                    _buildHangerButton(
+                                      title: 'Spending',
+                                      icon: Icons.analytics_outlined,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                            const ExpenseManagementScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    _buildHangerButton(
+                                      title: 'Saved',
+                                      icon: Icons.bookmark_border,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                            const SavedPostsScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const Divider(
+                              color: Colors.black12,
+                              thickness: 1,
+                              height: 10,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    FutureBuilder<List<PostFeedModel>>(
+                    FutureBuilder<List<PostFeedModel>?>(
                       future: _postsFuture,
                       builder: (context, postSnapshot) {
                         if (postSnapshot.connectionState ==
@@ -532,7 +527,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Padding(
                                 padding: EdgeInsets.all(40),
                                 child: CircularProgressIndicator(
-                                  color: Colors.pinkAccent,
+                                  color: Colors.black,
                                 ),
                               ),
                             ),
@@ -546,8 +541,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'Failed to load posts: ${postSnapshot.error}',
-                                  style:
-                                  const TextStyle(color: Colors.black26),
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -564,7 +560,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'No posts yet.',
-                                  style: TextStyle(color: Colors.black26),
+                                  style: TextStyle(
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ),
@@ -577,10 +576,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               final post = posts[index];
 
                               return Container(
-                                color: AppColors.background,
+                                color: Colors.white,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
+                                  vertical: 4,
                                 ),
                                 child: PostItem(
                                   post: post,
@@ -607,73 +605,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFilledButton({
-    required String text,
-    required VoidCallback onPressed,
-    IconData? icon,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.pinkAccent,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
-      child: icon == null
-          ? Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
-        ),
-        textAlign: TextAlign.center,
-      )
-          : Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingButton() {
-    return OutlinedButton(
-      onPressed: null,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: const BorderSide(color: Colors.white24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
-      child: const SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatItem(String value, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        color: Colors.black.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(
+          color: Colors.white24,
+          width: 0.5,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -682,20 +626,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value,
             style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              shadows: [
+                Shadow(
+                  color: Colors.black54,
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              shadows: [
+                Shadow(
+                  color: Colors.black87,
+                  blurRadius: 4,
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHangerButton({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 68,
+        margin: const EdgeInsets.only(right: 14),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.checkroom,
+              color: Colors.black,
+              size: 32,
+            ),
+            Transform.translate(
+              offset: const Offset(0, -5),
+              child: Container(
+                height: 72,
+                width: 60,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: Colors.black,
+                    width: 2,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(2),
+                    topRight: Radius.circular(2),
+                    bottomLeft: Radius.circular(8),
+                    bottomRight: Radius.circular(8),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      offset: Offset(3, 4),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 20,
+                      color: Colors.black,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

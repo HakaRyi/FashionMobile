@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../constants/app_colors.dart';
 import '../../managers/comment_manager.dart';
 
 class CommentInput extends StatefulWidget {
@@ -24,7 +23,10 @@ class _CommentInputState extends State<CommentInput> {
 
   Future<void> _submit(CommentManager manager) async {
     final text = controller.text.trim();
-    if (text.isEmpty || manager.isSubmittingComment) return;
+
+    if (text.isEmpty || manager.isSubmittingComment) {
+      return;
+    }
 
     controller.clear();
 
@@ -54,7 +56,7 @@ class _CommentInputState extends State<CommentInput> {
               color: Colors.white,
               border: Border(
                 top: BorderSide(
-                  color: AppColors.divider.withOpacity(0.9),
+                  color: Colors.black.withOpacity(0.06),
                 ),
               ),
               boxShadow: [
@@ -68,13 +70,13 @@ class _CommentInputState extends State<CommentInput> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 18,
-                  backgroundColor: AppColors.backgroundSecondary,
-                  child: const Icon(
+                  backgroundColor: Color(0xFFF1F1F1),
+                  child: Icon(
                     Icons.person,
                     size: 18,
-                    color: AppColors.textSecondary,
+                    color: Colors.black26,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -86,10 +88,10 @@ class _CommentInputState extends State<CommentInput> {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.backgroundSecondary,
+                      color: const Color(0xFFF7F7F7),
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
-                        color: AppColors.divider,
+                        color: Colors.black.withOpacity(0.06),
                       ),
                     ),
                     child: TextField(
@@ -101,16 +103,18 @@ class _CommentInputState extends State<CommentInput> {
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _submit(manager),
                       style: const TextStyle(
-                        color: AppColors.textPrimary,
+                        color: Colors.black,
                         fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                       decoration: InputDecoration(
                         hintText: isSubmitting
-                            ? "Posting a comment..."
-                            : "Adding a comment...",
+                            ? 'Posting comment...'
+                            : 'Add a comment...',
                         hintStyle: const TextStyle(
-                          color: AppColors.textSecondary,
+                          color: Colors.black38,
                           fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                         border: InputBorder.none,
                       ),
@@ -123,9 +127,7 @@ class _CommentInputState extends State<CommentInput> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: isSubmitting
-                        ? Colors.grey.shade400
-                        : AppColors.textPink,
+                    color: isSubmitting ? const Color(0xFFE0E0E0) : Colors.black,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -136,7 +138,7 @@ class _CommentInputState extends State<CommentInput> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: Colors.black,
                       ),
                     )
                         : const Icon(

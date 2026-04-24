@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
 import '../core/api_exception.dart';
 import '../managers/report_manager.dart';
 import '../models/report_type_model.dart';
@@ -33,7 +32,11 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_didLoad) return;
+
+    if (_didLoad) {
+      return;
+    }
+
     _didLoad = true;
     _loadTypes();
   }
@@ -46,7 +49,9 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
     try {
       await reportManager.loadReportTypes();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       final message = _extractErrorMessage(e);
 
@@ -63,7 +68,7 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
 
     if (_selectedReportTypeId == null || _selectedReportTypeId! <= 0) {
       setState(() {
-        _errorText = 'Please select the report type.';
+        _errorText = 'Please select a report reason.';
       });
       return;
     }
@@ -79,19 +84,23 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
         reason: _reasonController.text.trim(),
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFF16A34A),
         ),
       );
 
       Navigator.pop(context, result.message);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       final message = _extractErrorMessage(e);
 
@@ -108,10 +117,13 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
       return error.message;
     }
 
-    final raw = error.toString();
-    return raw.replaceFirst('Exception: ', '').trim().isEmpty
-        ? 'Something wrong. Please try again.'
-        : raw.replaceFirst('Exception: ', '').trim();
+    final raw = error.toString().replaceFirst('Exception: ', '').trim();
+
+    if (raw.isEmpty) {
+      return 'Something went wrong. Please try again.';
+    }
+
+    return raw;
   }
 
   void _showErrorSnackBar(String message) {
@@ -143,11 +155,14 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
           ),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
           ),
           child: SafeArea(
             top: false,
             child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,77 +171,34 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
                     child: Container(
                       width: 42,
                       height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 18),
                       decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withOpacity(0.25),
+                        color: Colors.black12,
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
                   ),
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.report_gmailerrorred_rounded,
-                        color: Colors.redAccent,
-                        size: 22,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Báo cáo bài viết',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Please let us know why you find this post problematic.',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
+                  _buildHeader(),
                   const SizedBox(height: 16),
                   if (isLoading)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 28),
+                      padding: EdgeInsets.symmetric(vertical: 34),
                       child: Center(
                         child: CircularProgressIndicator(
-                          color: AppColors.textPink,
+                          color: Colors.black,
                         ),
                       ),
                     )
                   else ...[
                     if (types.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.backgroundSecondary,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppColors.divider,
-                          ),
-                        ),
-                        child: const Text(
-                          'No report types are currently available..',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
-                      )
+                      _buildEmptyTypesCard()
                     else ...[
                       const Text(
                         'Choose a reason',
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: Colors.black,
                           fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -234,167 +206,24 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
                     ],
                     const SizedBox(height: 14),
                     const Text(
-                      'More description',
+                      'Additional description',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: Colors.black,
                         fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: _reasonController,
-                      maxLines: 4,
-                      maxLength: 1000,
-                      enabled: !isSubmitting,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Additional description (optional)',
-                        hintStyle: const TextStyle(
-                          color: AppColors.textSecondary,
-                        ),
-                        counterStyle: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                        filled: true,
-                        fillColor: AppColors.backgroundSecondary,
-                        contentPadding: const EdgeInsets.all(14),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.divider,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.divider,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.textPink,
-                            width: 1.2,
-                          ),
-                        ),
-                      ),
-                      onChanged: (_) {
-                        if (_errorText != null) {
-                          setState(() {
-                            _errorText = null;
-                          });
-                        }
-                      },
-                    ),
+                    _buildReasonField(isSubmitting),
                   ],
                   if (_errorText != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.redAccent.withOpacity(0.25),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 1),
-                            child: Icon(
-                              Icons.error_outline,
-                              size: 16,
-                              color: Colors.redAccent,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorText!,
-                              style: const TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                height: 1.35,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: 10),
+                    _buildErrorBox(_errorText!),
                   ],
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: isSubmitting
-                              ? null
-                              : () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(
-                              color: AppColors.divider,
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: isLoading || isSubmitting ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            backgroundColor: AppColors.textPink,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor:
-                            AppColors.textSecondary.withOpacity(0.25),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: isSubmitting
-                              ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: Colors.white,
-                            ),
-                          )
-                              : const Text(
-                            'Submit report',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 16),
+                  _buildActionButtons(
+                    isLoading: isLoading,
+                    isSubmitting: isSubmitting,
                   ),
                 ],
               ),
@@ -405,11 +234,251 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
     );
   }
 
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: _softCardDecoration(),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.report_gmailerrorred_rounded,
+            color: Colors.redAccent,
+            size: 26,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'REPORT POST',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Tell us why this post may violate community rules. Your report will be reviewed by the admin team.',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyTypesCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: _softCardDecoration(),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Colors.black38,
+            size: 20,
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'No report types are currently available.',
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReasonField(bool isSubmitting) {
+    return TextField(
+      controller: _reasonController,
+      maxLines: 4,
+      maxLength: 1000,
+      enabled: !isSubmitting,
+      style: const TextStyle(
+        color: Colors.black,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: InputDecoration(
+        hintText: 'Add more details if needed...',
+        hintStyle: const TextStyle(
+          color: Colors.black38,
+          fontWeight: FontWeight.w500,
+        ),
+        counterStyle: const TextStyle(
+          color: Colors.black38,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF7F7F7),
+        contentPadding: const EdgeInsets.all(14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Colors.black.withOpacity(0.06),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: Colors.black,
+            width: 1.2,
+          ),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Colors.black.withOpacity(0.05),
+          ),
+        ),
+      ),
+      onChanged: (_) {
+        if (_errorText != null) {
+          setState(() {
+            _errorText = null;
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildErrorBox(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.redAccent.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.error_outline,
+              size: 16,
+              color: Colors.redAccent,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons({
+    required bool isLoading,
+    required bool isSubmitting,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: isSubmitting ? null : () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black,
+              side: BorderSide(
+                color: Colors.black.withOpacity(0.12),
+              ),
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: const Text(
+              'CANCEL',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: isLoading || isSubmitting ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFFEDEDED),
+              disabledForegroundColor: Colors.black38,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: isSubmitting
+                ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: Colors.white,
+              ),
+            )
+                : const Text(
+              'SUBMIT',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTypeTile(ReportTypeModel type) {
     final selected = _selectedReportTypeId == type.reportTypeId;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       onTap: reportManager.isSubmitting
           ? null
           : () {
@@ -421,44 +490,50 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.textPink.withOpacity(0.08)
-              : AppColors.backgroundSecondary,
-          borderRadius: BorderRadius.circular(14),
+          color: selected ? Colors.redAccent.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? AppColors.textPink : AppColors.divider,
-            width: selected ? 1.2 : 1,
+            color: selected
+                ? Colors.redAccent
+                : Colors.black.withOpacity(0.06),
+            width: selected ? 1.3 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.025),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 22,
-              height: 22,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 24,
+              height: 24,
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: selected ? Colors.redAccent : Colors.transparent,
                 border: Border.all(
-                  color: selected
-                      ? AppColors.textPink
-                      : AppColors.textSecondary.withOpacity(0.45),
+                  color: selected ? Colors.redAccent : Colors.black26,
                   width: 1.6,
                 ),
               ),
-              child: Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: selected ? 10 : 0,
-                  height: selected ? 10 : 0,
-                  decoration: const BoxDecoration(
-                    color: AppColors.textPink,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
+              child: selected
+                  ? const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 16,
+              )
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -468,8 +543,8 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
                   Text(
                     type.typeName,
                     style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
                       fontSize: 14,
                     ),
                   ),
@@ -479,9 +554,10 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
                     Text(
                       type.description!,
                       style: const TextStyle(
-                        color: AppColors.textSecondary,
+                        color: Colors.black54,
                         fontSize: 12.5,
                         height: 1.35,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -490,6 +566,16 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  BoxDecoration _softCardDecoration() {
+    return BoxDecoration(
+      color: const Color(0xFFF7F7F7),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
       ),
     );
   }

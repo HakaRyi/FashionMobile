@@ -134,14 +134,14 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: const Color(0xFF1E1E1E),
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             title: const Text(
               'Unfollow?',
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -149,7 +149,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
             content: const Text(
               'Are you sure you want to unfollow this user?',
               style: TextStyle(
-                color: Colors.white70,
+                color: Colors.black87,
                 fontSize: 14,
               ),
             ),
@@ -158,7 +158,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
                   'Cancel',
-                  style: TextStyle(color: Colors.white54),
+                  style: TextStyle(color: Colors.black54),
                 ),
               ),
               TextButton(
@@ -444,148 +444,121 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              padding: const EdgeInsets.fromLTRB(20, 20, 10, 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    name,
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    email,
-                                    style: const TextStyle(
-                                      color: Colors.black38,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    bio,
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 14,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed:
-                                          isLoadingFollow ? null : _toggleFollow,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: isFollowing
-                                                ? Colors.white24
-                                                : Colors.pink,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          child: isLoadingFollow
-                                              ? const SizedBox(
-                                            height: 16,
-                                            width: 16,
-                                            child:
-                                            CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                              : Text(
-                                            isFollowing
-                                                ? 'Following'
-                                                : 'Follow',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
+                                      Text(
+                                        name,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.5,
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: () => _handleStartChat(name, avatar),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                            Colors.pinkAccent.withOpacity(0.8),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Message',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
+                                      Text(
+                                        email,
+                                        style: const TextStyle(
+                                          color: Colors.black38,
+                                          fontSize: 14,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              SlideRoute(
-                                                page: PublicWardrobeScreen(
-                                                  accountId: widget.userId,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.white,
-                                            side: const BorderSide(
-                                              color: Colors.pink,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.push(context, SlideRoute(page: PublicWardrobeScreen(accountId: widget.userId)));
+                                    },
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(10), // Tăng nhẹ padding
+                                      decoration: BoxDecoration(
+                                        color: Colors.black, // Nền đen sâu
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
                                           ),
-                                          child: const Text(
-                                            'View Public Wardrobe',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.pinkAccent,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
+                                        ],
                                       ),
-                                    ],
+                                      child: const Icon(
+                                        Icons.checkroom_rounded, // Icon cái móc treo nhìn "thời trang" hơn cánh cửa
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(height: 20),
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                children: [
+                                  // NÚT FOLLOW CHIẾM 2 PHẦN
+                                  Expanded(
+                                    flex: 2,
+                                    child: GestureDetector(
+                                      onTap: isLoadingFollow ? null : _toggleFollow,
+                                      child: Container(
+                                        height: 46,
+                                        decoration: BoxDecoration(
+                                          color: isFollowing ? Colors.transparent : Colors.black,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: isFollowing ? Border.all(color: Colors.black12, width: 1.5) : null,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: isLoadingFollow
+                                            ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                            : Text(
+                                          isFollowing ? 'Following' : 'Follow',
+                                          style: TextStyle(
+                                            color: isFollowing ? Colors.black : Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  // NÚT MESSAGE CHIẾM 1 PHẦN
+                                  Expanded(
+                                    flex: 1,
+                                    child: GestureDetector(
+                                      onTap: () => _handleStartChat(name, avatar),
+                                      child: Container(
+                                        height: 46,
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: Colors.black12, width: 1.5),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.messenger_outline_rounded, size: 18, color: Colors.black),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Chat',
+                                              style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
                           ],
                         ),
                       ),
@@ -648,8 +621,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               return Container(
                                 color: AppColors.background,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
+                                  vertical: 2,
                                 ),
                                 child: PostItem(
                                   post: post,

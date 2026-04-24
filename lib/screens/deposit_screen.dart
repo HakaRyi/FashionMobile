@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../constants/notification_type.dart';
-import '../utils/app_notification.dart';
-import '../../constants/app_colors.dart';
 import '../managers/payment_manager.dart';
 import '../services/notification_service.dart' as local_noti;
+import '../utils/app_notification.dart';
 import '../utils/notification_utils.dart';
 
 class DepositScreen extends StatefulWidget {
@@ -44,12 +44,21 @@ class _DepositScreenState extends State<DepositScreen> {
     _initDeepLinks();
   }
 
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _amountController.dispose();
+    super.dispose();
+  }
+
   void _initDeepLinks() {
     _appLinks = AppLinks();
 
     _linkSubscription = _appLinks.uriLinkStream.listen(
           (Uri uri) async {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         if (uri.scheme == 'fashionmobile' && uri.host == 'payment-result') {
           final String? status = uri.queryParameters['status'];
@@ -64,52 +73,77 @@ class _DepositScreenState extends State<DepositScreen> {
         }
       },
       onError: (_) async {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         await _showDepositFailedNotification();
         _showErrorDialog();
       },
     );
   }
 
+  String _formatMoney(double value) {
+    return '${_currencyFormat.format(value)} VND';
+  }
+
+  String _formatMoneyShort(double value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M VND';
+    }
+
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(0)}K VND';
+    }
+
+    return _formatMoney(value);
+  }
+
   Future<void> _showDepositSuccessNotification() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     NotificationUtils.showTopRight(
       context,
-      message: 'Nạp tiền thành công',
+      message: 'Top-up successful.',
     );
 
     await local_noti.NotificationService().showManualLocalNotification(
-      title: 'Nạp tiền thành công',
-      body: 'Bạn đã nạp ${_currencyFormat.format(_selectedAmount)}đ vào ví',
+      title: 'Top-up successful',
+      body: 'You added ${_formatMoney(_selectedAmount)} to your wallet.',
       channelId: 'wallet_channel',
-      channelName: 'Thông báo ví',
+      channelName: 'Wallet notifications',
     );
   }
 
   Future<void> _showDepositFailedNotification() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     NotificationUtils.showTopRight(
       context,
-      message: 'Nạp tiền thất bại',
+      message: 'Top-up failed.',
       isError: true,
     );
 
     await local_noti.NotificationService().showManualLocalNotification(
-      title: 'Nạp tiền thất bại',
-      body: 'Giao dịch nạp tiền không thành công hoặc đã bị hủy',
+      title: 'Top-up failed',
+      body: 'The top-up transaction failed or was cancelled.',
       channelId: 'wallet_channel',
-      channelName: 'Thông báo ví',
+      channelName: 'Wallet notifications',
     );
   }
 
   Future<void> _processPayment() async {
+    FocusScope.of(context).unfocus();
+
     if (_selectedAmount < 10000) {
       NotificationService.show(
         context,
-        title: "Thất bại",
-        message: "Số tiền nạp tối thiểu là 10.000đ",
+        title: 'Failed',
+        message: 'The minimum top-up amount is 10,000 VND.',
         type: NotificationType.error,
       );
       return;
@@ -121,19 +155,23 @@ class _DepositScreenState extends State<DepositScreen> {
 
     try {
       await _paymentManager.processPayment(_selectedAmount);
-    } catch (e) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
 
       NotificationService.show(
         context,
-        title: "Thất bại",
-        message: "Lỗi hệ thống",
+        title: 'Failed',
+        message: 'System error. Please try again.',
         type: NotificationType.error,
       );
 
       await _showDepositFailedNotification();
     } finally {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _isLoading = false;
@@ -145,6 +183,9 @@ class _DepositScreenState extends State<DepositScreen> {
     setState(() {
       _selectedAmount = amount;
       _amountController.text = _currencyFormat.format(amount);
+      _amountController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _amountController.text.length),
+      );
     });
   }
 
@@ -166,38 +207,51 @@ class _DepositScreenState extends State<DepositScreen> {
   }
 
   void _showSuccessDialog() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
           ),
           title: const Icon(
-            Icons.check_circle,
-            color: Colors.green,
+            Icons.check_circle_rounded,
+            color: Color(0xFF16A34A),
             size: 64,
           ),
           content: const Text(
-            'Thanh toán thành công! Số dư của bạn sẽ được cập nhật trong giây lát.',
+            'Payment successful. Your wallet balance will be updated shortly.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.black54,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          actionsAlignment: MainAxisAlignment.center,
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
+
                 if (mounted) {
-                  Navigator.pop(context);
+                  Navigator.pop(context, true);
                 }
               },
               child: const Text(
-                'Xác nhận',
-                style: TextStyle(color: Colors.pink),
+                'DONE',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -207,32 +261,44 @@ class _DepositScreenState extends State<DepositScreen> {
   }
 
   void _showErrorDialog() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
           ),
           title: const Icon(
-            Icons.error,
-            color: Colors.red,
+            Icons.error_rounded,
+            color: Colors.redAccent,
             size: 64,
           ),
           content: const Text(
-            'Giao dịch thất bại hoặc đã bị hủy. Vui lòng thử lại.',
+            'The transaction failed or was cancelled. Please try again.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.black54,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          actionsAlignment: MainAxisAlignment.center,
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text(
-                'Đóng',
-                style: TextStyle(color: Colors.pink),
+                'CLOSE',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -241,209 +307,463 @@ class _DepositScreenState extends State<DepositScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _linkSubscription?.cancel();
-    _amountController.dispose();
-    super.dispose();
+  bool get _canPay {
+    return !_isLoading && _selectedAmount >= 10000;
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool hasAmount = _selectedAmount > 0;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F5F5),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Top up your Wapo Pay account',
-          style: TextStyle(color: Colors.black),
-        ),
         centerTitle: true,
+        title: const Text(
+          'TOP UP',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+            letterSpacing: 0.4,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const Text(
-              'Enter the amount',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-              onChanged: _onAmountChanged,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.black.withOpacity(0.05),
-                suffixText: 'đ',
-                suffixStyle: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _quickAmounts.map((double amount) {
-                final bool isSelected = _selectedAmount == amount;
+      body: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
+        children: <Widget>[
+          _buildHeaderCard(),
+          const SizedBox(height: 16),
+          _buildAmountInputCard(),
+          const SizedBox(height: 16),
+          _buildQuickAmountSection(),
+          const SizedBox(height: 16),
+          _buildPaymentMethodSection(),
+          const SizedBox(height: 16),
+          _buildSummaryCard(hasAmount),
+          const SizedBox(height: 24),
+          _buildPayButton(),
+        ],
+      ),
+    );
+  }
 
-                return GestureDetector(
-                  onTap: () => _onQuickAmountSelected(amount),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.pink
-                          : AppColors.text.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? Colors.pinkAccent
-                            : AppColors.text,
-                      ),
-                    ),
-                    child: Text(
-                      '${_currencyFormat.format(amount)}đ',
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.text,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+  Widget _buildHeaderCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(18),
             ),
-            const SizedBox(height: 40),
-            const Text(
-              'Payment methods',
-              style: TextStyle(
+            child: const Icon(
+              Icons.add_card_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Top up your wallet',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'Add balance to pay for orders and Wapo services.',
+                  style: TextStyle(
+                    color: Colors.black45,
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountInputCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(
+            icon: Icons.payments_outlined,
+            title: 'Amount',
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.4,
+            ),
+            onChanged: _onAmountChanged,
+            decoration: InputDecoration(
+              hintText: '0',
+              hintStyle: const TextStyle(
+                color: Colors.black26,
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+              ),
+              suffixText: 'VND',
+              suffixStyle: const TextStyle(
                 color: Colors.black,
-                fontSize: 14,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
               ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.blueAccent.withOpacity(0.5),
+              filled: true,
+              fillColor: const Color(0xFFF7F7F7),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 18,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: BorderSide(
+                  color: Colors.black.withOpacity(0.05),
                 ),
               ),
-              child: Row(
-                children: <Widget>[
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(
+                  color: Colors.black,
+                  width: 1.2,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Minimum top-up amount is 10,000 VND.',
+            style: TextStyle(
+              color: Colors.black45,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAmountSection() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(
+            icon: Icons.bolt_rounded,
+            title: 'Quick amount',
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _quickAmounts.map((double amount) {
+              final bool isSelected = _selectedAmount == amount;
+
+              return InkWell(
+                onTap: () => _onQuickAmountSelected(amount),
+                borderRadius: BorderRadius.circular(999),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.black : const Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: isSelected
+                          ? Colors.black
+                          : Colors.black.withOpacity(0.06),
                     ),
-                    child: const Center(
-                      child: Text(
-                        'VNP',
-                        style: TextStyle(
-                          color: Colors.blueAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  ),
+                  child: Text(
+                    _formatMoneyShort(amount),
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodSection() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(
+            icon: Icons.credit_card_rounded,
+            title: 'Payment method',
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F7F7),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: const Color(0xFF2563EB).withOpacity(0.25),
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'VNP',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'VNPay (Sandbox)',
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                ),
+                const SizedBox(width: 13),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'VNPay Sandbox',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Payment via VNPay gateway',
-                          style: TextStyle(
-                            color: Colors.pink,
-                            fontSize: 12,
-                          ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Pay securely through the VNPay gateway.',
+                        style: TextStyle(
+                          color: Colors.black45,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.blueAccent,
-                  ),
-                ],
-              ),
+                ),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF2563EB),
+                ),
+              ],
             ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _processPayment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.black,
-                  strokeWidth: 2,
-                ),
-              )
-                  : Text(
-                'Pay ${_currencyFormat.format(_selectedAmount)}đ',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(bool hasAmount) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(
+            icon: Icons.receipt_long_outlined,
+            title: 'Payment summary',
+          ),
+          const SizedBox(height: 14),
+          _summaryRow(
+            label: 'Top-up amount',
+            value: hasAmount ? _formatMoney(_selectedAmount) : '0 VND',
+          ),
+          const SizedBox(height: 10),
+          _summaryRow(
+            label: 'Gateway fee',
+            value: '0 VND',
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(
+              height: 1,
+              color: Color(0xFFEDEDED),
             ),
-            const SizedBox(height: 24),
-          ],
+          ),
+          _summaryRow(
+            label: 'Total payment',
+            value: hasAmount ? _formatMoney(_selectedAmount) : '0 VND',
+            isTotal: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPayButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _canPay ? _processPayment : null,
+        icon: _isLoading
+            ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        )
+            : const Icon(Icons.lock_rounded),
+        label: Text(
+          _isLoading
+              ? 'PROCESSING...'
+              : 'PAY ${_selectedAmount > 0 ? _formatMoney(_selectedAmount) : ''}',
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.3,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: const Color(0xFFEDEDED),
+          disabledForegroundColor: Colors.black38,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _summaryRow({
+    required String label,
+    required String value,
+    bool isTotal = false,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isTotal ? Colors.black : Colors.black54,
+              fontSize: isTotal ? 15 : 13.5,
+              fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: isTotal ? 15.5 : 13.5,
+              fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle({
+    required IconData icon,
+    required String title,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.black,
+          size: 18,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title.toUpperCase(),
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
     );
   }
 }

@@ -16,19 +16,17 @@ class EventResultScreen extends StatefulWidget {
   State<EventResultScreen> createState() => _EventResultScreenState();
 }
 
-class _EventResultScreenState extends State<EventResultScreen> with TickerProviderStateMixin {
+class _EventResultScreenState extends State<EventResultScreen> {
   bool _startAnimation = false;
-  bool _showReward = false;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) setState(() => _startAnimation = true);
-    });
-
-    Future.delayed(const Duration(milliseconds: 1400), () {  // tăng nhẹ để phù hợp delay 700ms
-      if (mounted) setState(() => _showReward = true);
+    // Kích hoạt hiệu ứng sau khi build khung sườn (giúp mượt hơn)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) setState(() => _startAnimation = true);
+      });
     });
   }
 
@@ -37,89 +35,106 @@ class _EventResultScreenState extends State<EventResultScreen> with TickerProvid
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: const Color(0xFFF5F5F5), // Nền xám cực nhạt chuẩn Minimalist
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-            onPressed: () => Navigator.maybePop(context)),
-        title: const Text("Kết quả sự kiện", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          icon: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6), // Tăng độ trắng lên một chút cho dễ nhìn
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 16),
+              ),
+            ),
+          ),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        // GIẢI PHÁP: Bọc title trong lớp kính mờ (Glassmorphism) giống hệt nút Back
+        title: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.4), // Nền trắng mờ che đi phần ảnh tối
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                  "EVENT RESULTS",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    fontSize: 14, // Thu nhỏ font một xíu để nằm gọn trong badge
+                  )
+              ),
+            ),
+          ),
+        ),
         centerTitle: true,
       ),
       body: FutureBuilder<List<EventLeaderboardModel>>(
         future: EventService().getLeaderboard(widget.event.eventId),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: Colors.pinkAccent));
+            return const Center(child: CircularProgressIndicator(color: Colors.black));
           }
 
           final list = snapshot.data!;
           if (list.isEmpty) {
-            return const Center(child: Text("Chưa có bảng xếp hạng", style: TextStyle(color: Colors.white)));
+            return const Center(child: Text("No leaderboard data available", style: TextStyle(color: Colors.black54)));
           }
-
-          final podiumParticipants = list.take(3).toList();
-          final others = list.length > 3 ? list.sublist(3) : [];
 
           return Stack(
             children: [
+              // Ảnh bìa sự kiện làm mờ dần xuống nền xám
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
-                height: screenHeight * 0.45,
+                height: screenHeight * 0.35,
                 child: Image.network(widget.event.imageUrl, fit: BoxFit.cover),
               ),
               Positioned.fill(
                 child: Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.black45, Colors.transparent, Color(0xFF0A0A0A)],
+                      colors: [
+                        Colors.white.withOpacity(0.4),
+                        const Color(0xFFF5F5F5).withOpacity(0.9),
+                        const Color(0xFFF5F5F5)
+                      ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      stops: [0.0, 0.35, 1.0],
+                      stops: const [0.0, 0.25, 1.0],
                     ),
                   ),
                 ),
               ),
+
+              // Danh sách Leaderboard
               SafeArea(
-                child: SingleChildScrollView(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(top: 20, bottom: 140),
                   physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 20),
-
-                      SizedBox(
-                        height: 340,   // tăng nhẹ để có thêm không gian
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: _buildDynamicPodium(podiumParticipants, widget.event),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      AnimatedOpacity(
-                        opacity: _startAnimation ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 1000),
-                        curve: Curves.easeInOut,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 180),
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: others.length,
-                          itemBuilder: (context, index) => _buildLeaderboardItem(others[index]),
-                        ),
-                      ),
-                    ],
-                  ),
+                  itemCount: list.length,
+                  itemBuilder: (context, index) {
+                    final item = list[index];
+                    return _buildLeaderboardItem(item, index);
+                  },
                 ),
               ),
+
+              // Thanh Sticky Bottom
               _buildMyStickyBottom(context),
             ],
           );
@@ -128,197 +143,132 @@ class _EventResultScreenState extends State<EventResultScreen> with TickerProvid
     );
   }
 
-  List<Widget> _buildDynamicPodium(List<EventLeaderboardModel> participants, EventModel event) {
-    if (participants.isEmpty) return [];
+  Widget _buildLeaderboardItem(EventLeaderboardModel item, int index) {
+    // Hiệu ứng trượt (Slide) và mờ (Fade) nhẹ nhàng cho từng item
+    // Delay theo index để tạo cảm giác "rớt" từng cái một từ trên xuống
+    final int delay = (index * 100).clamp(0, 1000);
 
-    List<EventLeaderboardModel?> displayOrder = List.filled(3, null);
-    if (participants.length == 1) {
-      displayOrder[1] = participants[0];
-    } else if (participants.length == 2) {
-      displayOrder[0] = participants[1];
-      displayOrder[1] = participants[0];
-    } else if (participants.length >= 3) {
-      displayOrder[0] = participants[1]; // hạng 2
-      displayOrder[1] = participants[0]; // hạng 1
-      displayOrder[2] = participants[2]; // hạng 3
-    }
+    // Màu nhấn cho Top 3
+    Color rankColor = Colors.transparent;
+    if (item.rank == 1) rankColor = const Color(0xFFD4AF37); // Gold
+    else if (item.rank == 2) rankColor = const Color(0xFF9E9E9E); // Silver
+    else if (item.rank == 3) rankColor = const Color(0xFF8D6E63); // Bronze
 
-    return displayOrder.where((p) => p != null).map((p) {
-      double targetHeight = p!.rank == 1 ? 150 : (p.rank == 2 ? 118 : 92);
-      Color color = p.rank == 1 ? Colors.amberAccent : (p.rank == 2 ? Colors.grey : Colors.orangeAccent);
-
-      // Mỗi hạng trễ 700ms
-      int delayMs = (p.rank - 1) * 700;   // Top1: 0ms, Top2: 700ms, Top3: 1400ms
-
-      return _buildEnhancedPodium(p, targetHeight, color, delayMs);
-    }).toList();
-  }
-
-  Widget _buildEnhancedPodium(EventLeaderboardModel p, double targetHeight, Color color, int delayMs) {
-    bool isFirst = p.rank == 1;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // === AVATAR - HIỆN MỜ DẦN THEO THỨ TỰ ===
-          AnimatedOpacity(
-            opacity: _startAnimation ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeInOut,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 1.0),
-              duration: Duration(milliseconds: 600 + delayMs),
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        if (isFirst) BoxShadow(color: color.withOpacity(0.6), blurRadius: 20, spreadRadius: 3),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: isFirst ? 42 : 32,
-                      backgroundColor: color,
-                      child: CircleAvatar(
-                        radius: isFirst ? 39 : 29,
-                        backgroundImage: p.avatarUrl != null ? NetworkImage(p.avatarUrl!) : null,
-                        backgroundColor: Colors.white10,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Tên (hiện cùng avatar)
-          AnimatedOpacity(
-            opacity: _startAnimation ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeInOut,
-            child: Text(
-              p.userName,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isFirst ? 15 : 13,
-                fontWeight: FontWeight.bold,
-                shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Điểm số
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: _startAnimation ? p.finalScore : 0.0),
-            duration: const Duration(seconds: 2),
-            builder: (context, value, child) {
-              return Container(
-                padding: EdgeInsets.symmetric(horizontal: isFirst ? 14 : 10, vertical: isFirst ? 5 : 3),
-                decoration: BoxDecoration(
-                  color: isFirst ? Colors.pinkAccent : Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(isFirst ? 22 : 14),
-                  boxShadow: isFirst
-                      ? [BoxShadow(color: Colors.pinkAccent.withOpacity(0.5), blurRadius: 10)]
-                      : [],
-                ),
-                child: Text(
-                  "${value.toStringAsFixed(1)} pt",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isFirst ? 14 : 12,
-                    fontWeight: FontWeight.w900,
+    return AnimatedOpacity(
+      opacity: _startAnimation ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 600 + delay),
+        curve: Curves.easeOutQuart,
+        transform: Matrix4.translationValues(0, _startAnimation ? 0 : -30, 0), // Trượt từ Y = -30 xuống 0
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFEBEBEB), width: 1),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)
+              )
+            ]
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Vạch màu nhấn cho Top 3
+              if (item.rank <= 3)
+                Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                      color: rankColor,
+                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(16))
                   ),
                 ),
-              );
-            },
-          ),
 
-          const SizedBox(height: 14),
-
-          // === CỘT PODIUM - HIỆN MỜ DẦN THEO THỨ TỰ ===
-          AnimatedOpacity(
-            opacity: _startAnimation ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeInOut,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 1.0),
-              duration: Duration(milliseconds: 700 + delayMs),
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Container(
-                    width: 88,
-                    height: targetHeight,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color.withOpacity(0.85), color.withOpacity(0.15)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                      border: Border.all(color: color.withOpacity(0.4), width: 2),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-                        Text(
-                          "${p.rank}",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            height: 1,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      // Số Hạng
+                      SizedBox(
+                        width: 32,
+                        child: Text(
+                          "${item.rank}",
+                          style: TextStyle(
+                              color: item.rank <= 3 ? Colors.black : Colors.black38,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        const Spacer(),
+                      ),
+                      const SizedBox(width: 8),
 
-                        if (p.rewardAmount != null && p.rewardAmount! > 0)
-                          AnimatedOpacity(
-                            opacity: _showReward ? 1.0 : 0.0,
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeInOut,
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  "${NumberFormat.compact().format(p.rewardAmount)}đ",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
+                      // Avatar
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: const Color(0xFFF5F5F5),
+                        backgroundImage: item.avatarUrl != null ? NetworkImage(item.avatarUrl!) : null,
+                        child: item.avatarUrl == null ? const Icon(Icons.person, color: Colors.black26, size: 20) : null,
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Tên & Giải thưởng
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              item.userName,
+                              style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                      ],
-                    ),
+                            if (item.rewardAmount != null && item.rewardAmount! > 0) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.redeem_rounded, color: Colors.black54, size: 12),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "+${NumberFormat.decimalPattern().format(item.rewardAmount)} VNĐ",
+                                    style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w800),
+                                  ),
+                                ],
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+
+                      // Điểm số
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(8)
+                        ),
+                        child: Text(
+                          "${item.finalScore} pt",
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // Phần sticky bottom và leaderboard item giữ nguyên
   Widget _buildMyStickyBottom(BuildContext context) {
     return FutureBuilder<MyEventResultModel?>(
       future: EventService().getMyResult(widget.event.eventId),
@@ -328,50 +278,59 @@ class _EventResultScreenState extends State<EventResultScreen> with TickerProvid
 
         return Align(
           alignment: Alignment.bottomCenter,
-          child: ClipRRect(
+          child: ClipRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 decoration: BoxDecoration(
-                  color: widget.event.themeColors.first.withOpacity(0.15),
-                  border: Border(top: BorderSide(color: widget.event.themeColors.first.withOpacity(0.3))),
+                  color: Colors.white.withOpacity(0.9),
+                  border: const Border(top: BorderSide(color: Color(0xFFE0E0E0))),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          "${myRes.rank}",
-                          style: TextStyle(
-                            color: widget.event.themeColors.first,
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(8)
+                          ),
+                          child: Text(
+                            "#${myRes.rank}",
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            "Kết quả của bạn",
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            "YOUR RESULT",
+                            style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.0),
                           ),
                         ),
                         TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0.0, end: myRes.myScore),
                           duration: const Duration(seconds: 2),
                           builder: (context, value, child) => Text(
-                            "${value.toStringAsFixed(1)} pt",
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            "${value.toStringAsFixed(1)} PT",
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan,
-                        minimumSize: const Size(double.infinity, 46),
+                        backgroundColor: Colors.black, // Đen quyền lực
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => Navigator.push(
@@ -379,8 +338,8 @@ class _EventResultScreenState extends State<EventResultScreen> with TickerProvid
                         SlideRoute(page: MyResultDetailScreen(event: widget.event)),
                       ),
                       child: const Text(
-                        "XEM CHI TIẾT NHẬN XÉT",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        "VIEW REVIEW DETAILS",
+                        style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1.0, fontSize: 13),
                       ),
                     )
                   ],
@@ -390,53 +349,6 @@ class _EventResultScreenState extends State<EventResultScreen> with TickerProvid
           ),
         );
       },
-    );
-  }
-
-  Widget _buildLeaderboardItem(EventLeaderboardModel item) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: SizedBox(
-          width: 60,
-          child: Row(
-            children: [
-              Text("${item.rank}", style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 18,
-                backgroundImage: item.avatarUrl != null ? NetworkImage(item.avatarUrl!) : null,
-                backgroundColor: Colors.white10,
-              ),
-            ],
-          ),
-        ),
-        title: Text(item.userName, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-        subtitle: (item.rewardAmount != null && item.rewardAmount! > 0)
-            ? Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Row(
-            children: [
-              const Icon(Icons.confirmation_num_outlined, color: Colors.greenAccent, size: 12),
-              const SizedBox(width: 4),
-              Text(
-                "+${NumberFormat.decimalPattern().format(item.rewardAmount)}đ",
-                style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        )
-            : null,
-        trailing: Text(
-          "${item.finalScore} pt",
-          style: const TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.w900, fontSize: 15),
-        ),
-      ),
     );
   }
 }

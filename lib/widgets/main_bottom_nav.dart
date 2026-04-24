@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
-import 'dart:math' as math;
 
 class MainBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -14,165 +12,97 @@ class MainBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 65,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(0, Icons.home_filled),
-          _buildNavItem(1, Icons.search_rounded),
-          _buildSummerEventItem(), // Tab đặc biệt
-          _buildNavItem(3, Icons.checkroom_rounded),
-          _buildNavItem(4, Icons.person_rounded),
-        ],
+    return Padding(
+      // Giảm khoảng cách xung quanh để thanh gọn hơn và không bị nổi quá cao
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      child: Container(
+        height: 68, // Giảm chiều cao từ 80 xuống 68
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(34), // Bo tròn tối đa (bằng phân nửa chiều cao)
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4), // Giảm độ đậm của bóng đổ cho thanh thoát hơn
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildNavItem(0, Icons.home_outlined, Icons.home, "Home"),
+            _buildNavItem(1, Icons.search_rounded, Icons.search_rounded, "Search"),
+
+            // Nút Center (Nút Sự kiện / Add)
+            _buildCenterButton(),
+
+            _buildNavItem(3, Icons.checkroom_outlined, Icons.checkroom, "Wardrobe"),
+            _buildNavItem(4, Icons.person_outline_rounded, Icons.person_rounded, "Profile"),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon) {
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
     bool isSelected = currentIndex == index;
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
-        child: Icon(
-          icon,
-          size: 26,
-          color: isSelected ? AppColors.textPink : Colors.black26,
+        width: 56, // Giới hạn chiều rộng để các nút không bị dính vào nhau
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 24, // Giảm từ 26 xuống chuẩn 24
+              color: isSelected ? Colors.black : Colors.black38,
+            ),
+            const SizedBox(height: 2), // Giảm khoảng cách chữ và icon
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10, // Giảm cỡ chữ từ 12 xuống 10
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.black : Colors.black38,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSummerEventItem() {
+  Widget _buildCenterButton() {
     bool isSelected = currentIndex == 2;
     return GestureDetector(
       onTap: () => onTap(2),
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 70,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // Hiệu ứng bệ đỡ phía dưới khi được chọn
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              bottom: isSelected ? 10 : -20,
-              child: Container(
-                width: 35,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.pinkAccent.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(color: Colors.pinkAccent.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)
-                    ]
-                ),
-              ),
-            ),
-            // Icon chính bay lên
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutCubic,
-              margin: EdgeInsets.only(bottom: isSelected ? 35 : 0),
-              child: SummerPulseIcon(isSelected: isSelected),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 52, // Giảm kích thước nút giữa từ 65 xuống 52
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
+        child: const Icon(
+          Icons.style,
+          color: Colors.white,
+          size: 24, // Giảm icon nút giữa từ 32 xuống 24 cho cân xứng
+        ),
       ),
-    );
-  }
-}
-
-class SummerPulseIcon extends StatefulWidget {
-  final bool isSelected;
-  const SummerPulseIcon({super.key, required this.isSelected});
-
-  @override
-  State<SummerPulseIcon> createState() => _SummerPulseIconState();
-}
-
-class _SummerPulseIconState extends State<SummerPulseIcon> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!widget.isSelected) {
-      return const Icon(Icons.wb_sunny_outlined, size: 28, color: Colors.black26);
-    }
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Vòng tròn ripple lan tỏa đơn giản nhưng cực sang
-            Container(
-              width: 45 + (15 * _controller.value),
-              height: 45 + (15 * _controller.value),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.orangeAccent.withOpacity(1 - _controller.value),
-                  width: 2,
-                ),
-              ),
-            ),
-            // Nút Gradient tròn
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Colors.pink, Colors.pinkAccent],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.pinkAccent.withOpacity(0.4),
-                    blurRadius: 15,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.local_fire_department_rounded, // Icon ngọn lửa mùa hè rực cháy
-                size: 26,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

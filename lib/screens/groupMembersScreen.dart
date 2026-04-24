@@ -195,7 +195,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
                   ),
                   subtitle: Text(user['isOnline'] == "Online" ? "Active now" : "Offline",
                       style: TextStyle(color: user['isOnline'] == "Online" ? Colors.green : Colors.white38, fontSize: 12)),
-                  trailing: user['status'] == "Active" ? const Icon(Icons.check_circle, color: Colors.pinkAccent, size: 16) : null,
+                  trailing: user['status'] == "Active" ? const Icon(Icons.check_circle, color: Colors.green, size: 16) : null,
                 );
               },
             ),

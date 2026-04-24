@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../constants/post_status_values.dart';
 import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
 import '../widgets/post_item.dart';
 import 'create_post_screens.dart';
-import '../constants/post_status_values.dart';
 
 class MyPostsScreen extends StatefulWidget {
   const MyPostsScreen({super.key});
@@ -41,22 +40,9 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     });
   }
 
-  void _openEditPost(PostFeedModel post) {
-    Navigator.of(context)
-        .push(
-      MaterialPageRoute(
-        builder: (_) => CreatePostScreen(
-          postToEdit: post.toJson(),
-        ),
-      ),
-    )
-        .then((_) async {
-      await _loadMyPosts();
-    });
-  }
-
   bool _canEditPost(PostFeedModel post) {
     final status = post.status?.toLowerCase();
+
     return status != PostStatusValues.rejected.toLowerCase() &&
         status != 'airejected' &&
         status != 'blockedbyadmin';
@@ -65,7 +51,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       floatingActionButton: _buildFloatingButton(),
       body: SafeArea(
         child: ListenableBuilder(
@@ -75,23 +61,28 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
             return Column(
               children: [
-                _buildModernHeader(posts.length),
+                _buildHeader(posts.length),
                 Expanded(
                   child: postManager.isLoadingMyPosts
                       ? const Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.textPink,
+                      color: Colors.black,
                     ),
                   )
                       : posts.isEmpty
                       ? RefreshIndicator(
                     onRefresh: _refreshMyPosts,
+                    color: Colors.black,
+                    backgroundColor: Colors.white,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                      padding:
+                      const EdgeInsets.fromLTRB(20, 24, 20, 120),
                       children: [
                         SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.68,
+                          height:
+                          MediaQuery.of(context).size.height *
+                              0.68,
                           child: _buildEmptyState(),
                         ),
                       ],
@@ -99,11 +90,15 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                   )
                       : RefreshIndicator(
                     onRefresh: _refreshMyPosts,
+                    color: Colors.black,
+                    backgroundColor: Colors.white,
                     child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                      padding:
+                      const EdgeInsets.fromLTRB(16, 12, 16, 120),
                       physics: const AlwaysScrollableScrollPhysics(),
                       itemCount: posts.length + 1,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, __) =>
+                      const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return _buildOverviewCard(posts);
@@ -111,24 +106,12 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
                         final post = posts[index - 1];
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(22),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 18,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: PostItem(
-                              post: post,
-                              isMyPost: true,
-                              onRefresh: _refreshMyPosts,
-                            ),
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: PostItem(
+                            post: post,
+                            isMyPost: true,
+                            onRefresh: _refreshMyPosts,
                           ),
                         );
                       },
@@ -143,40 +126,19 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     );
   }
 
-  Widget _buildModernHeader(int totalPosts) {
+  Widget _buildHeader(int totalPosts) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.textPink.withOpacity(0.95),
-            const Color(0xFFFF8FB7),
-            const Color(0xFFFFB6CF),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPink.withOpacity(0.28),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+      decoration: _cardDecoration(),
       child: Row(
         children: [
           Container(
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.black,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.22),
-              ),
             ),
             child: const Icon(
               Icons.auto_awesome_rounded,
@@ -190,23 +152,24 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Bài viết của tôi',
+                  'MY POSTS',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.4,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   totalPosts == 0
-                      ? 'Bắt đầu xây dựng profile thời trang của bạn'
-                      : 'Bạn đang có $totalPosts bài viết trên hồ sơ',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.92),
+                      ? 'Start building your fashion profile.'
+                      : 'You have $totalPosts post(s) on your profile.',
+                  style: const TextStyle(
+                    color: Colors.black54,
                     fontSize: 13.5,
                     height: 1.35,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -215,14 +178,14 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
           IconButton(
             onPressed: _refreshMyPosts,
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.16),
+              backgroundColor: const Color(0xFFF5F5F5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
             icon: const Icon(
               Icons.refresh_rounded,
-              color: Colors.white,
+              color: Colors.black,
             ),
           ),
         ],
@@ -232,8 +195,10 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
   Widget _buildOverviewCard(List<PostFeedModel> posts) {
     final total = posts.length;
-    final published = posts.where((e) => e.status?.toLowerCase() == 'published').length;
-    final verifying = posts.where((e) => e.status?.toLowerCase() == 'verifying').length;
+    final published =
+        posts.where((e) => e.status?.toLowerCase() == 'published').length;
+    final verifying =
+        posts.where((e) => e.status?.toLowerCase() == 'verifying').length;
     final rejected = posts.where((e) {
       final s = e.status?.toLowerCase();
       return s == 'rejected' || s == 'airejected' || s == 'blockedbyadmin';
@@ -241,38 +206,22 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B1C22),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.06),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Tổng quan',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
+          _sectionTitle(
+            'OVERVIEW',
+            Icons.analytics_outlined,
           ),
           const SizedBox(height: 6),
           const Text(
-            'Theo dõi nhanh trạng thái bài viết của bạn',
+            'Quickly track the review status of your posts.',
             style: TextStyle(
-              color: AppColors.textSecondary,
+              color: Colors.black45,
               fontSize: 13,
               height: 1.4,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 16),
@@ -281,7 +230,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.grid_view_rounded,
-                  label: 'Tổng bài',
+                  label: 'Total',
                   value: '$total',
                 ),
               ),
@@ -289,7 +238,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.check_circle_rounded,
-                  label: 'Công khai',
+                  label: 'Published',
                   value: '$published',
                 ),
               ),
@@ -297,7 +246,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.hourglass_top_rounded,
-                  label: 'Đang duyệt',
+                  label: 'Reviewing',
                   value: '$verifying',
                 ),
               ),
@@ -305,7 +254,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.report_gmailerrorred_rounded,
-                  label: 'Từ chối',
+                  label: 'Rejected',
                   value: '$rejected',
                 ),
               ),
@@ -322,24 +271,31 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     required String value,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 14,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: const Color(0xFFF7F7F7),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withOpacity(0.06),
+          color: Colors.black.withOpacity(0.04),
         ),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.textPink, size: 20),
+          Icon(
+            icon,
+            color: Colors.black,
+            size: 20,
+          ),
           const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              color: AppColors.textPrimary,
+              color: Colors.black,
               fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 4),
@@ -347,9 +303,9 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
             label,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
+              color: Colors.black45,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
               height: 1.3,
             ),
           ),
@@ -359,34 +315,18 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
   }
 
   Widget _buildFloatingButton() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [
-            AppColors.textPink,
-            AppColors.textPink.withOpacity(0.82),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPink.withOpacity(0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: FloatingActionButton.extended(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        onPressed: _openCreatePost,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text(
-          'Tạo bài viết',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
+    return FloatingActionButton.extended(
+      elevation: 0,
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      onPressed: _openCreatePost,
+      icon: const Icon(Icons.add_rounded),
+      label: const Text(
+        'CREATE POST',
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+          letterSpacing: 0.4,
         ),
       ),
     );
@@ -398,75 +338,60 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-          decoration: BoxDecoration(
-            color: const Color(0xFF17181D),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.06),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.16),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
+          decoration: _cardDecoration(),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 width: 92,
                 height: 92,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.textPink.withOpacity(0.28),
-                      AppColors.textPink.withOpacity(0.08),
-                      Colors.transparent,
-                    ],
-                  ),
+                  color: Color(0xFFF1F1F1),
                 ),
-                child: Container(
-                  margin: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.article_outlined,
-                    size: 34,
-                    color: AppColors.textPink,
-                  ),
+                child: const Icon(
+                  Icons.article_outlined,
+                  size: 38,
+                  color: Colors.black26,
                 ),
               ),
               const SizedBox(height: 22),
               const Text(
-                'Chưa có bài viết nào',
+                'NO POSTS YET',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: Colors.black,
                   fontSize: 22,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.4,
                 ),
               ),
               const SizedBox(height: 10),
               const Text(
-                'Hãy đăng bài đầu tiên để xây dựng profile cá nhân thật nổi bật. Bài viết có ảnh sẽ được AI kiểm duyệt trước khi hiển thị công khai.',
+                'Create your first post to build a standout fashion profile. Posts with images will be reviewed by AI before becoming public.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.textSecondary,
+                  color: Colors.black45,
                   fontSize: 14,
                   height: 1.6,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 22),
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: _openCreatePost,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text(
+                  'CREATE FIRST POST',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    letterSpacing: 0.4,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: AppColors.textPink,
+                  backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 22,
@@ -476,25 +401,50 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_rounded),
-                    SizedBox(width: 8),
-                    Text(
-                      'Tạo bài viết ngay',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.5,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _sectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.black,
+          size: 18,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
     );
   }
 }

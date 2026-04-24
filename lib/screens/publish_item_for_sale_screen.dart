@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../constants/app_colors.dart';
 import '../managers/item_manager.dart';
 import '../models/wardrobe_item_model.dart';
 import '../utils/app_toast.dart';
@@ -190,6 +189,7 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     AppToast.show(
       context,
       manager.errorMessage ?? 'Failed to publish item.',
+      isError: true,
     );
   }
 
@@ -198,16 +198,27 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     final manager = context.watch<ItemManager>();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
+        backgroundColor: const Color(0xFFF5F5F5),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
-          'Sell Item',
+          'SELL ITEM',
           style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+            letterSpacing: 0.4,
           ),
         ),
       ),
@@ -215,12 +226,13 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
             children: [
               _buildItemPreview(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               _buildSaleInformationSection(),
-              const SizedBox(height: 22),
+              const SizedBox(height: 20),
               _buildVariantHeader(),
               const SizedBox(height: 12),
               ...List.generate(
@@ -233,10 +245,11 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
                 child: ElevatedButton(
                   onPressed: manager.isLoading ? null : _publishItem,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.textPink,
+                    backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.white10,
-                    disabledForegroundColor: Colors.white38,
+                    disabledBackgroundColor: const Color(0xFFEDEDED),
+                    disabledForegroundColor: Colors.black38,
+                    elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -252,10 +265,11 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
                     ),
                   )
                       : const Text(
-                    'Publish for Sale',
+                    'PUBLISH FOR SALE',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ),
@@ -272,39 +286,35 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
 
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
-      ),
+      decoration: _cardDecoration(),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             child: !_hasText(imageUrl)
                 ? Container(
-              width: 82,
-              height: 82,
-              color: AppColors.surface,
+              width: 86,
+              height: 86,
+              color: const Color(0xFFF1F1F1),
               child: const Icon(
                 Icons.checkroom_outlined,
-                color: Colors.white38,
+                color: Colors.black26,
                 size: 34,
               ),
             )
                 : Image.network(
               imageUrl!,
-              width: 82,
-              height: 82,
+              width: 86,
+              height: 86,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) {
                 return Container(
-                  width: 82,
-                  height: 82,
-                  color: AppColors.surface,
+                  width: 86,
+                  height: 86,
+                  color: const Color(0xFFF1F1F1),
                   child: const Icon(
                     Icons.broken_image_outlined,
-                    color: Colors.white38,
+                    color: Colors.black26,
                   ),
                 );
               },
@@ -315,26 +325,37 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'ITEM',
+                  style: TextStyle(
+                    color: Colors.black38,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 5),
                 Text(
                   widget.item.itemName,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
                     fontSize: 17,
                   ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 if (_hasText(widget.item.category))
                   Text(
                     widget.item.category!,
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.black54,
                       fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
@@ -358,22 +379,14 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
 
   Widget _buildSaleInformationSection() {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Sale Information',
-            style: TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-            ),
+          _sectionTitle(
+            'SALE INFORMATION',
+            Icons.storefront_outlined,
           ),
           const SizedBox(height: 14),
           _buildTextField(
@@ -399,12 +412,15 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _selectedCondition,
-            dropdownColor: AppColors.backgroundSecondary,
+            dropdownColor: Colors.white,
             decoration: _inputDecoration(
               label: 'Condition',
               icon: Icons.verified_outlined,
             ),
-            style: const TextStyle(color: AppColors.text),
+            style: const TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w600,
+            ),
             items: _conditionOptions.map((condition) {
               return DropdownMenuItem<String>(
                 value: condition,
@@ -421,13 +437,14 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
               });
             },
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           const Text(
-            'This item will be visible in public marketplace after publishing.',
+            'This item will be visible in the public marketplace after publishing.',
             style: TextStyle(
-              color: Colors.white60,
+              color: Colors.black45,
               fontSize: 12,
               height: 1.4,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -440,20 +457,27 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
       children: [
         const Expanded(
           child: Text(
-            'Variants',
+            'VARIANTS',
             style: TextStyle(
-              color: AppColors.text,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.4,
             ),
           ),
         ),
         TextButton.icon(
           onPressed: _addVariant,
           icon: const Icon(Icons.add),
-          label: const Text('Add variant'),
+          label: const Text(
+            'Add variant',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
           style: TextButton.styleFrom(
-            foregroundColor: AppColors.textPink,
+            foregroundColor: Colors.black,
           ),
         ),
       ],
@@ -465,24 +489,16 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: Column(
         children: [
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Variant ${index + 1}',
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                child: _sectionTitle(
+                  'VARIANT ${index + 1}',
+                  Icons.category_outlined,
                 ),
               ),
               IconButton(
@@ -492,7 +508,7 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildTextField(
             controller: controller.skuController,
             label: 'SKU',
@@ -587,14 +603,25 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
                 return const SizedBox.shrink();
               }
 
-              return Align(
-                alignment: Alignment.centerLeft,
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.black.withOpacity(0.04),
+                  ),
+                ),
                 child: Text(
                   'Variant price: ${_formatPrice(price)}',
                   style: const TextStyle(
-                    color: AppColors.textPink,
+                    color: Colors.black,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               );
@@ -617,7 +644,10 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(color: AppColors.text),
+      style: const TextStyle(
+        color: Colors.black,
+        fontWeight: FontWeight.w600,
+      ),
       decoration: _inputDecoration(
         label: label,
         hint: hint,
@@ -637,26 +667,43 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(color: Colors.white60),
-      hintStyle: const TextStyle(color: Colors.white30),
-      prefixIcon: Icon(icon, color: AppColors.textPink),
+      labelStyle: const TextStyle(
+        color: Colors.black45,
+        fontWeight: FontWeight.w600,
+      ),
+      hintStyle: const TextStyle(
+        color: Colors.black26,
+        fontWeight: FontWeight.w500,
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: Colors.black,
+      ),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: const Color(0xFFF7F7F7),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.divider),
+        borderSide: BorderSide(
+          color: Colors.black.withOpacity(0.06),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.textPink),
+        borderSide: const BorderSide(
+          color: Colors.black,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.redAccent),
+        borderSide: const BorderSide(
+          color: Colors.redAccent,
+        ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.redAccent),
+        borderSide: const BorderSide(
+          color: Colors.redAccent,
+        ),
       ),
     );
   }
@@ -665,18 +712,59 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.textPink.withOpacity(0.16),
+        color: const Color(0xFFF1F1F1),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.textPink.withOpacity(0.7)),
+        border: Border.all(
+          color: Colors.black.withOpacity(0.05),
+        ),
       ),
       child: Text(
         value,
         style: const TextStyle(
-          color: AppColors.textPink,
+          color: Colors.black54,
           fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w800,
         ),
       ),
+    );
+  }
+
+  Widget _sectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.black,
+          size: 18,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
     );
   }
 }

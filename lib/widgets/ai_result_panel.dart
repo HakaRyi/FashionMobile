@@ -59,7 +59,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(color: Colors.pinkAccent),
+          child: CircularProgressIndicator(color: Colors.black),
         ),
       );
     }
@@ -80,7 +80,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
         const SizedBox(height: 24),
 
         // 2. THÔNG TIN CƠ BẢN
-        _buildSectionHeader("THÔNG TIN CƠ BẢN"),
+        _buildSectionHeader("BASIC INFO"),
         const SizedBox(height: 12),
         _buildFieldWrapper('itemName'), // Tên món đồ chiếm 1 hàng
 
@@ -97,7 +97,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
         const Divider(color: Colors.white10, height: 20),
 
         // 3. KẾT QUẢ PHÂN TÍCH AI (Chia 2 cột)
-        _buildSectionHeader("AI PHÂN TÍCH CHUYÊN SÂU"),
+        _buildSectionHeader("AI IN-DEPTH ANALYSIS"),
         const SizedBox(height: 12),
         _buildRow([
           _buildFieldWrapper('itemType'),
@@ -128,7 +128,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
         const Divider(color: Colors.white10, height: 40),
 
         // 4. MÔ TẢ SẢN PHẨM
-        _buildSectionHeader("MÔ TẢ CHI TIẾT"),
+        _buildSectionHeader("DETAILED DESCRIPTION"),
         const SizedBox(height: 12),
         _buildDescriptionField(),
 
@@ -181,7 +181,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
           _buildLabel(key),
           const SizedBox(height: 6),
           FashionAutocompleteField(
-            label: "Nhập ${key}",
+            label: "Enter ${key}",
             options: currentOptions,
             controller: _controllers[key]!,
             enabled: true,
@@ -198,7 +198,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.pinkAccent),
+        border: Border.all(color: Colors.black.withOpacity(0.3)),
       ),
       child: TextFormField(
         controller: _controllers['description'],
@@ -209,7 +209,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
         decoration: InputDecoration(
           hintText: "Thêm mô tả chi tiết...",
           hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
-          prefixIcon: const Icon(Icons.notes, color: Colors.pinkAccent, size: 20),
+          prefixIcon: const Icon(Icons.notes, color: Colors.black, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
         ),
@@ -225,13 +225,13 @@ class _AIResultPanelState extends State<AIResultPanel> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isTrue ? Colors.pinkAccent.withOpacity(0.3) : Colors.black12),
+        border: Border.all(color: isTrue ? Colors.black.withOpacity(0.3) : Colors.black12),
       ),
       child: Row(
         children: [
           Icon(
             isTrue ? Icons.public : Icons.public_off,
-            color: isTrue ? Colors.pinkAccent : Colors.black,
+            color: isTrue ? Colors.black : Colors.black54,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -249,7 +249,8 @@ class _AIResultPanelState extends State<AIResultPanel> {
           ),
           Switch(
             value: isTrue,
-            activeColor: Colors.pinkAccent,
+            activeColor: Colors.white,
+            activeTrackColor: Colors.blueAccent,
             onChanged: (val) {
               widget.onAttributeSelected('isPublic', val.toString());
             },
@@ -266,13 +267,13 @@ class _AIResultPanelState extends State<AIResultPanel> {
         Icon(
             isAI ? Icons.auto_awesome : Icons.edit_note,
             size: 13,
-            color: isAI ? Colors.pinkAccent : Colors.black45
+            color: isAI ? Colors.black : Colors.black45
         ),
         const SizedBox(width: 6),
         Text(
           key.toUpperCase(),
           style: TextStyle(
-              color: isAI ? Colors.pinkAccent : Colors.black45,
+              color: isAI ? Colors.black : Colors.black45,
               fontSize: 9,
               fontWeight: FontWeight.bold
           ),

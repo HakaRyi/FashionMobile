@@ -45,7 +45,7 @@ class TryOnManager extends ChangeNotifier {
       }
 
       resultImageBytes = result;
-      await _historyService.saveHistory(resultImageBytes!);
+      // await _historyService.saveHistory(resultImageBytes!);
       await fetchHistory();
       _showSuccessNotification(globalContext);
     } on ApiException catch (e) {

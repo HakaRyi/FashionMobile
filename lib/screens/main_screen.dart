@@ -62,6 +62,7 @@ class MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: mainScreenKey,
+      extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
