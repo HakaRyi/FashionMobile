@@ -198,6 +198,19 @@ class ItemService {
 
     final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.smartMatchEndpoint}");
 
+    // Log ra để kiểm tra Payload gửi đi có đúng không
+    final payload = {
+      "prompt": prompt,
+      "referenceItemId": referenceItemId,
+      "targetWardrobeIds": targetWardrobeIds,
+      "includeMyWardrobe": useMyWardrobe,
+      "includeSavedItems": useSavedItems,
+      "useMyStylePreferences": useMyStylePreferences,
+      "useMyPhysicalProfile": useMyPhysicalProfile,
+      "limit": limit,
+    };
+    debugPrint("🔥 SENDING PAYLOAD TO SMART MATCH: ${jsonEncode(payload)}");
+
     try {
       final response = await http.post(
         url,
@@ -206,24 +219,24 @@ class ItemService {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': '69420',
         },
-        body: jsonEncode({
-          "prompt": prompt,
-          "referenceItemId": referenceItemId,
-          "targetWardrobeIds": targetWardrobeIds,
-          "includeMyWardrobe": useMyWardrobe,
-          "includeSavedItems": useSavedItems,
-          "useMyStylePreferences": useMyStylePreferences,
-          "useMyPhysicalProfile": useMyPhysicalProfile,
-          "limit": limit,
-        }),
+        body: jsonEncode(payload),
       );
 
+      debugPrint("🔥 SMART MATCH STATUS: ${response.statusCode}");
+      debugPrint("🔥 SMART MATCH BODY: ${response.body}");
+
       if (response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        return decodedData['data'];
+        final decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        if (decodedData['data'] != null && decodedData['data'] is List) {
+          return decodedData['data'] as List<dynamic>;
+        } else {
+          debugPrint("🔥 LỖI: 'data' không phải là List hoặc bị null");
+          return [];
+        }
       }
     } catch (e) {
-      print("Lỗi getSmartRecommendations: $e");
+      debugPrint("🔥 LỖI getSmartRecommendations: $e");
     }
     return [];
   }

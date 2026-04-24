@@ -346,41 +346,41 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   }
   Widget _getCategoryThumbnail(String category, bool isSelected) {
     String cat = category.toLowerCase();
-    String imageUrl = "";
+    String assetPath = "";
 
     // 1. CHUNG (ALL)
     if (cat == 'all') {
-      imageUrl = "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=200&q=80"; // Đồ tổng hợp
+      assetPath = "assets/images/all.png";
     }
-    // 2. NHÓM CATEGORY (upper_body, lower_body, full_body, footwear, accessory)
+
     else if (cat.contains('upper') || cat.contains('top') || cat.contains('shirt')) {
-      imageUrl = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&q=80"; // Áo thun
+      assetPath = "assets/images/aodo.png";
     } else if (cat.contains('lower') || cat.contains('pant') || cat.contains('skirt') || cat.contains('jean')) {
-      imageUrl = "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=200&q=80"; // Quần jean
+      assetPath = "assets/images/quanxanh.png";
     } else if (cat.contains('full') || cat.contains('dress') || cat.contains('jumpsuit')) {
-      imageUrl = "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200&q=80"; // Đầm, váy liền (Full body)
+      assetPath = "assets/images/fullbody.png";
     } else if (cat.contains('footwear') || cat.contains('shoe')) {
-      imageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&q=80"; // Giày sneaker
+      assetPath = "assets/images/giay.png";
     } else if (cat.contains('accessory')) {
-      imageUrl = "https://images.unsplash.com/photo-1509941943102-10c232535736?w=200&q=80"; // Mắt kính/Phụ kiện
+      assetPath = "assets/images/phukien.png";
     }
-    // 3. NHÓM STYLE (streetwear, casual, formal, sporty, vintage, minimalist)
+
     else if (cat.contains('casual')) {
-      imageUrl = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200&q=80"; // Đồ casual
+      assetPath = "assets/images/casual.png";
     } else if (cat.contains('formal') || cat.contains('suit')) {
-      imageUrl = "https://www.filsunique.com/cdn/shop/articles/elegant-indian-macho-man-model-suit-pink-tie-posed-winter-day_1_1200x630.jpg?v=1705560612"; // Đồ Vest/Âu
+      assetPath = "assets/images/formalclothes.png";
     } else if (cat.contains('sport')) {
-      imageUrl = "https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=200&q=80"; // Đồ thể thao (sporty)
+      assetPath = "assets/images/sporty.png";
     } else if (cat.contains('streetwear') || cat.contains('street')) {
-      imageUrl = "https://www.outfiten.com/wp-content/uploads/2024/08/What-is-Streetwear-Clothing_-A-Deep-Dive-into-Urban-Fashion-Trends.jpg"; // Streetwear
+      assetPath = "assets/images/streetwear.png";
     } else if (cat.contains('vintage') || cat.contains('retro')) {
-      imageUrl = "https://images.unsplash.com/photo-1550614000-4b95d4ed79ac?w=200&q=80"; // Phong cách Vintage (cổ điển)
+      assetPath = "assets/images/vintage.png";
     } else if (cat.contains('minimalist') || cat.contains('minimal')) {
-      imageUrl = "https://images.unsplash.com/photo-1434389678059-42db2ea4ce04?w=200&q=80"; // Phong cách Tối giản (Minimalist)
+      assetPath = "assets/images/minimalist.png";
     }
     // 4. MẶC ĐỊNH
     else {
-      imageUrl = "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&q=80"; // Nếu không lọt vô từ khóa nào
+      assetPath = "assets/images/logowapo.png"; // Nếu không lọt vô từ khóa nào thì hiện logo app
     }
 
     return Container(
@@ -390,14 +390,15 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         shape: BoxShape.rectangle,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isSelected ? Colors.transparent : Colors.transparent, // Bo viền đen nếu đang chọn
+          color: isSelected ? Colors.transparent : Colors.transparent,
           width: 2,
         ),
         boxShadow: isSelected
             ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))]
             : null,
         image: DecorationImage(
-          image: NetworkImage(imageUrl),
+          // ĐỔI NetworkImage THÀNH AssetImage Ở ĐÂY
+          image: AssetImage(assetPath),
           fit: BoxFit.cover,
           // Nếu không được chọn thì hình hơi mờ/trắng đi một xíu cho chìm xuống
           colorFilter: isSelected ? null : ColorFilter.mode(Colors.white.withOpacity(0.5), BlendMode.lighten),
@@ -405,76 +406,6 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       ),
     );
   }
-
-  // HIỂN THỊ MENU KHI NHẤN GIỮ (HOLD)
-  // void _showActionMenu(BuildContext context, dynamic item) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     backgroundColor: Colors.white,
-  //     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-  //     builder: (context) => SafeArea(
-  //       child: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           const SizedBox(height: 12),
-  //           Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2))),
-  //           ListTile(
-  //             leading: const Icon(Icons.auto_awesome, color: Colors.black),
-  //             title: const Text("AI Outfit Suggestion", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black)),
-  //             onTap: () {
-  //               Navigator.pop(context);
-  //               Navigator.push(context, SlideRoute(page: AISuggestionScreen(selectedItem: item)));
-  //             },
-  //           ),
-  //           ListTile(
-  //             leading: const Icon(Icons.face, color: Colors.black),
-  //             title: const Text("Virtual Try-on", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-  //             onTap: () {
-  //               Navigator.pop(context);
-  //               Navigator.push(
-  //                 context,
-  //                 MaterialPageRoute(
-  //                   builder: (context) => TryOnScreen(
-  //                     sourceItem: TryOnSourceItem(
-  //                       itemId: item['itemId'],
-  //                       itemName: item['itemName'] ?? 'Unknown Item',
-  //                       imageUrl: item['primaryImageUrl'] ?? item['imageUrl'] ?? '',
-  //                       brand: item['brand'],
-  //                       category: item['category'],
-  //                     ),
-  //                   ),
-  //                 ),
-  //               );
-  //             },
-  //           ),
-  //           ListTile(
-  //             leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-  //             title: const Text("Remove from Wardrobe", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
-  //             onTap: () async {
-  //               Navigator.pop(context);
-  //               final bool? confirm = await showDialog<bool>(
-  //                 context: context,
-  //                 builder: (c) => AlertDialog(
-  //                   title: const Text("Confirm"),
-  //                   content: const Text("Delete this item?"),
-  //                   actions: [
-  //                     TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Cancel")),
-  //                     TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Delete")),
-  //                   ],
-  //                 ),
-  //               );
-  //               if (confirm == true) {
-  //                 await ItemService().deleteItem(item['itemId']);
-  //                 _handleRefresh();
-  //               }
-  //             },
-  //           ),
-  //           const SizedBox(height: 20),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildEmptyState() {
     return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inventory_2_outlined, size: 64, color: Colors.black12), SizedBox(height: 16), Text("NO ITEMS FOUND", style: TextStyle(color: Colors.black26, fontWeight: FontWeight.w900))]));

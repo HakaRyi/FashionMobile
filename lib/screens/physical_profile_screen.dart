@@ -1,6 +1,8 @@
 import 'package:fashion_mobile/screens/user_preference_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../utils/route_transitions.dart';
+
 class PhysicalProfileScreen extends StatefulWidget {
   const PhysicalProfileScreen({super.key});
 
@@ -16,9 +18,7 @@ class _PhysicalProfileScreenState extends State<PhysicalProfileScreen> with Sing
   final TextEditingController _waistCtrl = TextEditingController();
   final TextEditingController _hipCtrl = TextEditingController();
   final TextEditingController _bustCtrl = TextEditingController();
-  final TextEditingController _dobCtrl = TextEditingController();
 
-  DateTime? _selectedDate;
   int _selectedGender = 0; // Giả sử 0: Nữ, 1: Nam, 2: Unisex
   String _selectedBodyShape = "Unknown";
   String _selectedSkinTone = "Unknown";
@@ -49,42 +49,12 @@ class _PhysicalProfileScreenState extends State<PhysicalProfileScreen> with Sing
     _waistCtrl.dispose();
     _hipCtrl.dispose();
     _bustCtrl.dispose();
-    _dobCtrl.dispose();
     super.dispose();
-  }
-
-  // Hàm chọn ngày sinh
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime(2000, 1, 1),
-      firstDate: DateTime(1950, 1, 1),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.black,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dobCtrl.text = "${picked.day}/${picked.month}/${picked.year}";
-      });
-    }
   }
 
   void _onNext() {
     Map<String, dynamic> physicalData = {
       "gender": _selectedGender,
-      "dateOfBirth": _selectedDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
       "height": double.tryParse(_heightCtrl.text) ?? 0,
       "weight": double.tryParse(_weightCtrl.text) ?? 0,
       "waist": double.tryParse(_waistCtrl.text) ?? 0,
@@ -94,27 +64,24 @@ class _PhysicalProfileScreenState extends State<PhysicalProfileScreen> with Sing
       "skinTone": _selectedSkinTone,
     };
 
-    Navigator.push(context, MaterialPageRoute(builder: (_) => UserPreferenceScreen(physicalData: physicalData)));
+    Navigator.push(context, SlideRoute(page: UserPreferenceScreen(physicalData: physicalData)));
   }
 
   void _onSkip() {
     Map<String, dynamic> emptyData = {
       "gender": 0,
-      "dateOfBirth": DateTime.now().toIso8601String(),
       "height": 0, "weight": 0, "waist": 0, "hip": 0, "bust": 0,
       "bodyShape": "Unknown", "skinTone": "Unknown"
     };
-    Navigator.push(context, MaterialPageRoute(builder: (_) => UserPreferenceScreen(physicalData: emptyData)));
+    Navigator.push(context, SlideRoute(page: UserPreferenceScreen(physicalData: emptyData)));
   }
-
-  // BƯỚC 5: HÀM TẠO HIỆU ỨNG TRƯỢT LÊN CHO TỪNG CỤM
   Widget _buildAnimatedItem(Widget child, int index) {
     double start = index * 0.15;
     double end = start + 0.5;
     if (end > 1.0) end = 1.0;
 
     Animation<Offset> slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.2), // Trượt nhẹ từ dưới lên
+      begin: const Offset(0.0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
@@ -137,7 +104,14 @@ class _PhysicalProfileScreenState extends State<PhysicalProfileScreen> with Sing
       ),
     );
   }
-
+  String _getGenderString(int genderValue) {
+    switch (genderValue) {
+      case 1: return "Male";
+      case 2: return "Female";
+      case 3: return "Other";
+      default: return "Unknown";
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -183,37 +157,24 @@ class _PhysicalProfileScreenState extends State<PhysicalProfileScreen> with Sing
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSectionTitle("BASIC INFO"),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _dobCtrl,
-                          readOnly: true,
-                          onTap: () => _selectDate(context),
-                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                          decoration: InputDecoration(
-                            labelText: "Date of Birth",
-                            labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
-                            suffixIcon: const Icon(Icons.calendar_today, size: 18, color: Colors.black54),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 2.0)),
-                          ),
-                        ),
                         const SizedBox(height: 16),
                         _buildDropdown(
                           "Gender",
-                          ["Female", "Male", "Unisex"],
-                          _selectedGender == 0 ? "Female" : (_selectedGender == 1 ? "Male" : "Unisex"),
+                          ["Unknown", "Male", "Female", "Other"],
+                          _getGenderString(_selectedGender),
                               (val) {
                             setState(() {
-                              _selectedGender = val == "Female" ? 0 : (val == "Male" ? 1 : 2);
+                              if (val == "Male") _selectedGender = 1;
+                              else if (val == "Female") _selectedGender = 2;
+                              else if (val == "Other") _selectedGender = 3;
+                              else _selectedGender = 0; // Unknown
                             });
                           },
                         ),
                         const SizedBox(height: 30),
                       ],
                     ),
-                    1, // Index 1
+                    1,
                   ),
 
                   // CỤM 2: Measurements

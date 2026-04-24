@@ -58,7 +58,7 @@ class SettingsScreen extends StatelessWidget {
                 }
               }
             }),
-            _buildSettingItem(Icons.notifications_none, "Edit Personal Information", () {
+            _buildSettingItem(Icons.edit_document, "Edit Personal Information", () {
               Navigator.push(
                   context,
                   SlideRoute(page: const EditPersonalInformationScreen())

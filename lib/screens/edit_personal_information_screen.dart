@@ -20,23 +20,46 @@ class _EditPersonalInformationScreenState extends State<EditPersonalInformationS
   final TextEditingController _hipCtrl = TextEditingController();
   final TextEditingController _bustCtrl = TextEditingController();
   final TextEditingController _dobCtrl = TextEditingController();
+  final TextEditingController _valCtrl = TextEditingController(); // Controller cho ô nhập custom
 
   DateTime? _selectedDate;
-  int _selectedGender = 0; // 0: Female, 1: Male, 2: Unisex
+  int _selectedGender = 0; // 0: Unknown, 1: Male, 2: Female, 3: Other
   String _selectedBodyShape = "Unknown";
   String _selectedSkinTone = "Unknown";
 
   final List<String> _bodyShapes = ["Hourglass", "Rectangle", "Triangle", "Inverted Triangle", "Apple", "Unknown"];
   final List<String> _skinTones = ["Light", "Medium", "Dark", "Unknown"];
 
-  // Style Preferences
-  final List<String> _availableStyles = ["Minimalist", "Streetwear", "Vintage", "Casual", "Formal", "Sporty"];
-  List<String> _selectedStyles = [];
+  // ================= PHẦN QUẢN LÝ SỞ THÍCH =================
+  final List<String> _preferenceTypes = ["Style", "Color", "Material", "Brand"];
+  String _selectedType = "Style";
+
+  final Map<String, List<String>> _defaultValues = {
+    "Style": ["Minimalist", "Streetwear", "Vintage", "Casual", "Formal", "Sporty"],
+    "Color": ["Black", "White", "Red", "Blue", "Green", "Yellow", "Gray"],
+    "Material": ["Cotton", "Silk", "Denim", "Leather", "Linen"],
+    "Brand": ["Nike", "Adidas", "Zara", "H&M", "Uniqlo"]
+  };
+
+  final List<Map<String, String>> _userPreferences = [];
+  // ========================================================
 
   @override
   void initState() {
     super.initState();
     _fetchMyData();
+  }
+
+  @override
+  void dispose() {
+    _heightCtrl.dispose();
+    _weightCtrl.dispose();
+    _waistCtrl.dispose();
+    _hipCtrl.dispose();
+    _bustCtrl.dispose();
+    _dobCtrl.dispose();
+    _valCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchMyData() async {
@@ -64,8 +87,27 @@ class _EditPersonalInformationScreenState extends State<EditPersonalInformationS
         String skinTone = profile['skinTone'] ?? "Unknown";
         _selectedSkinTone = _skinTones.contains(skinTone) ? skinTone : "Unknown";
 
+        // Load dữ liệu sở thích từ API vào mảng hiển thị UI
+        _userPreferences.clear();
         if (profile['favoriteStyles'] != null) {
-          _selectedStyles = List<String>.from(profile['favoriteStyles']);
+          for (var item in profile['favoriteStyles']) {
+            _userPreferences.add({"type": "Style", "value": item.toString()});
+          }
+        }
+        if (profile['favoriteColors'] != null) {
+          for (var item in profile['favoriteColors']) {
+            _userPreferences.add({"type": "Color", "value": item.toString()});
+          }
+        }
+        if (profile['favoriteMaterials'] != null) {
+          for (var item in profile['favoriteMaterials']) {
+            _userPreferences.add({"type": "Material", "value": item.toString()});
+          }
+        }
+        if (profile['favoriteBrands'] != null) {
+          for (var item in profile['favoriteBrands']) {
+            _userPreferences.add({"type": "Brand", "value": item.toString()});
+          }
         }
 
         _isLoading = false;
@@ -98,8 +140,27 @@ class _EditPersonalInformationScreenState extends State<EditPersonalInformationS
     }
   }
 
+  void _addPreference(String type, String value) {
+    String val = value.trim();
+    if (val.isEmpty) return;
+
+    bool exists = _userPreferences.any((p) => p['type'] == type && (p['value'] ?? '').toLowerCase() == val.toLowerCase());
+    if (!exists) {
+      setState(() {
+        _userPreferences.add({"type": type, "value": val});
+        _valCtrl.clear();
+      });
+    }
+  }
+
   Future<void> _onSave() async {
     setState(() => _isSaving = true);
+
+    // Tách dữ liệu sở thích ra theo type để gửi về Backend
+    List<String> favStyles = _userPreferences.where((p) => p['type'] == 'Style').map((p) => p['value']!).toList();
+    List<String> favColors = _userPreferences.where((p) => p['type'] == 'Color').map((p) => p['value']!).toList();
+    List<String> favMaterials = _userPreferences.where((p) => p['type'] == 'Material').map((p) => p['value']!).toList();
+    List<String> favBrands = _userPreferences.where((p) => p['type'] == 'Brand').map((p) => p['value']!).toList();
 
     Map<String, dynamic> payload = {
       "gender": _selectedGender,
@@ -111,8 +172,10 @@ class _EditPersonalInformationScreenState extends State<EditPersonalInformationS
       "bust": double.tryParse(_bustCtrl.text) ?? 0,
       "bodyShape": _selectedBodyShape,
       "skinTone": _selectedSkinTone,
-      "favoriteStyles": _selectedStyles,
-      "favoriteColors": ["Black", "White"], // Giữ nguyên theo payload cũ
+      "favoriteStyles": favStyles,
+      "favoriteColors": favColors,
+      "favoriteMaterials": favMaterials,
+      "favoriteBrands": favBrands,
     };
 
     final success = await UserProfileService().updateProfile(payload);
@@ -122,28 +185,50 @@ class _EditPersonalInformationScreenState extends State<EditPersonalInformationS
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Profile updated successfully!", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.black,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          )
+            SnackBar(
+              content: const Text("Profile updated successfully!", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.black,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).size.height - 150,
+                  left: 20,
+                  right: 20
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            )
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Failed to update profile.", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          )
+            SnackBar(
+              content: const Text("Failed to update profile.", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).size.height - 150,
+                  left: 20,
+                  right: 20
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            )
         );
       }
     }
   }
 
+  // Hàm chuyển đổi từ số int sang chữ để hiển thị trên Dropdown
+  String _getGenderString(int genderValue) {
+    switch (genderValue) {
+      case 1: return "Male";
+      case 2: return "Female";
+      case 3: return "Other";
+      default: return "Unknown";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    List<String> currentSuggestions = _defaultValues[_selectedType] ?? [];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -159,135 +244,229 @@ class _EditPersonalInformationScreenState extends State<EditPersonalInformationS
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Keep your profile updated to get the best AI styling recommendations.", style: TextStyle(color: Colors.black54, fontSize: 13)),
-                        const SizedBox(height: 30),
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Keep your profile updated to get the best AI styling recommendations.", style: TextStyle(color: Colors.black54, fontSize: 13)),
+                  const SizedBox(height: 30),
 
-                        // 1. Basic Info
-                        _buildSectionTitle("BASIC INFO"),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _dobCtrl,
-                          readOnly: true,
-                          onTap: () => _selectDate(context),
-                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+                  // ================= 1. BASIC INFO =================
+                  _buildSectionTitle("BASIC INFO"),
+                  const SizedBox(height: 12),
+                  // Vẫn giữ trường Date Of Birth
+                  TextField(
+                    controller: _dobCtrl,
+                    readOnly: true,
+                    onTap: () => _selectDate(context),
+                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+                    decoration: InputDecoration(
+                      labelText: "Date of Birth",
+                      labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
+                      suffixIcon: const Icon(Icons.calendar_today, size: 18, color: Colors.black54),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 2.0)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Cập nhật lại Dropdown Gender theo Enum mới
+                  _buildDropdown(
+                    "Gender",
+                    ["Unknown", "Male", "Female", "Other"],
+                    _getGenderString(_selectedGender),
+                        (val) {
+                      setState(() {
+                        if (val == "Male") _selectedGender = 1;
+                        else if (val == "Female") _selectedGender = 2;
+                        else if (val == "Other") _selectedGender = 3;
+                        else _selectedGender = 0; // Unknown
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 30),
+
+                  // ================= 2. MEASUREMENTS =================
+                  _buildSectionTitle("MEASUREMENTS"),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildNumberField("Height (cm)", _heightCtrl)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildNumberField("Weight (kg)", _weightCtrl)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: _buildNumberField("Bust (cm)", _bustCtrl)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildNumberField("Waist (cm)", _waistCtrl)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildNumberField("Hip (cm)", _hipCtrl)),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+
+                  // ================= 3. APPEARANCE =================
+                  _buildSectionTitle("APPEARANCE"),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDropdown("Body Shape", _bodyShapes, _selectedBodyShape, (val) => setState(() => _selectedBodyShape = val!))),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildDropdown("Skin Tone", _skinTones, _selectedSkinTone, (val) => setState(() => _selectedSkinTone = val!))),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+
+                  // ================= 4. STYLE PREFERENCES =================
+                  _buildSectionTitle("STYLE PREFERENCES"),
+                  const SizedBox(height: 12),
+
+                  // Khung nhập liệu Type + Text
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedType,
+                          isExpanded: true,
+                          dropdownColor: Colors.white,
+                          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
                           decoration: InputDecoration(
-                            labelText: "Date of Birth",
-                            labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
-                            suffixIcon: const Icon(Icons.calendar_today, size: 18, color: Colors.black54),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 2.0)),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDropdown(
-                          "Gender",
-                          ["Female", "Male", "Unisex"],
-                          _selectedGender == 0 ? "Female" : (_selectedGender == 1 ? "Male" : "Unisex"),
-                          (val) {
-                            setState(() => _selectedGender = val == "Female" ? 0 : (val == "Male" ? 1 : 2));
+                          items: _preferenceTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedType = val!;
+                              _valCtrl.clear();
+                            });
                           },
                         ),
-                        const SizedBox(height: 30),
-
-                        // 2. Measurements
-                        _buildSectionTitle("MEASUREMENTS"),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(child: _buildNumberField("Height (cm)", _heightCtrl)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildNumberField("Weight (kg)", _weightCtrl)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _buildNumberField("Bust (cm)", _bustCtrl)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildNumberField("Waist (cm)", _waistCtrl)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildNumberField("Hip (cm)", _hipCtrl)),
-                          ],
-                        ),
-                        const SizedBox(height: 30),
-
-                        // 3. Appearance
-                        _buildSectionTitle("APPEARANCE"),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(child: _buildDropdown("Body Shape", _bodyShapes, _selectedBodyShape, (val) => setState(() => _selectedBodyShape = val!))),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildDropdown("Skin Tone", _skinTones, _selectedSkinTone, (val) => setState(() => _selectedSkinTone = val!))),
-                          ],
-                        ),
-                        const SizedBox(height: 30),
-
-                        // 4. Style Preferences
-                        _buildSectionTitle("STYLE PREFERENCES"),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: _availableStyles.map((style) {
-                            final isSelected = _selectedStyles.contains(style);
-                            return FilterChip(
-                              label: Text(style),
-                              selected: isSelected,
-                              selectedColor: Colors.black,
-                              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.w600),
-                              backgroundColor: Colors.grey.shade100,
-                              checkmarkColor: Colors.white,
-                              onSelected: (bool value) {
-                                setState(() {
-                                  if (value) {
-                                    _selectedStyles.add(style);
-                                  } else {
-                                    _selectedStyles.remove(style);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Nút Save ghim dưới cùng
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 20),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                        ),
-                        onPressed: _isSaving ? null : _onSave,
-                        child: _isSaving
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text("SAVE CHANGES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1.5)),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: _valCtrl,
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: "Or type custom...",
+                            hintStyle: const TextStyle(color: Colors.black38, fontSize: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 2.0)),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.add_circle, color: Colors.black),
+                              onPressed: () => _addPreference(_selectedType, _valCtrl.text),
+                            ),
+                          ),
+                          onSubmitted: (val) => _addPreference(_selectedType, val),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Thanh gợi ý (Quick Add)
+                  const Text("Quick Add (Tap to select):", style: TextStyle(color: Colors.black38, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.0)),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: currentSuggestions.map((suggestion) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ActionChip(
+                            label: Text(suggestion, style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w600)),
+                            backgroundColor: Colors.grey.shade100,
+                            side: const BorderSide(color: Colors.black12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            onPressed: () => _addPreference(_selectedType, suggestion),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 24),
+
+                  // Các sở thích đã lưu
+                  const Text("ADDED PREFERENCES", style: TextStyle(color: Colors.black38, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                  const SizedBox(height: 12),
+                  if (_userPreferences.isEmpty)
+                    const Text("No preferences added.", style: TextStyle(color: Colors.black54, fontStyle: FontStyle.italic))
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
+                      children: _userPreferences.map((pref) {
+                        Color chipColor = Colors.black;
+                        if (pref['type'] == 'Color') chipColor = const Color(0xFF3B3B3B);
+                        if (pref['type'] == 'Material') chipColor = const Color(0xFF5C5C5C);
+                        if (pref['type'] == 'Brand') chipColor = const Color(0xFF7A7A7A);
+
+                        return Chip(
+                          label: RichText(
+                            text: TextSpan(
+                                children: [
+                                  TextSpan(text: "${pref['type']}: ", style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  TextSpan(text: pref['value'], style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                ]
+                            ),
+                          ),
+                          backgroundColor: chipColor,
+                          deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white70),
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          onDeleted: () {
+                            setState(() {
+                              _userPreferences.remove(pref);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
+          ),
+
+          // Nút Save ghim dưới cùng
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  ),
+                  onPressed: _isSaving ? null : _onSave,
+                  child: _isSaving
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text("SAVE CHANGES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1.5)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

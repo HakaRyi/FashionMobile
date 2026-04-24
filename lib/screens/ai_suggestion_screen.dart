@@ -4,10 +4,11 @@ import 'package:intl/intl.dart';
 import '../constants/app_colors.dart';
 import '../services/wallet_service.dart';
 import '../services/wardrobe_service.dart';
+import '../utils/route_transitions.dart';
 import '../widgets/clothing_item.dart';
 import 'ai_result_screen.dart';
 import '../models/wardrobe_item_model.dart';
-
+import 'edit_personal_information_screen.dart';
 class AISuggestionScreen extends StatefulWidget {
   final dynamic selectedItem;
 
@@ -163,16 +164,36 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                                "PERSONAL CONTEXT",
-                                style: TextStyle(color: Colors.black38, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Text(
+                                    "PERSONAL CONTEXT",
+                                    style: TextStyle(color: Colors.black38, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0)
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.push(context, SlideRoute(page: const EditPersonalInformationScreen()));
+                                  },
+                                  child: const Text(
+                                    "EDIT",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      decoration: TextDecoration.underline, // Gạch chân cho giống nút bấm
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 12),
-                            _buildCustomOptionBtn('Saved', 'My Saved', Icons.bookmark_border),
-                            const SizedBox(height: 10),
                             _buildCustomOptionBtn('StylePrefs', 'My Style', Icons.auto_awesome_mosaic_outlined),
                             const SizedBox(height: 10),
                             _buildCustomOptionBtn('PhysicalProfile', 'My Body', Icons.accessibility_new_outlined),
+                            const SizedBox(height: 10),
+                            _buildCustomOptionBtn('Saved', 'My Saved', Icons.bookmark_border),
                           ],
                         ),
                       ),
@@ -278,7 +299,6 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
           ),
         ),
 
-        // HIỂN THỊ KẾT QUẢ GỢI Ý
         if (_searchResults.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(top: 8),
@@ -314,8 +334,6 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
               ),
             ),
           ),
-
-        // HIỂN THỊ CHIPS TÀI KHOẢN ĐÃ CHỌN
         if (_selectedOthers.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -337,6 +355,10 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
   }
 
   Widget _buildPromptBar() {
+    // Kiểm tra xem đã load xong và số dư có đủ không
+    bool hasEnoughBalance = _currentBalance >= _serviceCost;
+    bool canGenerate = !_isLoadingBalance && hasEnoughBalance;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       decoration: BoxDecoration(
@@ -350,9 +372,10 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, // Thêm dòng này để chữ canh trái
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
+              padding: const EdgeInsets.only(bottom: 12, left: 4, right: 4), // Giảm bottom padding xíu
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -394,6 +417,25 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
               ),
             ),
 
+            // HIỂN THỊ CHỮ CẢNH BÁO NẾU KHÔNG ĐỦ TIỀN
+            if (!_isLoadingBalance && !hasEnoughBalance)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 12),
+                child: Row(
+                  children: const [
+                    Icon(Icons.error_outline, color: Colors.redAccent, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      "Insufficient balance. Please top up to use this service.",
+                      style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            // Nếu đủ tiền thì giữ khoảng cách cũ
+            if (_isLoadingBalance || hasEnoughBalance)
+              const SizedBox(height: 8),
+
             Row(
               children: [
                 Expanded(
@@ -407,6 +449,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                     ),
                     child: TextField(
                       controller: _promptController,
+                      // Nếu không có tiền, làm mờ luôn cái khung nhập text (tùy chọn)
+                      enabled: canGenerate,
                       style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w500),
                       decoration: const InputDecoration(
                         hintText: "Add details (e.g., party, vintage...)",
@@ -418,7 +462,8 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
-                  onTap: () async {
+                  // Chỉ cho phép bấm khi đủ tiền
+                  onTap: canGenerate ? () async {
                     await Navigator.push(context, MaterialPageRoute(
                         builder: (context) => AIResultScreen(
                           baseItem: widget.selectedItem,
@@ -434,18 +479,25 @@ class _AISuggestionScreenState extends State<AISuggestionScreen> {
                       debugPrint("Returning to Suggestion, reloading balance...");
                       _fetchBalance();
                     }
-                  },
-                  child: Container(
+                  } : null,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     height: 54,
                     width: 54,
                     decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
-                        ]
+                      // Đổi màu thành xám nếu không đủ tiền
+                      color: canGenerate ? Colors.black : Colors.black12,
+                      shape: BoxShape.circle,
+                      boxShadow: canGenerate ? [
+                        BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+                      ] : [],
                     ),
-                    child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                    child: Icon(
+                        Icons.auto_awesome,
+                        // Đổi màu icon mờ đi nếu nút bị disable
+                        color: canGenerate ? Colors.white : Colors.black26,
+                        size: 20
+                    ),
                   ),
                 )
               ],
