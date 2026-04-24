@@ -1,4 +1,3 @@
-// lib/models/wardrobe_item_model.dart
 class WardrobeItemModel {
   final int itemId;
   final String itemName;
@@ -7,9 +6,14 @@ class WardrobeItemModel {
   final String? brand;
   final String? status;
   final String? imageUrl;
+  final String? size;
   final bool isSaved;
   final bool isOwner;
   final String? category;
+
+  final bool isForSale;
+  final double? listedPrice;
+  final String? condition;
 
   WardrobeItemModel({
     required this.itemId,
@@ -19,38 +23,69 @@ class WardrobeItemModel {
     this.brand,
     this.status,
     this.imageUrl,
+    this.size,
     this.isSaved = false,
     this.isOwner = false,
     this.category,
+    required this.isForSale,
+    required this.listedPrice,
+    required this.condition,
   });
 
   factory WardrobeItemModel.fromJson(Map<String, dynamic> json) {
-    try {
-      return WardrobeItemModel(
-        itemId: json['itemId'] ?? 0,
-        itemName: json['itemName'] ?? '',
-        description: json['description'],
-        mainColor: json['mainColor'],
-        brand: json['brand'],
-        status: json['status']?.toString(),
-        imageUrl: json['thumbnailUrl'] ?? json['imageUrl'],
-        isSaved: json['isSaved'] ?? false,
-        isOwner: json['isOwner'] ?? false,
-        category: json['category'],
-      );
-    } catch (e) {
-      print("❌ LỖI TẠI WardrobeItemModel: $e | Dữ liệu gây lỗi: $json");
-      rethrow;
-    }
-  }
-  WardrobeItemModel copyWith({bool? isSaved}) {
     return WardrobeItemModel(
-      itemId: this.itemId,
-      itemName: this.itemName,
-      imageUrl: this.imageUrl,
-      category: this.category,
+      itemId: int.tryParse(json['itemId'].toString()) ?? 0,
+      itemName: json['itemName']?.toString() ?? '',
+      description: json['description']?.toString(),
+      mainColor: json['mainColor']?.toString(),
+      brand: json['brand']?.toString(),
+      status: json['status']?.toString(),
+      imageUrl: json['thumbnailUrl']?.toString() ?? json['imageUrl']?.toString(),
+      size: json['size']?.toString(),
+      isSaved: json['isSaved'] == true,
+      isOwner: json['isOwner'] == true,
+      category: json['category']?.toString(),
+      isForSale: json['isForSale'] == true,
+      listedPrice: json['listedPrice'] != null
+          ? double.tryParse(json['listedPrice'].toString())
+          : null,
+      condition: json['condition']?.toString(),
+    );
+  }
+
+  String? get thumbnailUrl => imageUrl;
+
+  WardrobeItemModel copyWith({
+    int? itemId,
+    String? itemName,
+    String? description,
+    String? mainColor,
+    String? brand,
+    String? status,
+    String? imageUrl,
+    String? size,
+    bool? isSaved,
+    bool? isOwner,
+    String? category,
+    bool? isForSale,
+    double? listedPrice,
+    String? condition,
+  }) {
+    return WardrobeItemModel(
+      itemId: itemId ?? this.itemId,
+      itemName: itemName ?? this.itemName,
+      description: description ?? this.description,
+      mainColor: mainColor ?? this.mainColor,
+      brand: brand ?? this.brand,
+      status: status ?? this.status,
+      imageUrl: imageUrl ?? this.imageUrl,
+      size: size ?? this.size,
       isSaved: isSaved ?? this.isSaved,
-      isOwner: this.isOwner,
+      isOwner: isOwner ?? this.isOwner,
+      category: category ?? this.category,
+      isForSale: isForSale ?? this.isForSale,
+      listedPrice: listedPrice ?? this.listedPrice,
+      condition: condition ?? this.condition,
     );
   }
 }

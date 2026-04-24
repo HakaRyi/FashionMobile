@@ -75,7 +75,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
               leading: const Icon(Icons.bookmark_remove, color: Colors.redAccent),
               title: const Text("Bỏ lưu món đồ", style: TextStyle(color: Colors.redAccent)),
               onTap: () async {
-                Navigator.pop(context); // Đóng bottom sheet
+                Navigator.pop(context);
                 _handleUnsave(item['itemId']);
               },
             ),
@@ -85,19 +85,26 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
       ),
     );
   }
+
   Future<void> _handleUnsave(int itemId) async {
-    final success = await _itemService.unsaveItem(itemId);
-    if (success) {
-      if (mounted) {
-        AppToast.show(context, "Đã bỏ lưu món đồ!");
-      }
+    try {
+      await _itemService.unsaveItem(itemId);
+
+      if (!mounted) return;
+
+      AppToast.show(context, "Đã bỏ lưu món đồ!");
       _fetchSavedItems();
-    } else {
-      if (mounted) {
-        AppToast.show(context, "Thao tác thất bại!", isError: true);
-      }
+    } catch (e) {
+      if (!mounted) return;
+
+      AppToast.show(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
     }
   }
+
   Future<void> _fetchSavedItems() async {
     final items = await _itemService.getSavedItems();
     if (mounted) {

@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
+
 import '../models/order_model.dart';
 import 'package:fashion_mobile/screens/order_detail_screen.dart';
 
 class NotificationOverlay {
-  static void showNewOrderNotification(BuildContext context, OrderModel order) {
+  static void showNewOrderNotification(
+      BuildContext context,
+      OrderModel order, {
+        bool isPurchase = true,
+      }) {
     late OverlayEntry overlayEntry;
+
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) {
+      return;
+    }
 
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -15,11 +25,17 @@ class NotificationOverlay {
           color: Colors.transparent,
           child: GestureDetector(
             onTap: () {
-              overlayEntry.remove();
+              if (overlayEntry.mounted) {
+                overlayEntry.remove();
+              }
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => OrderDetailScreen(orderId: order.orderId, isSeller: false,),
+                  builder: (_) => OrderDetailScreen(
+                    orderId: order.orderId,
+                    isPurchase: isPurchase,
+                  ),
                 ),
               );
             },
@@ -35,7 +51,9 @@ class NotificationOverlay {
                     offset: const Offset(0, 4),
                   ),
                 ],
-                border: Border.all(color: Colors.pinkAccent.withOpacity(0.5)),
+                border: Border.all(
+                  color: Colors.pinkAccent.withOpacity(0.5),
+                ),
               ),
               child: Row(
                 children: [
@@ -45,7 +63,10 @@ class NotificationOverlay {
                       color: Colors.pink.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.shopping_bag, color: Colors.pinkAccent),
+                    child: const Icon(
+                      Icons.shopping_bag,
+                      color: Colors.pinkAccent,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -53,13 +74,20 @@ class NotificationOverlay {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Đơn hàng mới!",
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          'Order Updated',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Bạn vừa có một đơn hàng mới từ ${order.seller?.name ?? 'Người bán'}",
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          _buildMessage(order, isPurchase),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -67,8 +95,15 @@ class NotificationOverlay {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white54),
-                    onPressed: () => overlayEntry.remove(),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white54,
+                    ),
+                    onPressed: () {
+                      if (overlayEntry.mounted) {
+                        overlayEntry.remove();
+                      }
+                    },
                   ),
                 ],
               ),
@@ -78,12 +113,24 @@ class NotificationOverlay {
       ),
     );
 
-    Overlay.of(context).insert(overlayEntry);
+    overlay.insert(overlayEntry);
 
     Future.delayed(const Duration(seconds: 5), () {
       if (overlayEntry.mounted) {
         overlayEntry.remove();
       }
     });
+  }
+
+  static String _buildMessage(OrderModel order, bool isPurchase) {
+    final orderCode = order.orderCode.isNotEmpty
+        ? order.orderCode
+        : '#${order.orderId}';
+
+    if (isPurchase) {
+      return 'Your order $orderCode has been updated by ${order.sellerName}.';
+    }
+
+    return 'You have a new update for order $orderCode from ${order.buyerName}.';
   }
 }

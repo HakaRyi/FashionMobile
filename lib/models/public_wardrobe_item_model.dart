@@ -1,4 +1,3 @@
-// lib/models/public_wardrobe_item_model.dart
 class PublicWardrobeItemModel {
   final int itemId;
   final String? itemName;
@@ -18,6 +17,13 @@ class PublicWardrobeItemModel {
   final DateTime? createdAt;
   final String? thumbnailUrl;
 
+  final bool isForSale;
+  final double? listedPrice;
+  final String? condition;
+
+  final bool? isSaved;
+  final bool? isOwner;
+
   PublicWardrobeItemModel({
     required this.itemId,
     required this.itemName,
@@ -36,29 +42,74 @@ class PublicWardrobeItemModel {
     required this.description,
     required this.createdAt,
     required this.thumbnailUrl,
+    required this.isForSale,
+    required this.listedPrice,
+    required this.condition,
+    this.isSaved,
+    this.isOwner,
   });
 
   factory PublicWardrobeItemModel.fromJson(Map<String, dynamic> json) {
     return PublicWardrobeItemModel(
-      itemId: json['itemId'] ?? 0,
-      itemName: json['itemName'],
-      itemType: json['itemType'],
-      category: json['category'],
-      subCategory: json['subCategory'],
-      style: json['style'],
-      gender: json['gender'],
-      mainColor: json['mainColor'],
-      subColor: json['subColor'],
-      material: json['material'],
-      pattern: json['pattern'],
-      fit: json['fit'],
-      size: json['size'],
-      brand: json['brand'],
-      description: json['description'],
+      itemId: int.tryParse(json['itemId'].toString()) ?? 0,
+      itemName: json['itemName']?.toString(),
+      itemType: json['itemType']?.toString(),
+      category: json['category']?.toString(),
+      subCategory: json['subCategory']?.toString(),
+      style: json['style']?.toString(),
+      gender: json['gender']?.toString(),
+      mainColor: json['mainColor']?.toString(),
+      subColor: json['subColor']?.toString(),
+      material: json['material']?.toString(),
+      pattern: json['pattern']?.toString(),
+      fit: json['fit']?.toString(),
+      size: json['size']?.toString(),
+      brand: json['brand']?.toString(),
+      description: json['description']?.toString(),
       createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'])
+          ? DateTime.tryParse(json['createdAt'].toString())
           : null,
-      thumbnailUrl: json['thumbnailUrl'],
+      thumbnailUrl: json['thumbnailUrl']?.toString(),
+      isForSale: json['isForSale'] == true,
+      listedPrice: json['listedPrice'] != null
+          ? double.tryParse(json['listedPrice'].toString())
+          : null,
+      condition: json['condition']?.toString(),
+      isSaved: json['isSaved'] == true,
+      isOwner: json['isOwner'] == true,
+    );
+  }
+
+  PublicWardrobeItemModel copyWith({
+    bool? isSaved,
+    bool? isOwner,
+    bool? isForSale,
+    double? listedPrice,
+    String? condition,
+  }) {
+    return PublicWardrobeItemModel(
+      itemId: itemId,
+      itemName: itemName,
+      itemType: itemType,
+      category: category,
+      subCategory: subCategory,
+      style: style,
+      gender: gender,
+      mainColor: mainColor,
+      subColor: subColor,
+      material: material,
+      pattern: pattern,
+      fit: fit,
+      size: size,
+      brand: brand,
+      description: description,
+      createdAt: createdAt,
+      thumbnailUrl: thumbnailUrl,
+      isForSale: isForSale ?? this.isForSale,
+      listedPrice: listedPrice ?? this.listedPrice,
+      condition: condition ?? this.condition,
+      isSaved: isSaved ?? this.isSaved,
+      isOwner: isOwner ?? this.isOwner,
     );
   }
 }

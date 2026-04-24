@@ -1,14 +1,21 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/api_constants.dart';
+import '../models/item_commerce_model.dart';
+import '../models/item_variant_model.dart';
 import '../models/public_item_detail_model.dart';
+import '../models/public_wardrobe_item_model.dart';
+import '../models/wardrobe_item_model.dart';
 
 class ItemService {
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
   }
+
   Future<Map<String, String>> _buildHeaders({bool withAuth = false}) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -16,64 +23,90 @@ class ItemService {
     };
 
     if (withAuth) {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
-      if (token.isNotEmpty) {
+      final token = await _getToken();
+      if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
     }
 
     return headers;
   }
-  // Lấy danh sách đồ của tôi
-  Future<List<dynamic>> getMyItems() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
 
-    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}");
-
+  Exception _buildExceptionFromResponse(http.Response response) {
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final body = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> decodedData = jsonDecode(response.body);
-        return decodedData['data'] ?? [];
+      if (body is Map<String, dynamic>) {
+        final message = body['message']?.toString();
+        if (message != null && message.trim().isNotEmpty) {
+          return Exception(message);
+        }
       }
-      return [];
-    } catch (e) {
-      print("Lỗi getMyItems: $e");
-      return [];
+    } catch (_) {}
+
+    switch (response.statusCode) {
+      case 400:
+        return Exception('Bad request.');
+      case 401:
+        return Exception('Unauthorized. Please log in again.');
+      case 403:
+        return Exception('You do not have permission to perform this action.');
+      case 404:
+        return Exception('Requested data was not found.');
+      case 500:
+        return Exception('Server error. Please try again later.');
+      default:
+        return Exception('Request failed with status ${response.statusCode}.');
     }
   }
 
-  Future<Map<String, dynamic>?> getItemById(int id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+  Future<List<WardrobeItemModel>> getMyItems() async {
+    final url = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}",
+    );
 
-    final url = Uri.parse("${ApiConstants.baseUrl}/item/$id");
+    final response = await http.get(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
 
-    try {
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $token'},
-      );
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> decodedData = jsonDecode(response.body);
+      final list = decodedData['data'] as List<dynamic>? ?? [];
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-    } catch (e) {
-      print("Lỗi getItemById: $e");
+      return list
+          .map((e) => WardrobeItemModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
-    return null;
+
+    throw _buildExceptionFromResponse(response);
   }
+
+  Future<Map<String, dynamic>> getItemById(int itemId) async {
+    final endpoint = ApiConstants.getItemByIdEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.get(
+      url,
+      headers: await _buildHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw _buildExceptionFromResponse(response);
+  }
+
   Future<PublicItemDetailModel> getPublicItemDetail(int itemId) async {
-    final url = Uri.parse("${ApiConstants.baseUrl}/items/public/$itemId");
+    final endpoint = ApiConstants.publicItemDetailEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
 
     final response = await http.get(
       url,
@@ -84,7 +117,7 @@ class ItemService {
       final Map<String, dynamic> body = jsonDecode(response.body);
 
       if (body['data'] == null || body['data'] is! Map<String, dynamic>) {
-        throw Exception('Dữ liệu chi tiết món đồ không hợp lệ.');
+        throw Exception('Invalid public item detail data.');
       }
 
       return PublicItemDetailModel.fromJson(
@@ -92,61 +125,44 @@ class ItemService {
       );
     }
 
-    try {
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? 'Không thể tải chi tiết món đồ công khai.');
-    } catch (_) {
-      throw Exception('Không thể tải chi tiết món đồ công khai.');
-    }
+    throw _buildExceptionFromResponse(response);
   }
 
-  Future<bool> deleteItem(int itemId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    final endpoint = ApiConstants.deleteItemEndpoint.replaceFirst('{itemId}', itemId.toString());
+  Future<void> deleteItem(int itemId) async {
+    final endpoint = ApiConstants.deleteItemEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
     final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
 
-    try {
-      final response = await http.delete(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print("Server báo: ${data['message']}");
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print("Lỗi deleteItem: $e");
-      return false;
+    final response = await http.delete(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
     }
   }
-  Future<bool> updateItem(int itemId, Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    final endpoint = ApiConstants.updateItemEndpoint.replaceFirst('{itemId}', itemId.toString());
+
+  Future<void> updateItem(int itemId, Map<String, dynamic> data) async {
+    final endpoint = ApiConstants.updateItemEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
     final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
 
-    try {
-      final response = await http.put(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(data),
-      );
-      return response.statusCode == 200;
-    } catch (e) {
-      print("Lỗi updateItem: $e");
-      return false;
+    final response = await http.put(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
     }
   }
+
   Future<List<dynamic>> getSmartRecommendations({
     required int? referenceItemId,
     required String prompt,
@@ -155,83 +171,263 @@ class ItemService {
     required List<int> targetWardrobeIds,
     int limit = 10,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final url = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.smartMatchEndpoint}",
+    );
 
-    final url = Uri.parse("${ApiConstants.baseUrl}${ApiConstants.smartMatchEndpoint}");
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode({
+        'prompt': prompt,
+        'referenceItemId': referenceItemId,
+        'targetWardrobeIds': targetWardrobeIds,
+        'includeMyWardrobe': useMyWardrobe,
+        'includeSavedItems': useSavedItems,
+        'limit': limit,
+      }),
+    );
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': '69420',
-        },
-        body: jsonEncode({
-          "prompt": prompt,
-          "referenceItemId": referenceItemId,
-          "targetWardrobeIds": targetWardrobeIds,
-          "includeMyWardrobe": useMyWardrobe,
-          "includeSavedItems": useSavedItems,
-          "limit": limit,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        return decodedData['data'];
-      }
-    } catch (e) {
-      print("Lỗi getSmartRecommendations: $e");
+    if (response.statusCode == 200) {
+      final decodedData = jsonDecode(response.body);
+      return decodedData['data'] ?? [];
     }
-    return [];
+
+    throw _buildExceptionFromResponse(response);
   }
+
   Future<int?> sendConsultRequest(int itemId) async {
     final token = await _getToken();
+
     final response = await http.post(
       Uri.parse("${ApiConstants.baseUrl}/Chat/consult/$itemId"),
-      headers: {'Authorization': 'Bearer $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '69420',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
     );
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body)['groupId'];
+      final body = jsonDecode(response.body);
+      return body['groupId'] is int
+          ? body['groupId'] as int
+          : int.tryParse(body['groupId'].toString());
     }
-    return null;
+
+    throw _buildExceptionFromResponse(response);
   }
-  Future<bool> saveItem(int itemId) async {
-    final token = await _getToken();
-    final url = Uri.parse("${ApiConstants.baseUrl}/items/$itemId/save");
-    try {
-      final response = await http.post(url, headers: {'Authorization': 'Bearer $token'});
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
+
+  Future<void> saveItem(int itemId) async {
+    final endpoint = ApiConstants.saveItemEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
     }
   }
 
-  Future<bool> unsaveItem(int itemId) async {
-    final token = await _getToken();
-    final url = Uri.parse("${ApiConstants.baseUrl}/items/$itemId/save");
-    try {
-      final response = await http.delete(url, headers: {'Authorization': 'Bearer $token'});
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
+  Future<void> unsaveItem(int itemId) async {
+    final endpoint = ApiConstants.saveItemEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.delete(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
     }
   }
 
-  Future<List<dynamic>> getSavedItems() async {
-    final token = await _getToken();
-    final url = Uri.parse("${ApiConstants.baseUrl}/items/saved");
-    try {
-      final response = await http.get(url, headers: {'Authorization': 'Bearer $token'});
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as List;
+  Future<List<PublicWardrobeItemModel>> getSavedItems() async {
+    final url = Uri.parse(
+      "${ApiConstants.baseUrl}${ApiConstants.getMySaveItemEndpoint}",
+    );
+
+    final response = await http.get(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+
+      if (body is Map<String, dynamic>) {
+        final list = body['data'] as List<dynamic>? ?? [];
+        return list
+            .map(
+              (e) => PublicWardrobeItemModel.fromJson(
+            e as Map<String, dynamic>,
+          ),
+        )
+            .toList();
       }
-    } catch (e) {
-      print("Lỗi getSavedItems: $e");
+
+      if (body is List) {
+        return body
+            .map(
+              (e) => PublicWardrobeItemModel.fromJson(
+            e as Map<String, dynamic>,
+          ),
+        )
+            .toList();
+      }
+
+      return [];
     }
-    return [];
+
+    throw _buildExceptionFromResponse(response);
   }
 
+  Future<ItemCommerceModel> publishItem({
+    required int itemId,
+    required double listedPrice,
+    String? condition,
+    required List<Map<String, dynamic>> variants,
+  }) async {
+    final endpoint = ApiConstants.publishItemEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode({
+        'listedPrice': listedPrice,
+        'condition': condition,
+        'variants': variants,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return ItemCommerceModel.fromJson(body['data'] as Map<String, dynamic>);
+    }
+
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<ItemCommerceModel> unpublishItem(int itemId) async {
+    final endpoint = ApiConstants.unpublishItemEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return ItemCommerceModel.fromJson(body['data'] as Map<String, dynamic>);
+    }
+
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<List<ItemVariantModel>> getItemVariants(int itemId) async {
+    final endpoint = ApiConstants.getItemVariantsEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.get(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final list = body['data'] as List<dynamic>? ?? [];
+
+      return list
+          .map((e) => ItemVariantModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<ItemVariantModel> createItemVariant({
+    required int itemId,
+    required Map<String, dynamic> data,
+  }) async {
+    final endpoint = ApiConstants.createItemVariantEndpoint.replaceFirst(
+      '{itemId}',
+      itemId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return ItemVariantModel.fromJson(body['data'] as Map<String, dynamic>);
+    }
+
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<ItemVariantModel> updateItemVariant({
+    required int itemVariantId,
+    required Map<String, dynamic> data,
+  }) async {
+    final endpoint = ApiConstants.updateItemVariantEndpoint.replaceFirst(
+      '{itemVariantId}',
+      itemVariantId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.put(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return ItemVariantModel.fromJson(body['data'] as Map<String, dynamic>);
+    }
+
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<void> deleteItemVariant(int itemVariantId) async {
+    final endpoint = ApiConstants.deleteItemVariantEndpoint.replaceFirst(
+      '{itemVariantId}',
+      itemVariantId.toString(),
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await http.delete(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
 }

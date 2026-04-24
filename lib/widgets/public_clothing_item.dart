@@ -1,4 +1,3 @@
-// lib/widgets/public_clothing_item.dart
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
@@ -10,8 +9,13 @@ class PublicClothingItem extends StatelessWidget {
   final bool isSaved;
   final VoidCallback? onTap;
   final VoidCallback? onSave;
-  final bool showSaveButton; // Dùng để ẩn nút tim nếu là đồ của chính mình
+  final bool showSaveButton;
   final VoidCallback? onLongPress;
+
+  // NEW
+  final bool isForSale;
+  final double? listedPrice;
+
   const PublicClothingItem({
     super.key,
     required this.itemId,
@@ -21,12 +25,19 @@ class PublicClothingItem extends StatelessWidget {
     this.isSaved = false,
     this.onTap,
     this.onSave,
-    this.showSaveButton = true, // Mặc định là hiện
+    this.showSaveButton = true,
     this.onLongPress,
+    this.isForSale = false,
+    this.listedPrice,
   });
 
   bool get _isNetworkImage {
     return imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+  }
+
+  String _formatPrice(double? value) {
+    if (value == null) return '';
+    return "${value.toStringAsFixed(0)} VND";
   }
 
   @override
@@ -34,6 +45,7 @@ class PublicClothingItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
+      borderRadius: BorderRadius.circular(15),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.backgroundSecondary,
@@ -46,15 +58,43 @@ class PublicClothingItem extends StatelessWidget {
             Expanded(
               child: Stack(
                 children: [
-                  // Ảnh sản phẩm
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(15),
                     ),
-                    child: _buildImage(),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: _buildImage(),
+                    ),
                   ),
 
-                  // Nút Trái tim (Chỉ hiện nếu showSaveButton = true)
+                  // Badge đang bán
+                  if (isForSale)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.textPink,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          "For Sale",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Nút save
                   if (showSaveButton)
                     Positioned(
                       top: 8,
@@ -79,9 +119,8 @@ class PublicClothingItem extends StatelessWidget {
               ),
             ),
 
-            // Thông tin text bên dưới
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -95,13 +134,31 @@ class PublicClothingItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+
+                  const SizedBox(height: 4),
+
+                  if (isForSale && listedPrice != null) ...[
+                    Text(
+                      _formatPrice(listedPrice),
+                      style: const TextStyle(
+                        color: AppColors.textPink,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                  ],
+
                   Text(
                     "$likes lượt thích",
                     style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 11,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -121,7 +178,7 @@ class PublicClothingItem extends StatelessWidget {
       return Image.network(
         imageUrl,
         width: double.infinity,
-        height: double.infinity, // Thêm để chiếm hết không gian Stack
+        height: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _buildPlaceholder(),
         loadingBuilder: (context, child, progress) {
@@ -131,7 +188,10 @@ class PublicClothingItem extends StatelessWidget {
             height: double.infinity,
             color: Colors.black12,
             child: const Center(
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPink),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.textPink,
+              ),
             ),
           );
         },
