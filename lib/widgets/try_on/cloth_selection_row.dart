@@ -94,10 +94,10 @@ class ClothSelectionRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white24, width: 1.5),
+                border: Border.all(color: Colors.black26, width: 1.5),
               ),
               child: const Center(
-                child: Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 28),
+                child: Icon(Icons.add_photo_alternate_outlined, color: Colors.black26, size: 28),
               ),
             ),
           ),

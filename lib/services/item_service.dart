@@ -188,6 +188,8 @@ class ItemService {
     required String prompt,
     required bool useMyWardrobe,
     required bool useSavedItems,
+    required bool useMyStylePreferences,
+    required bool useMyPhysicalProfile,
     required List<int> targetWardrobeIds,
     int limit = 10,
   }) async {
@@ -210,6 +212,8 @@ class ItemService {
           "targetWardrobeIds": targetWardrobeIds,
           "includeMyWardrobe": useMyWardrobe,
           "includeSavedItems": useSavedItems,
+          "useMyStylePreferences": useMyStylePreferences,
+          "useMyPhysicalProfile": useMyPhysicalProfile,
           "limit": limit,
         }),
       );

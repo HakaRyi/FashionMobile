@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 import '../models/wardrobe_item_model.dart';
+import '../widgets/animated_fabric_background.dart';
 import '../widgets/clothing_item.dart';
 import '../services/item_service.dart';
 import 'clothing_detail_screen.dart';
@@ -12,6 +13,8 @@ class AIResultScreen extends StatefulWidget {
   final String prompt;
   final bool useMyWardrobe;
   final bool includeSavedItems;
+  final bool useMyStylePreferences;
+  final bool useMyPhysicalProfile;
   final List<int> targetWardrobeIds;
 
   const AIResultScreen({
@@ -20,6 +23,8 @@ class AIResultScreen extends StatefulWidget {
     required this.prompt,
     required this.useMyWardrobe,
     required this.includeSavedItems,
+    required this.useMyStylePreferences,
+    required this.useMyPhysicalProfile,
     required this.targetWardrobeIds,
   });
 
@@ -54,6 +59,8 @@ class _AIResultScreenState extends State<AIResultScreen> {
       prompt: widget.prompt,
       useMyWardrobe: widget.useMyWardrobe,
       useSavedItems: widget.includeSavedItems,
+      useMyStylePreferences: widget.useMyStylePreferences,
+      useMyPhysicalProfile: widget.useMyPhysicalProfile,
       targetWardrobeIds: widget.targetWardrobeIds,
       limit: 20,
     );
@@ -96,7 +103,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: const Text("AI STYLIST RESULT",
@@ -113,7 +120,10 @@ class _AIResultScreenState extends State<AIResultScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: FutureBuilder<List<dynamic>>(
+      extendBodyBehindAppBar: true,
+      body: AnimatedFabricBackground(
+          child: SafeArea(
+            child: FutureBuilder<List<dynamic>>(
         future: _recommendationsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -142,6 +152,8 @@ class _AIResultScreenState extends State<AIResultScreen> {
             ),
           );
         },
+            ),
+          ),
       ),
     );
   }
@@ -284,8 +296,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: ClothingItem(
-                title: item['itemName'] ?? "",
-                imageUrl: item['primaryImageUrl'],
+                itemData: item,
               ),
             ),
           ),

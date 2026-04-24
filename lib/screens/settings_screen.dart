@@ -1,10 +1,19 @@
+import 'package:fashion_mobile/screens/privacy_safety_screen.dart';
+import 'package:fashion_mobile/screens/saved_posts_screen.dart';
+import 'package:fashion_mobile/screens/suggestion_screen.dart';
+import 'package:fashion_mobile/screens/try_on_screen.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../services/account_service.dart';
 import '../utils/route_transitions.dart';
+import 'about_wapo_screen.dart';
+import 'edit_personal_information_screen.dart';
 import 'edit_profile_screen.dart';
+import 'help_center_screen.dart';
 import 'login_screen.dart';
 import 'expense_management_screen.dart';
+import 'notification_screen.dart';
+import 'order_manager_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -21,9 +30,9 @@ class SettingsScreen extends StatelessWidget {
           "SETTINGS",
           style: TextStyle(
             color: Colors.black,
-            fontSize: 14,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
-            letterSpacing: 2.0, // Giãn chữ phong cách Fashion Magazine
+            letterSpacing: 0, // Giãn chữ phong cách Fashion Magazine
           ),
         ),
         leading: IconButton(
@@ -49,24 +58,50 @@ class SettingsScreen extends StatelessWidget {
                 }
               }
             }),
-            _buildSettingItem(Icons.notifications_none, "Notifications", () {}),
-            _buildSettingItem(Icons.lock_outline, "Privacy & Safety", () {}),
+            _buildSettingItem(Icons.notifications_none, "Edit Personal Information", () {
+              Navigator.push(
+                  context,
+                  SlideRoute(page: const EditPersonalInformationScreen())
+              );
+            }),
+            _buildSettingItem(Icons.notifications_none, "Notifications", () {
+              Navigator.push(
+                  context,
+                  SlideRoute(page: const NotificationScreen())
+              );
+            }),
+            _buildSettingItem(Icons.lock_outline, "Privacy & Safety", () {
+              Navigator.push(context, SlideRoute(page: const PrivacySafetyScreen()));
+            }),
           ]),
 
           _buildSectionTitle("YOUR ACTIVITY"),
           _buildSettingsGroup([
-            _buildSettingItem(Icons.history, "Try-on History", () {}),
-            _buildSettingItem(Icons.favorite_border, "Saved Outfits", () {}),
-            _buildSettingItem(Icons.analytics_outlined, "Style Analytics", () {}),
+            _buildSettingItem(Icons.face, "Try-on", () {
+              Navigator.push(context, SlideRoute(page: const TryOnScreen()));
+            }),
+            _buildSettingItem(Icons.history, "History AI Suggestion", () {
+              Navigator.push(context, SlideRoute(page: const SuggestionScreen()));
+            }),
+            _buildSettingItem(Icons.favorite_border, "My Saved", () {
+              Navigator.push(context, SlideRoute(page: const SavedPostsScreen()));
+            }),
+            _buildSettingItem(Icons.receipt_long_outlined, "Orders Management", () {
+              Navigator.push(context, SlideRoute(page: const OrderManagementScreen()));
+            }),
             _buildSettingItem(Icons.account_balance_wallet_outlined, "Expense Management", () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpenseManagementScreen()));
+              Navigator.push(context, SlideRoute(page: const ExpenseManagementScreen()));
             }),
           ]),
 
           _buildSectionTitle("SUPPORT"),
           _buildSettingsGroup([
-            _buildSettingItem(Icons.help_outline, "Help Center", () {}),
-            _buildSettingItem(Icons.info_outline, "About Wapo", () {}),
+            _buildSettingItem(Icons.help_outline, "Help Center", () {
+              Navigator.push(context, SlideRoute(page: const HelpCenterScreen()));
+            }),
+            _buildSettingItem(Icons.info_outline, "About Wapo", () {
+              Navigator.push(context, SlideRoute(page: const AboutWapoScreen()));
+            }),
           ]),
 
           const SizedBox(height: 40),
@@ -87,7 +122,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               child: const Text(
                 "LOG OUT",
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0),
               ),
             ),
           ),

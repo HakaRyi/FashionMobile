@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../services/recommendation_service.dart';
+import '../widgets/animated_fabric_background.dart';
 import '../widgets/clothing_item.dart';
 import 'clothing_detail_screen.dart';
 
@@ -66,7 +67,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: const Text("OUTFIT PREVIEW",
@@ -76,7 +77,10 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: FutureBuilder<List<dynamic>>(
+      extendBodyBehindAppBar: true,
+      body:AnimatedFabricBackground(
+          child: SafeArea(
+            child: FutureBuilder<List<dynamic>>(
         future: _detailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -99,33 +103,39 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
             ),
           );
         },
+            ),
+          ),
       ),
     );
   }
 
   Widget _buildSnapCarousel(String categoryName, List<dynamic> items) {
+    String displayTitle = categoryName.toUpperCase();
+    if (displayTitle == "UPPER_BODY") displayTitle = "TOPS & JACKETS";
+    if (displayTitle == "LOWER_BODY") displayTitle = "PANTS & SKIRTS";
+    if (displayTitle == "FOOTWEAR") displayTitle = "SHOES";
+    if (displayTitle == "ACCESSORY") displayTitle = "ACCESSORIES";
     if (items.isEmpty) return const SizedBox.shrink();
 
     final bool shouldLoop = items.length >= 3;
     final int itemCount = shouldLoop ? 1000 : items.length;
     final int initialPage = shouldLoop ? (itemCount ~/ 2) - ((itemCount ~/ 2) % items.length) : 0;
 
-    // Khởi tạo controller cho từng category nếu chưa có
     final controller = _controllers.putIfAbsent(
       categoryName,
           () => PageController(viewportFraction: 0.45, initialPage: initialPage),
     );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.fromLTRB(25, 10, 20, 0),
-        //   child: Text(
-        //     categoryName.toUpperCase(),
-        //     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black38),
-        //   ),
-        // ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(25, 10, 20, 0),
+          child: Text(
+            displayTitle.toUpperCase(),
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing:0, color: Colors.black),
+          ),
+        ),
         SizedBox(
           height: 220,
           child: PageView.builder(
@@ -188,8 +198,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: ClothingItem(
-                title: item['itemName'] ?? "",
-                imageUrl: item['primaryImageUrl'],
+                itemData: item,
               ),
             ),
           ),

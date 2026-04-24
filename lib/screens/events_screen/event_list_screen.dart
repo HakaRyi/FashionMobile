@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../../models/event_model.dart';
 import '../../services/event_service.dart';
 import '../../utils/route_transitions.dart';
+import '../../widgets/animated_fabric_background.dart';
 import 'event_access_screen.dart';
 import 'event_detail.dart' hide EventModel;
 import 'event_result_screen.dart';
@@ -72,12 +73,13 @@ class _EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
+        child: AnimatedFabricBackground(
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5), // Nền xám cực nhạt để nổi bật thẻ trắng
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: const Color(0xFFF5F5F5),
-          titleSpacing: 20, // Canh lề trái cho chuẩn
+          backgroundColor: Colors.transparent,
+          titleSpacing: 20,
           title: const Text(
               "Fashion Events",
               style: TextStyle(
@@ -87,14 +89,15 @@ class _EventListScreenState extends State<EventListScreen> {
                   letterSpacing: -0.5
               )
           ),
-          centerTitle: false, // Tiêu đề nằm bên trái giống Wardrobe
+          centerTitle: false,
           bottom: const TabBar(
-            indicatorColor: Colors.black, // Đổi từ hồng sang đen
+            dividerColor: Colors.transparent,
+            indicatorColor: Colors.black,
             indicatorSize: TabBarIndicatorSize.label,
-            indicatorWeight: 3, // Giảm độ dày một xíu cho tinh tế
+            indicatorWeight: 3,
             labelColor: Colors.black,
             unselectedLabelColor: Colors.black45,
-            labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1.0),
+            labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0),
             tabs: [
               Tab(text: "EXPLORE"),
               Tab(text: "MY EVENTS")
@@ -103,6 +106,7 @@ class _EventListScreenState extends State<EventListScreen> {
         ),
         body: _buildBody(),
       ),
+        ),
     );
   }
 
