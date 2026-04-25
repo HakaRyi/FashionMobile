@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../constants/app_colors.dart';
 import '../../managers/comment_manager.dart';
 import 'comment_input.dart';
 import 'comment_item.dart';
@@ -51,9 +50,12 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
     _controller = widget.externalScrollController ?? ScrollController();
 
     _controller.addListener(() {
-      if (!_controller.hasClients) return;
+      if (!_controller.hasClients) {
+        return;
+      }
 
       final position = _controller.position;
+
       if (position.pixels >= position.maxScrollExtent - 250) {
         context.read<CommentManager>().loadMore();
       }
@@ -65,6 +67,7 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
     if (widget.externalScrollController == null) {
       _controller.dispose();
     }
+
     super.dispose();
   }
 
@@ -79,7 +82,7 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(
-              top: Radius.circular(22),
+              top: Radius.circular(24),
             ),
           ),
           child: Column(
@@ -88,7 +91,7 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
                 width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withOpacity(0.25),
+                  color: Colors.black12,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -97,11 +100,11 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Comment',
+                      'Comments',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: Colors.black,
                         fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -111,15 +114,15 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.backgroundSecondary,
+                      color: const Color(0xFFF1F1F1),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       '${manager.comments.length}',
                       style: const TextStyle(
-                        color: AppColors.textPink,
+                        color: Colors.black,
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -131,7 +134,8 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: () => manager.refresh(widget.postId),
-            color: AppColors.textPink,
+            color: Colors.black,
+            backgroundColor: Colors.white,
             child: Builder(
               builder: (_) {
                 if (manager.isInitialLoading && manager.comments.isEmpty) {
@@ -142,7 +146,7 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
                       SizedBox(height: 160),
                       Center(
                         child: CircularProgressIndicator(
-                          color: AppColors.textPink,
+                          color: Colors.black,
                         ),
                       ),
                     ],
@@ -159,27 +163,28 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
                         child: Icon(
                           Icons.mode_comment_outlined,
                           size: 50,
-                          color: AppColors.textSecondary,
+                          color: Colors.black26,
                         ),
                       ),
                       SizedBox(height: 12),
                       Center(
                         child: Text(
-                          "No comments yet",
+                          'No comments yet',
                           style: TextStyle(
                             fontSize: 15,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
                       SizedBox(height: 6),
                       Center(
                         child: Text(
-                          "Be the first to comment",
+                          'Be the first to comment',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.textSecondary,
+                            color: Colors.black38,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -204,7 +209,7 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.textPink,
+                              color: Colors.black,
                             ),
                           ),
                         ),

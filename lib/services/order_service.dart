@@ -1,109 +1,303 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/api_constants.dart';
+import '../core/api_exception.dart';
 import '../models/order_model.dart';
 import 'api_client.dart';
 
 class OrderService {
+  ApiException _buildApiException(
+      int statusCode,
+      String responseBody,
+      String fallbackMessage,
+      ) {
+    try {
+      final data = jsonDecode(responseBody);
+
+      if (data is Map<String, dynamic>) {
+        final message = data['message']?.toString();
+
+        if (message != null && message.trim().isNotEmpty) {
+          return ApiException(
+            message,
+            statusCode: statusCode,
+          );
+        }
+
+        final error = data['error']?.toString();
+
+        if (error != null && error.trim().isNotEmpty) {
+          return ApiException(
+            error,
+            statusCode: statusCode,
+          );
+        }
+
+        final title = data['title']?.toString();
+
+        if (title != null && title.trim().isNotEmpty) {
+          return ApiException(
+            title,
+            statusCode: statusCode,
+          );
+        }
+      }
+
+      if (data is String && data.trim().isNotEmpty) {
+        return ApiException(
+          data,
+          statusCode: statusCode,
+        );
+      }
+    } catch (_) {
+      if (responseBody.trim().isNotEmpty) {
+        return ApiException(
+          responseBody,
+          statusCode: statusCode,
+        );
+      }
+    }
+
+    return ApiException(
+      fallbackMessage,
+      statusCode: statusCode,
+    );
+  }
+
+  dynamic _decodeJson(String responseBody) {
+    try {
+      return jsonDecode(responseBody);
+    } catch (_) {
+      throw ApiException('Invalid server response.');
+    }
+  }
+
+  Future<Map<String, String>> _buildMultipartHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final token = prefs.getString('token') ??
+        prefs.getString('accessToken') ??
+        prefs.getString('jwt') ??
+        '';
+
+    final headers = <String, String>{
+      'ngrok-skip-browser-warning': '69420',
+    };
+
+    if (token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return headers;
+  }
+
   Future<OrderModel> getOrderById(int orderId) async {
-    final url = Uri.parse('${ApiConstants.baseUrl}/orders/$orderId');
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.getOrderById(orderId),
+    );
 
     final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return OrderModel.fromJson(data);
-    } else {
-      throw Exception('Lỗi tải dữ liệu đơn hàng: ${response.statusCode}');
+      return OrderModel.fromJson(_decodeJson(response.body));
     }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Failed to load order.',
+    );
   }
 
-  Future<OrderModel> createOrder(Map<String, dynamic> requestBody) async {
-    final url = Uri.parse('${ApiConstants.baseUrl}/orders');
+  Future<OrderModel> createOrder(
+      int sellerId,
+      Map<String, dynamic> body,
+      ) async {
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.createOrder(sellerId),
+    );
 
-    final response = await ApiClient.post(url, body: requestBody);
+    final response = await ApiClient.post(
+      url,
+      body: body,
+    );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return OrderModel.fromJson(data);
-    } else {
-      throw Exception('Lỗi tạo đơn: ${response.body}');
+      return OrderModel.fromJson(_decodeJson(response.body));
     }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Create order failed.',
+    );
   }
 
   Future<List<OrderModel>> getSalesOrders() async {
-    final url = Uri.parse('${ApiConstants.baseUrl}/orders/sales');
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.getMySales,
+    );
 
     final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => OrderModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Lỗi tải danh sách đơn bán');
+      final data = _decodeJson(response.body);
+
+      if (data is! List) {
+        throw ApiException('Invalid sales order data.');
+      }
+
+      return data
+          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
+          .toList();
     }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Load sales orders failed.',
+    );
   }
 
   Future<List<OrderModel>> getPurchasesOrders() async {
-    final url = Uri.parse('${ApiConstants.baseUrl}/orders/purchases');
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.getMyPurchases,
+    );
 
     final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => OrderModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Lỗi tải danh sách đơn mua');
+      final data = _decodeJson(response.body);
+
+      if (data is! List) {
+        throw ApiException('Invalid purchase order data.');
+      }
+
+      return data
+          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
+          .toList();
     }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Load purchase orders failed.',
+    );
   }
 
-  Future<OrderModel> updateOrderStatus(int orderId, String status) async {
-    final url = Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/status');
+  Future<OrderModel> updateOrderStatus(
+      int orderId,
+      String status,
+      ) async {
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.updateOrderStatus(orderId, status),
+    );
 
-    final response = await ApiClient.put(url, body: {"status": status});
+    final response = await ApiClient.put(url);
 
     if (response.statusCode == 200) {
-      return OrderModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Lỗi cập nhật trạng thái: ${jsonDecode(response.body)['message'] ?? response.statusCode}');
+      return OrderModel.fromJson(_decodeJson(response.body));
     }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Update order status failed.',
+    );
   }
 
   Future<OrderModel> payOrder(int orderId) async {
-    final url = Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/pay');
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.payOrder(orderId),
+    );
 
     final response = await ApiClient.post(url);
 
     if (response.statusCode == 200) {
-      return OrderModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Lỗi thanh toán: ${jsonDecode(response.body)['message'] ?? response.statusCode}');
+      return OrderModel.fromJson(_decodeJson(response.body));
     }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Payment failed.',
+    );
   }
 
-  Future<bool> createRefundRequest(int orderId, String reason, String proof1, String proof2) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/orders/$orderId/refund-request'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-        "ngrok-skip-browser-warning": "69420",
-      },
-      body: jsonEncode({
-        "Reason": reason,
-        "ProofImage1": proof1,
-        "ProofImage2": proof2,
-      }),
+  Future<OrderModel> createRefundRequest({
+    required int orderId,
+    required String reason,
+    required File proofImage1,
+    File? proofImage2,
+  }) async {
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.createRefund(orderId),
     );
 
-    if (response.statusCode == 200) {
-      return true;
-    } else {
-      throw Exception('Lỗi: ${response.statusCode} - ${response.body}');
+    final request = http.MultipartRequest('POST', url);
+
+    request.headers.addAll(await _buildMultipartHeaders());
+
+    request.fields['Reason'] = reason;
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'ProofImage1',
+        proofImage1.path,
+        filename: path.basename(proofImage1.path),
+      ),
+    );
+
+    if (proofImage2 != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'ProofImage2',
+          proofImage2.path,
+          filename: path.basename(proofImage2.path),
+        ),
+      );
     }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return OrderModel.fromJson(_decodeJson(response.body));
+    }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Refund request failed.',
+    );
+  }
+
+  Future<List<dynamic>> getMyRefunds() async {
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.getMyRefunds,
+    );
+
+    final response = await ApiClient.get(url);
+
+    if (response.statusCode == 200) {
+      final data = _decodeJson(response.body);
+
+      if (data is! List) {
+        throw ApiException('Invalid refund data.');
+      }
+
+      return data;
+    }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Load refund failed.',
+    );
   }
 }

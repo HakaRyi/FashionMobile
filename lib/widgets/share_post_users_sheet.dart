@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+
 import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
 import '../models/shareable_user_model.dart';
@@ -25,6 +25,12 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
 
   bool _isSubmitting = false;
 
+  @override
+  void dispose() {
+    _captionController.dispose();
+    super.dispose();
+  }
+
   void _toggleUser(ShareableUserModel user) {
     setState(() {
       if (_selectedUserIds.contains(user.accountId)) {
@@ -35,8 +41,20 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
     });
   }
 
+  String _normalizeError(Object error) {
+    final text = error.toString();
+
+    if (text.startsWith('Exception: ')) {
+      return text.replaceFirst('Exception: ', '').trim();
+    }
+
+    return text;
+  }
+
   Future<void> _handleShare() async {
-    if (_selectedUserIds.isEmpty || _isSubmitting) return;
+    if (_selectedUserIds.isEmpty || _isSubmitting) {
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -49,34 +67,38 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
         caption: _captionController.text.trim(),
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       NotificationUtils.showTopRight(
         context,
-        message: 'Đã chia sẻ bài viết thành công',
+        message: 'Post shared successfully.',
       );
 
-      // Nếu bạn muốn máy người gửi cũng nổi 1 local notification nội bộ sau khi share xong
-      // thì giữ đoạn này. Không ảnh hưởng flow chat hiện tại.
       await NotificationService().showManualLocalNotification(
-        title: 'Chia sẻ bài viết',
-        body: 'Bạn đã chia sẻ bài viết cho ${_selectedUserIds.length} người',
+        title: 'Post shared',
+        body: 'You shared this post with ${_selectedUserIds.length} user(s).',
       );
 
       Navigator.pop(context, true);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+
+      final message = _normalizeError(e);
 
       NotificationUtils.showTopRight(
         context,
-        message: 'Chia sẻ thất bại',
+        message: 'Failed to share post.',
         isError: true,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Chia sẻ thất bại: $e'),
+          content: Text(message),
         ),
       );
     } finally {
@@ -89,21 +111,17 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
   }
 
   @override
-  void dispose() {
-    _captionController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final selectedCount = _selectedUserIds.length;
+
     return SafeArea(
       top: false,
       child: Container(
         height: MediaQuery.of(context).size.height * 0.84,
         decoration: const BoxDecoration(
-          color: AppColors.background,
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(24),
+            top: Radius.circular(28),
           ),
         ),
         child: Column(
@@ -113,7 +131,7 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textSecondary.withOpacity(0.25),
+                color: Colors.black12,
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -123,11 +141,12 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Chia sẻ vào chat',
+                      'SHARE TO CHAT',
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: Colors.black,
                         fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ),
@@ -137,18 +156,20 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.backgroundSecondary,
+                      color: const Color(0xFFF1F1F1),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                        color: AppColors.textPink.withOpacity(0.25),
+                        color: Colors.black.withOpacity(0.05),
                       ),
                     ),
                     child: Text(
-                      '${_selectedUserIds.length} đã chọn',
+                      selectedCount == 1
+                          ? '1 selected'
+                          : '$selectedCount selected',
                       style: const TextStyle(
-                        color: AppColors.textPink,
+                        color: Colors.black,
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -162,26 +183,28 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
                 controller: _captionController,
                 maxLines: 2,
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Thêm lời nhắn...',
+                  hintText: 'Add a message...',
                   hintStyle: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: Colors.black38,
+                    fontWeight: FontWeight.w500,
                   ),
                   filled: true,
-                  fillColor: AppColors.backgroundSecondary,
+                  fillColor: const Color(0xFFF7F7F7),
                   contentPadding: const EdgeInsets.all(14),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.divider,
+                    borderSide: BorderSide(
+                      color: Colors.black.withOpacity(0.06),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(
-                      color: AppColors.textPink,
+                      color: Colors.black,
                       width: 1.2,
                     ),
                   ),
@@ -203,14 +226,16 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_selectedUserIds.isEmpty || _isSubmitting)
+                  onPressed:
+                  (_selectedUserIds.isEmpty || _isSubmitting)
                       ? null
                       : _handleShare,
                   style: ElevatedButton.styleFrom(
                     elevation: 0,
-                    backgroundColor: AppColors.textPink,
-                    disabledBackgroundColor: AppColors.textSecondary.withOpacity(0.25),
+                    backgroundColor: Colors.black,
+                    disabledBackgroundColor: const Color(0xFFEDEDED),
                     foregroundColor: Colors.white,
+                    disabledForegroundColor: Colors.black38,
                     minimumSize: const Size.fromHeight(50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -226,10 +251,11 @@ class _SharePostUsersSheetState extends State<SharePostUsersSheet> {
                     ),
                   )
                       : const Text(
-                    'Chia sẻ',
+                    'SHARE',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ),

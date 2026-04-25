@@ -1,8 +1,9 @@
-// lib/services/wardrobe_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/api_constants.dart';
+import '../models/public_wardrobe_item_model.dart';
 import '../models/wardrobe_item_model.dart';
 
 class WardrobeService {
@@ -32,7 +33,10 @@ class WardrobeService {
     if (response.statusCode == 200) {
       final Map<String, dynamic> body = jsonDecode(response.body);
       final List<dynamic> data = body['data'] ?? [];
-      return data.map((json) => WardrobeItemModel.fromJson(json)).toList();
+
+      return data
+          .map((json) => WardrobeItemModel.fromJson(json as Map<String, dynamic>))
+          .toList();
     } else {
       throw Exception('Lỗi tải danh sách tủ đồ của tôi');
     }
@@ -52,7 +56,7 @@ class WardrobeService {
     }
   }
 
-  Future<List<WardrobeItemModel>> getPublicWardrobeItems(
+  Future<List<PublicWardrobeItemModel>> getPublicWardrobeItems(
       int accountId, {
         int page = 1,
         int pageSize = 12,
@@ -63,27 +67,62 @@ class WardrobeService {
       ),
       headers: await _buildHeaders(withAuth: true),
     );
+
     if (response.statusCode == 200) {
       final Map<String, dynamic> body = jsonDecode(response.body);
-      print("DEBUG: Response Body Keys: ${body.keys.toList()}");
-      try{
-        final Map<String, dynamic> data = body['data'] ?? {};
-        print("DEBUG: Data Keys: ${data.keys.toList()}");
-        final Map<String, dynamic> itemsWrapper = data['items'] ?? {};
-        print("DEBUG: ItemsWrapper Keys: ${itemsWrapper.keys.toList()}");
-        final List<dynamic> items = itemsWrapper['items'] ?? [];
-        print("DEBUG: Danh sách items có ${items.length} phần tử.");
-        if (items.isNotEmpty) {
-          print("DEBUG: Thử parse phần tử đầu tiên: ${items[0]}");
+
+      try {
+        final dynamic data = body['data'];
+
+        if (data is List) {
+          return data
+              .map((json) => PublicWardrobeItemModel.fromJson(
+            json as Map<String, dynamic>,
+          ))
+              .toList();
         }
-        return items.map((json) => WardrobeItemModel.fromJson(json)).toList();
-      }catch(e, stacktrace){
-        print("❌ LỖI PARSE JSON: $e");
-        print("Stacktrace: $stacktrace");
+
+        if (data is Map<String, dynamic>) {
+          // Case 1: data = { items: [...] }
+          if (data['items'] is List) {
+            final List<dynamic> items = data['items'] as List<dynamic>;
+            return items
+                .map((json) => PublicWardrobeItemModel.fromJson(
+              json as Map<String, dynamic>,
+            ))
+                .toList();
+          }
+
+          // Case 2: data = { items: { items: [...] } }
+          if (data['items'] is Map<String, dynamic>) {
+            final Map<String, dynamic> itemsWrapper =
+            data['items'] as Map<String, dynamic>;
+            final List<dynamic> items =
+                (itemsWrapper['items'] as List<dynamic>?) ?? [];
+
+            return items
+                .map((json) => PublicWardrobeItemModel.fromJson(
+              json as Map<String, dynamic>,
+            ))
+                .toList();
+          }
+
+          // Case 3: data = { data: [...] } kiểu nested lạ
+          if (data['data'] is List) {
+            final List<dynamic> items = data['data'] as List<dynamic>;
+            return items
+                .map((json) => PublicWardrobeItemModel.fromJson(
+              json as Map<String, dynamic>,
+            ))
+                .toList();
+          }
+        }
+
+        return [];
+      } catch (e) {
         throw Exception('Lỗi xử lý dữ liệu từ server: $e');
       }
     } else {
-      print("❌ LỖI SERVER: ${response.statusCode} - ${response.body}");
       throw Exception('Lỗi tải danh sách tủ đồ công khai');
     }
   }
@@ -104,9 +143,12 @@ class WardrobeService {
       throw Exception('Lỗi tải số lượng món đồ công khai');
     }
   }
+
   Future<List<dynamic>> searchWardrobeByUsername(String username) async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.searchWardrobeByUsernameEndpoint}?username=$username'),
+      Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.searchWardrobeByUsernameEndpoint}?username=$username',
+      ),
       headers: await _buildHeaders(),
     );
 

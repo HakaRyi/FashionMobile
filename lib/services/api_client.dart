@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/material.dart';
 
 import '../constants/api_constants.dart';
-import '../main.dart';
-import '../screens/login_screen.dart';
 
 class ApiClient {
   static const Duration timeout = Duration(seconds: 10);
@@ -18,61 +16,84 @@ class ApiClient {
 
     return {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
+      if (token.trim().isNotEmpty) 'Authorization': 'Bearer $token',
       'ngrok-skip-browser-warning': '69420',
     };
   }
 
   static Future<http.Response> get(Uri url) async {
-    return _execute((headers) => http.get(url, headers: headers));
+    return _execute(
+          (headers) => http.get(
+        url,
+        headers: headers,
+      ),
+    );
   }
 
   static Future<http.Response> post(
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-    return _execute((headers) => http.post(
-      url,
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
-    ));
+    return _execute(
+          (headers) => http.post(
+        url,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ),
+    );
   }
 
   static Future<http.Response> put(
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-    return _execute((headers) => http.put(
-      url,
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
-    ));
+    return _execute(
+          (headers) => http.put(
+        url,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ),
+    );
   }
 
   static Future<http.Response> patch(
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-    return _execute((headers) => http.patch(
-      url,
-      headers: headers,
-      body: body == null ? null : jsonEncode(body),
-    ));
+    return _execute(
+          (headers) => http.patch(
+        url,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ),
+    );
   }
 
   static Future<http.Response> delete(
       Uri url, {
         Map<String, dynamic>? body,
       }) async {
-    return _execute((headers) => http.delete(
-      url,
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
-    ));
+    return _execute(
+          (headers) => http.delete(
+        url,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ),
+    );
   }
 
   static Future<Map<String, String>> getHeaders() async {
-    return await _headers();
+    return _headers();
+  }
+
+  static Future<bool> hasSession() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final token = prefs.getString('token');
+    final refreshToken = prefs.getString('refreshToken');
+
+    return (refreshToken != null && refreshToken.trim().isNotEmpty) ||
+        (token != null && token.trim().isNotEmpty);
   }
 
   static Future<bool> _refreshToken() async {
@@ -83,69 +104,95 @@ class ApiClient {
     _refreshTokenCompleter = Completer<bool>();
 
     final prefs = await SharedPreferences.getInstance();
+
+    final accessToken = prefs.getString('token');
     final refreshToken = prefs.getString('refreshToken');
 
-    if (refreshToken == null) {
-      _refreshTokenCompleter!.complete(false);
-      _refreshTokenCompleter = null;
+    if (accessToken == null ||
+        accessToken.trim().isEmpty ||
+        refreshToken == null ||
+        refreshToken.trim().isEmpty) {
+      _completeRefresh(false);
       return false;
     }
 
     try {
-      final url = Uri.parse("${ApiConstants.baseUrl}/Auth/refresh");
-      final response = await http.post(
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.refreshTokenEndpoint}',
+      );
+
+      final response = await http
+          .post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': '69420',
         },
         body: jsonEncode({
+          'accessToken': accessToken,
           'refreshToken': refreshToken,
         }),
-      );
+      )
+          .timeout(timeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await prefs.setString('token', data['accessToken']);
-        await prefs.setString('refreshToken', data['refreshToken']);
 
-        _refreshTokenCompleter!.complete(true);
-        _refreshTokenCompleter = null;
-        return true;
+        final newAccessToken =
+        (data['accessToken'] ?? data['data']?['accessToken'])?.toString();
+
+        final newRefreshToken =
+        (data['refreshToken'] ?? data['data']?['refreshToken'])
+            ?.toString();
+
+        if (newAccessToken != null &&
+            newAccessToken.isNotEmpty &&
+            newRefreshToken != null &&
+            newRefreshToken.isNotEmpty) {
+          await prefs.setString('token', newAccessToken);
+          await prefs.setString('refreshToken', newRefreshToken);
+
+          _completeRefresh(true);
+          return true;
+        }
       }
 
-      _refreshTokenCompleter!.complete(false);
-      _refreshTokenCompleter = null;
+      _completeRefresh(false);
       return false;
-    } catch (e) {
-      if (!_refreshTokenCompleter!.isCompleted) {
-        _refreshTokenCompleter!.complete(false);
-      }
-      _refreshTokenCompleter = null;
+    } catch (_) {
+      _completeRefresh(false);
       return false;
     }
   }
 
+  static void _completeRefresh(bool value) {
+    if (_refreshTokenCompleter != null &&
+        !_refreshTokenCompleter!.isCompleted) {
+      _refreshTokenCompleter!.complete(value);
+    }
+
+    _refreshTokenCompleter = null;
+  }
+
   static Future<http.Response> _execute(
-      Future<http.Response> Function(Map<String, String>) request) async {
+      Future<http.Response> Function(Map<String, String>) request,
+      ) async {
     Map<String, String> headers = await _headers();
+
     http.Response response = await request(headers).timeout(timeout);
 
     if (response.statusCode == 401) {
       final isRefreshed = await _refreshToken();
+
       if (isRefreshed) {
         headers = await _headers();
         response = await request(headers).timeout(timeout);
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.clear();
-        navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
-        );
-        throw Exception('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        return response;
       }
+
+      throw Exception('Session expired. Please log in again.');
     }
+
     return response;
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+
 import '../managers/post_manager.dart';
 import '../models/shareable_user_model.dart';
 
@@ -21,67 +21,93 @@ class ShareUserList extends StatefulWidget {
 
 class _ShareUserListState extends State<ShareUserList> {
   final TextEditingController _searchController = TextEditingController();
+
   String _keyword = '';
   String? _error;
 
   @override
   void initState() {
     super.initState();
+
     _loadUsers();
+
     _searchController.addListener(() {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
         _keyword = _searchController.text.trim().toLowerCase();
       });
     });
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUsers() async {
     try {
       await postManager.fetchShareableUsers(refresh: widget.refreshOnOpen);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
-        _error = e.toString();
+        _error = _normalizeError(e);
       });
     }
   }
 
-  List<ShareableUserModel> _filterUsers(List<ShareableUserModel> users) {
-    if (_keyword.isEmpty) return users;
+  String _normalizeError(Object error) {
+    final text = error.toString();
 
-    return users.where((u) {
-      final name = u.userName.toLowerCase();
+    if (text.startsWith('Exception: ')) {
+      return text.replaceFirst('Exception: ', '').trim();
+    }
+
+    return text;
+  }
+
+  List<ShareableUserModel> _filterUsers(List<ShareableUserModel> users) {
+    if (_keyword.isEmpty) {
+      return users;
+    }
+
+    return users.where((user) {
+      final name = user.userName.toLowerCase();
       return name.contains(_keyword);
     }).toList();
   }
 
   Widget _buildRoleBadge({
     required String label,
-    required Color color,
+    required bool isDark,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: isDark ? Colors.black : const Color(0xFFF1F1F1),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.20)),
+        border: Border.all(
+          color: isDark ? Colors.black : Colors.black.withOpacity(0.05),
+        ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: color,
+          color: isDark ? Colors.white : Colors.black54,
           fontSize: 10.5,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
@@ -98,31 +124,33 @@ class _ShareUserListState extends State<ShareUserList> {
             TextField(
               controller: _searchController,
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: Colors.black,
                 fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
               decoration: InputDecoration(
-                hintText: 'Tìm người để chia sẻ...',
+                hintText: 'Search people to share...',
                 hintStyle: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: Colors.black38,
+                  fontWeight: FontWeight.w500,
                 ),
                 prefixIcon: const Icon(
                   Icons.search,
-                  color: AppColors.textSecondary,
+                  color: Colors.black45,
                 ),
                 filled: true,
-                fillColor: AppColors.backgroundSecondary,
+                fillColor: const Color(0xFFF7F7F7),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(
-                    color: AppColors.divider,
+                    color: Colors.black.withOpacity(0.06),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: const BorderSide(
-                    color: AppColors.textPink,
+                    color: Colors.black,
                     width: 1.2,
                   ),
                 ),
@@ -136,6 +164,7 @@ class _ShareUserListState extends State<ShareUserList> {
                   _error!,
                   style: const TextStyle(
                     color: Colors.redAccent,
+                    fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -143,27 +172,27 @@ class _ShareUserListState extends State<ShareUserList> {
                   : postManager.isLoadingShareableUsers
                   ? const Center(
                 child: CircularProgressIndicator(
-                  color: AppColors.textPink,
+                  color: Colors.black,
                 ),
               )
                   : users.isEmpty
                   ? const Center(
                 child: Text(
-                  'Không có người nào để chia sẻ',
+                  'No people available to share with.',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: Colors.black45,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               )
                   : ListView.separated(
                 itemCount: users.length,
-                separatorBuilder: (_, __) => const Divider(
-                  color: AppColors.divider,
-                  height: 1,
-                ),
+                separatorBuilder: (_, __) =>
+                const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final user = users[index];
-                  final isSelected = widget.selectedUserIds.contains(user.accountId);
+                  final isSelected = widget.selectedUserIds
+                      .contains(user.accountId);
 
                   return Material(
                     color: Colors.transparent,
@@ -171,53 +200,63 @@ class _ShareUserListState extends State<ShareUserList> {
                       borderRadius: BorderRadius.circular(16),
                       onTap: () => widget.onToggleUser(user),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
+                        duration:
+                        const Duration(milliseconds: 180),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.backgroundSecondary
+                              ? const Color(0xFFF1F1F1)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isSelected
-                                ? AppColors.textPink.withOpacity(0.45)
-                                : AppColors.divider,
+                                ? Colors.black
+                                : Colors.black.withOpacity(0.06),
                           ),
                         ),
                         child: Row(
                           children: [
                             CircleAvatar(
                               radius: 22,
-                              backgroundColor: AppColors.backgroundSecondary,
-                              backgroundImage: user.avatarUrl != null &&
-                                  user.avatarUrl!.isNotEmpty
-                                  ? NetworkImage(user.avatarUrl!)
+                              backgroundColor:
+                              const Color(0xFFF1F1F1),
+                              backgroundImage:
+                              user.avatarUrl != null &&
+                                  user.avatarUrl!
+                                      .isNotEmpty
+                                  ? NetworkImage(
+                                user.avatarUrl!,
+                              )
                                   : null,
-                              child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
+                              child: user.avatarUrl == null ||
+                                  user.avatarUrl!.isEmpty
                                   ? const Icon(
                                 Icons.person,
-                                color: AppColors.textPink,
+                                color: Colors.black26,
                               )
                                   : null,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     user.userName.isNotEmpty
                                         ? user.userName
-                                        : 'Người dùng',
+                                        : 'User',
                                     maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    overflow:
+                                    TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: AppColors.textPrimary,
+                                      color: Colors.black,
                                       fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight:
+                                      FontWeight.w900,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
@@ -228,12 +267,12 @@ class _ShareUserListState extends State<ShareUserList> {
                                       if (user.isFollower)
                                         _buildRoleBadge(
                                           label: 'Follows you',
-                                          color: Colors.teal,
+                                          isDark: false,
                                         ),
                                       if (user.isFollowing)
                                         _buildRoleBadge(
                                           label: 'You follow',
-                                          color: AppColors.textPink,
+                                          isDark: true,
                                         ),
                                     ],
                                   ),
@@ -242,11 +281,17 @@ class _ShareUserListState extends State<ShareUserList> {
                             ),
                             Checkbox(
                               value: isSelected,
-                              activeColor: AppColors.textPink,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
+                              activeColor: Colors.black,
+                              checkColor: Colors.white,
+                              side: const BorderSide(
+                                color: Colors.black38,
                               ),
-                              onChanged: (_) => widget.onToggleUser(user),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(5),
+                              ),
+                              onChanged: (_) =>
+                                  widget.onToggleUser(user),
                             ),
                           ],
                         ),

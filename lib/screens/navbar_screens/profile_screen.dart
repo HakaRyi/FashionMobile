@@ -1,24 +1,22 @@
-// ---> BẮT ĐẦU SỬA: Thay thế toàn bộ file profile_screen.dart
+import 'dart:async';
+
+import 'package:fashion_mobile/screens/order_history_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../constants/app_colors.dart';
+
+import '../../models/post_feed_model.dart';
 import '../../screens/create_post_screens.dart';
 import '../../screens/expense_management_screen.dart';
+import '../../screens/public_wardrobe_screen.dart';
 import '../../screens/saved_posts_screen.dart';
 import '../../screens/settings_screen.dart';
 import '../../services/account_service.dart';
 import '../../services/post_service.dart';
+import '../../services/wallet_service.dart';
+import '../../utils/global_event_bus.dart';
 import '../../utils/route_transitions.dart';
 import '../../utils/stat_skeleton_item.dart';
-import '../../widgets/wapo_pay_sheet.dart';
-import '../order_manager_screen.dart';
-import '../public_wardrobe_screen.dart';
 import '../../widgets/post_item.dart';
-import '../../models/post_feed_model.dart';
-import '../../services/wallet_service.dart';
-import 'dart:async';
-import '../../utils/global_event_bus.dart';
+import '../../widgets/wapo_pay_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _refreshData();
+
     _eventSubscription = GlobalEventBus().onProfileUpdateNeeded.listen((_) {
       if (mounted) {
         _refreshData();
@@ -51,11 +50,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void _refreshData() {
+  Future<void> _refreshData() async {
     setState(() {
       _profileFuture = AccountService().getMyProfile();
-      _postsFuture = PostService().fetchMyPosts().catchError((_) => <PostFeedModel>[]);
-      _walletFuture = WalletService().getMyWalletBalance().catchError((_) => 0.0);
+      _postsFuture = PostService().fetchMyPosts().catchError(
+            (_) => <PostFeedModel>[],
+      );
+      _walletFuture = WalletService().getMyWalletBalance().catchError(
+            (_) => 0.0,
+      );
     });
   }
 
@@ -64,9 +67,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
+      builder: (_) {
         return WapoPaySheet(initialBalance: balance);
       },
+    );
+  }
+
+  int? _parseAccountId(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    return int.tryParse(value.toString());
+  }
+
+  String _safeString(dynamic value, String fallback) {
+    final text = value?.toString().trim();
+
+    if (text == null || text.isEmpty) {
+      return fallback;
+    }
+
+    return text;
+  }
+
+  double _safeDouble(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
+  Future<void> _openSettings() async {
+    final result = await Navigator.push(
+      context,
+      SlideRoute(page: const SettingsScreen()),
+    );
+
+    if (result == true && mounted) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _openCreatePost() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CreatePostScreen(),
+      ),
+    );
+
+    if (mounted) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _openOrderHistory() async {
+    await Navigator.push(
+      context,
+      SlideRoute(
+        page: const OrderHistoryScreen(),
+      ),
+    );
+
+    if (mounted) {
+      _refreshData();
+    }
+  }
+
+  void _openMyWardrobe(int? accountId) {
+    if (accountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account information not found.'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      SlideRoute(
+        page: PublicWardrobeScreen(
+          accountId: accountId,
+          isOwnerView: true,
+        ),
+      ),
     );
   }
 
@@ -100,20 +195,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final user = profileSnapshot.data;
-          final String avatar = user?['avatar'] ?? "";
-          final String name = user?['username'] ?? "User";
-          final String email = user?['email'] ?? "unknown@gmail.com";
-          final String bio = user?['description'] ?? "No bio yet.";
-          final double balance = (user?['balance'] ?? 0.0).toDouble();
-          final String followerCount = (user?['followerCount'] ?? user?['followers'] ?? 0).toString();
-          final String followingCount = (user?['followingCount'] ?? user?['following'] ?? 0).toString();
+
+          final String avatar = _safeString(user?['avatar'], '');
+          final String name = _safeString(user?['username'], 'User');
+          final String email = _safeString(user?['email'], 'unknown@gmail.com');
+          final String bio = _safeString(
+            user?['description'],
+            'No self-introduction yet.',
+          );
+
+          final double balance = _safeDouble(user?['balance']);
+
+          final String followerCount = _safeString(
+            user?['followerCount'] ?? user?['followers'],
+            '0',
+          );
+
+          final String followingCount = _safeString(
+            user?['followingCount'] ?? user?['following'],
+            '0',
+          );
 
           final int? accountId = _parseAccountId(
             user?['id'] ?? user?['accountId'] ?? user?['userId'],
           );
 
           return RefreshIndicator(
-            onRefresh: () async => _refreshData(),
+            onRefresh: _refreshData,
             color: Colors.black,
             backgroundColor: Colors.white,
             child: Stack(
@@ -129,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         image: avatar.isNotEmpty
                             ? NetworkImage(avatar)
                             : const NetworkImage(
-                          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s",
+                          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s',
                         ),
                         fit: BoxFit.cover,
                       ),
@@ -166,7 +274,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           fontSize: 18,
                           letterSpacing: 1.2,
                           shadows: [
-                            Shadow(color: Colors.black87, blurRadius: 10),
+                            Shadow(
+                              color: Colors.black87,
+                              blurRadius: 10,
+                            ),
                           ],
                         ),
                       ),
@@ -177,15 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icons.settings_outlined,
                             color: Colors.white,
                           ),
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              SlideRoute(page: const SettingsScreen()),
-                            );
-                            if (result == true) {
-                              _refreshData();
-                            }
-                          },
+                          onPressed: _openSettings,
                         ),
                       ],
                     ),
@@ -193,7 +296,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: SizedBox(
                         height: coverHeight - kToolbarHeight - profileOverlap,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 20,
+                          ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -202,7 +308,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
-                                    colors: [Colors.black87, Colors.black45],
+                                    colors: [
+                                      Colors.black87,
+                                      Colors.black45,
+                                    ],
                                   ),
                                 ),
                                 child: CircleAvatar(
@@ -210,7 +319,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   backgroundColor: Colors.white,
                                   backgroundImage: avatar.isNotEmpty
                                       ? NetworkImage(avatar)
-                                      : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                                      : const AssetImage(
+                                    'assets/images/default_avatar.png',
+                                  ) as ImageProvider,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -218,20 +329,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                     children: [
                                       FutureBuilder<List<PostFeedModel>?>(
                                         future: _postsFuture,
                                         builder: (context, snapshot) {
-                                          if (snapshot.connectionState == ConnectionState.waiting) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
                                             return const StatSkeletonItem();
                                           }
-                                          final postCount = (snapshot.data?.length ?? 0).toString();
-                                          return _buildStatItem(postCount, "POSTS");
+
+                                          final postCount =
+                                          (snapshot.data?.length ?? 0)
+                                              .toString();
+
+                                          return _buildStatItem(
+                                            postCount,
+                                            'POSTS',
+                                          );
                                         },
                                       ),
-                                      _buildStatItem(followerCount, "FOLLOWERS"),
-                                      _buildStatItem(followingCount, "FOLLOWING"),
+                                      _buildStatItem(
+                                        followerCount,
+                                        'FOLLOWERS',
+                                      ),
+                                      _buildStatItem(
+                                        followingCount,
+                                        'FOLLOWING',
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -264,7 +390,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                              padding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 10),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -298,65 +425,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                             ),
-
                             Padding(
-                              padding: const EdgeInsets.only(top: 10, bottom: 20),
+                              padding: const EdgeInsets.only(
+                                top: 10,
+                                bottom: 20,
+                              ),
                               child: SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.only(left: 20, right: 20),
+                                padding: const EdgeInsets.only(
+                                  left: 20,
+                                  right: 20,
+                                ),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildHangerButton(
-                                      title: "Create\nPost",
+                                      title: 'Create\nPost',
                                       icon: Icons.add_a_photo_outlined,
-                                      onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const CreatePostScreen()),
-                                      ).then((_) => _refreshData()),
+                                      onTap: _openCreatePost,
                                     ),
                                     _buildHangerButton(
-                                      title: "Wardrobe",
+                                      title: 'Wardrobe',
                                       icon: Icons.door_sliding_outlined,
-                                      onTap: () {
-                                        if (accountId == null) return;
-                                        Navigator.push(context, SlideRoute(page: PublicWardrobeScreen(accountId: accountId)));
-                                      },
+                                      onTap: () => _openMyWardrobe(accountId),
                                     ),
                                     FutureBuilder<double?>(
                                       future: _walletFuture,
                                       builder: (context, walletSnapshot) {
-                                        final isLoading = walletSnapshot.connectionState == ConnectionState.waiting;
-                                        final currentBalance = walletSnapshot.data ?? balance;
+                                        final isLoading =
+                                            walletSnapshot.connectionState ==
+                                                ConnectionState.waiting;
+
+                                        final currentBalance =
+                                            walletSnapshot.data ?? balance;
+
                                         return _buildHangerButton(
-                                          title: isLoading ? "..." : "Wallet",
-                                          icon: Icons.account_balance_wallet_outlined,
-                                          onTap: isLoading ? () {} : () => _showWapoPaySheet(context, currentBalance),
+                                          title: isLoading ? '...' : 'Wallet',
+                                          icon: Icons
+                                              .account_balance_wallet_outlined,
+                                          onTap: isLoading
+                                              ? () {}
+                                              : () => _showWapoPaySheet(
+                                            context,
+                                            currentBalance,
+                                          ),
                                         );
                                       },
                                     ),
                                     _buildHangerButton(
-                                      title: "Orders",
+                                      title: 'Orders',
                                       icon: Icons.receipt_long_outlined,
-                                      onTap: () => Navigator.push(context, SlideRoute(page: const OrderManagementScreen())),
+                                      onTap: _openOrderHistory,
                                     ),
                                     _buildHangerButton(
-                                      title: "Spending",
+                                      title: 'Spending',
                                       icon: Icons.analytics_outlined,
-                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpenseManagementScreen())),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                            const ExpenseManagementScreen(),
+                                          ),
+                                        );
+                                      },
                                     ),
                                     _buildHangerButton(
-                                      title: "Saved",
+                                      title: 'Saved',
                                       icon: Icons.bookmark_border,
-                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedPostsScreen())),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                            const SavedPostsScreen(),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-
-                            const Divider(color: Colors.black12, thickness: 1, height: 10),
+                            const Divider(
+                              color: Colors.black12,
+                              thickness: 1,
+                              height: 10,
+                            ),
                           ],
                         ),
                       ),
@@ -364,12 +520,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     FutureBuilder<List<PostFeedModel>?>(
                       future: _postsFuture,
                       builder: (context, postSnapshot) {
-                        if (postSnapshot.connectionState == ConnectionState.waiting) {
+                        if (postSnapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const SliverToBoxAdapter(
                             child: Center(
                               child: Padding(
                                 padding: EdgeInsets.all(40),
-                                child: CircularProgressIndicator(color: Colors.black),
+                                child: CircularProgressIndicator(
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
                           );
@@ -382,7 +541,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'Failed to load posts: ${postSnapshot.error}',
-                                  style: const TextStyle(color: Colors.black54),
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -398,8 +559,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               padding: EdgeInsets.all(40),
                               child: Center(
                                 child: Text(
-                                  "No posts yet.",
-                                  style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w500),
+                                  'No posts yet.',
+                                  style: TextStyle(
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ),
@@ -410,13 +574,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                               final post = posts[index];
+
                               return Container(
                                 color: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
                                 child: PostItem(
                                   post: post,
                                   isMyPost: true,
-                                  onRefresh: () => _refreshData(),
+                                  onRefresh: _refreshData,
                                 ),
                               );
                             },
@@ -438,20 +605,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  int? _parseAccountId(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    return int.tryParse(value.toString());
-  }
-
   Widget _buildStatItem(String value, String label) {
     return Container(
-      // Padding giúp tạo khoảng cách từ chữ đẩy ra viền đen
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4), // Nền đen mờ 40% (bạn có thể tăng giảm tùy ý)
-        borderRadius: BorderRadius.circular(13), // Bo góc cho mềm mại
-        border: Border.all(color: Colors.white24, width: 0.5), // Tùy chọn: Thêm dòng này nếu muốn có viền trắng mờ bao quanh
+        color: Colors.black.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(
+          color: Colors.white24,
+          width: 0.5,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -462,9 +628,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: Colors.white,
               fontWeight: FontWeight.w900,
               fontSize: 16,
-              // Giữ lại shadow để chữ nổi bật hẳn lên trên nền mờ
               shadows: [
-                Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2)),
+                Shadow(
+                  color: Colors.black54,
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
               ],
             ),
           ),
@@ -477,7 +646,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
               shadows: [
-                Shadow(color: Colors.black87, blurRadius: 4),
+                Shadow(
+                  color: Colors.black87,
+                  blurRadius: 4,
+                ),
               ],
             ),
           ),
@@ -486,7 +658,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildHangerButton({required String title, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildHangerButton({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -494,7 +670,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         margin: const EdgeInsets.only(right: 14),
         child: Column(
           children: [
-            const Icon(Icons.checkroom, color: Colors.black, size: 32),
+            const Icon(
+              Icons.checkroom,
+              color: Colors.black,
+              size: 32,
+            ),
             Transform.translate(
               offset: const Offset(0, -5),
               child: Container(
@@ -503,7 +683,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: Colors.black, width: 2),
+                  border: Border.all(
+                    color: Colors.black,
+                    width: 2,
+                  ),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(2),
                     topRight: Radius.circular(2),
@@ -521,7 +704,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: 20, color: Colors.black),
+                    Icon(
+                      icon,
+                      size: 20,
+                      color: Colors.black,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       title,

@@ -1,35 +1,121 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
+
+import '../models/order_model.dart';
 import '../services/order_service.dart';
 
 class OrderManager {
   final OrderService _service = OrderService();
 
-  Future<bool> submitRefundRequest(BuildContext context, int orderId, String reason, File image1, File image2) async {
-    try {
-      final bytes1 = await image1.readAsBytes();
-      final String base64Image1 = "data:image/jpeg;base64,${base64Encode(bytes1)}";
+  List<OrderModel> sales = [];
+  List<OrderModel> purchases = [];
 
-      final bytes2 = await image2.readAsBytes();
-      final String base64Image2 = "data:image/jpeg;base64,${base64Encode(bytes2)}";
+  Future<void> loadAll() async {
+    final results = await Future.wait([
+      _service.getSalesOrders(),
+      _service.getPurchasesOrders(),
+    ]);
 
-      final success = await _service.createRefundRequest(orderId, reason, base64Image1, base64Image2);
+    sales = results[0];
+    purchases = results[1];
+  }
 
-      if (success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gửi yêu cầu trả hàng thành công')),
-        );
-        return true;
-      }
-      return false;
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi gửi yêu cầu: $e')),
-        );
-      }
-      return false;
-    }
+  Future<void> refreshSales() async {
+    sales = await _service.getSalesOrders();
+  }
+
+  Future<void> refreshPurchases() async {
+    purchases = await _service.getPurchasesOrders();
+  }
+
+  Future<OrderModel> getOrderById(int orderId) async {
+    return await _service.getOrderById(orderId);
+  }
+
+  Future<OrderModel> createOrder(
+      int sellerId,
+      Map<String, dynamic> body,
+      ) async {
+    final order = await _service.createOrder(
+      sellerId,
+      body,
+    );
+
+    await refreshPurchases();
+
+    return order;
+  }
+
+  Future<OrderModel> pay(int orderId) async {
+    final order = await _service.payOrder(orderId);
+    await refreshPurchases();
+
+    return order;
+  }
+
+  Future<OrderModel> updateStatus(
+      int orderId,
+      String status,
+      ) async {
+    final order = await _service.updateOrderStatus(
+      orderId,
+      status,
+    );
+
+    await loadAll();
+
+    return order;
+  }
+
+  Future<OrderModel> confirmReceived(int orderId) async {
+    final order = await _service.updateOrderStatus(
+      orderId,
+      'COMPLETED',
+    );
+
+    await refreshPurchases();
+
+    return order;
+  }
+
+  Future<OrderModel> markAsShipping(int orderId) async {
+    final order = await _service.updateOrderStatus(
+      orderId,
+      'SHIPPING',
+    );
+
+    await refreshSales();
+
+    return order;
+  }
+
+  Future<OrderModel> cancel(int orderId) async {
+    final order = await _service.updateOrderStatus(
+      orderId,
+      'CANCELLED',
+    );
+
+    await loadAll();
+
+    return order;
+  }
+
+  Future<void> refund(
+      int orderId,
+      String reason,
+      File proofImage1,
+      File? proofImage2,
+      ) async {
+    await _service.createRefundRequest(
+      orderId: orderId,
+      reason: reason,
+      proofImage1: proofImage1,
+      proofImage2: proofImage2,
+    );
+
+    await refreshPurchases();
+  }
+
+  Future<List<dynamic>> getMyRefunds() async {
+    return await _service.getMyRefunds();
   }
 }

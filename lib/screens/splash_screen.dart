@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../constants/app_colors.dart';
+
 import 'login_screen.dart';
 import 'main_screen.dart';
 
@@ -19,42 +19,47 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuthStatus() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
     final prefs = await SharedPreferences.getInstance();
-    final String? token = prefs.getString('token');
 
-    if (!mounted) return;
+    final token = prefs.getString('token');
+    final refreshToken = prefs.getString('refreshToken');
 
-    if (token != null && token.isNotEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+    final bool hasSession =
+        (refreshToken != null && refreshToken.trim().isNotEmpty) ||
+            (token != null && token.trim().isNotEmpty);
+
+    if (!mounted) {
+      return;
     }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) {
+          return hasSession ? const MainScreen() : const LoginScreen();
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return const Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/images/logowapo.png',
+            Image(
+              image: AssetImage('assets/images/logowapo.png'),
               height: 80,
               fit: BoxFit.contain,
             ),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(
-              color: Colors.pink,
+            SizedBox(height: 24),
+            CircularProgressIndicator(
+              color: Colors.black,
             ),
           ],
         ),

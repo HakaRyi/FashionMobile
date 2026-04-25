@@ -1,18 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/api_constants.dart';
 import 'api_client.dart';
 
 class AccountService {
   Future<Map<String, dynamic>?> getMyProfile() async {
-    // final prefs = await SharedPreferences.getInstance();
-    // final String? userId = prefs.getString('userId');
-
-    // if (userId == null) return null;
-
-    final url = Uri.parse("${ApiConstants.baseUrl}/Account/me");
+    final url = Uri.parse('${ApiConstants.baseUrl}/Account/me');
 
     try {
       final response = await ApiClient.get(url);
@@ -20,18 +17,20 @@ class AccountService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
+
+      return null;
     } catch (e) {
-      print("Lỗi fetch profile: $e");
+      debugPrintSafe('Fetch profile error: $e');
+      return null;
     }
-    return null;
   }
 
   Future<Map<String, dynamic>?> getUserProfile(String targetUserId) async {
-    final prefs = await SharedPreferences.getInstance();
+    if (targetUserId.trim().isEmpty) {
+      return null;
+    }
 
-    if (targetUserId.trim().isEmpty) return null;
-
-    final url = Uri.parse("${ApiConstants.baseUrl}/Account/$targetUserId");
+    final url = Uri.parse('${ApiConstants.baseUrl}/Account/$targetUserId');
 
     try {
       final response = await ApiClient.get(url);
@@ -39,38 +38,43 @@ class AccountService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
+
+      return null;
     } catch (e) {
-      print("Lỗi fetch user profile: $e");
+      debugPrintSafe('Fetch user profile error: $e');
+      return null;
     }
-    return null;
   }
 
   Future<bool> completeOnboarding(String username) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
-    if (token == null) return false;
+    if (token == null || token.trim().isEmpty) {
+      return false;
+    }
 
-    final url = Uri.parse("${ApiConstants.baseUrl}/Account/onboarding");
+    final url = Uri.parse('${ApiConstants.baseUrl}/Account/onboarding');
 
     try {
       final response = await ApiClient.put(
         url,
         body: {
-          "userName": username,
+          'userName': username,
         },
       );
 
       if (response.statusCode == 200) {
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('username', username);
         return true;
       }
+
       return false;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
+
   Future<int> updateProfile({
     required String username,
     required String email,
@@ -80,37 +84,65 @@ class AccountService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
-    final url = Uri.parse("${ApiConstants.baseUrl}/Account/update-profile");
+    if (token == null || token.trim().isEmpty) {
+      return -1;
+    }
 
-    var request = http.MultipartRequest('PUT', url);
+    final url = Uri.parse('${ApiConstants.baseUrl}/Account/update-profile');
+
+    final request = http.MultipartRequest('PUT', url);
+
     request.headers['Authorization'] = 'Bearer $token';
+    request.headers['ngrok-skip-browser-warning'] = '69420';
 
     request.fields['Username'] = username;
     request.fields['Email'] = email;
     request.fields['Description'] = description;
 
     if (avatarFile != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'Avatar',
-        avatarFile.path,
-      ));
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'Avatar',
+          avatarFile.path,
+        ),
+      );
     }
 
     try {
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200) return 1;
+      if (response.statusCode == 200) {
+        await prefs.setString('username', username);
+        await prefs.setString('email', email);
+        return 1;
+      }
+
+      if (response.statusCode == 401) {
+        return -1;
+      }
+
       if (response.statusCode == 409) {
-        final msg = jsonDecode(response.body)['message'];
-        if (msg.contains("Email")) return -2;
+        final body = jsonDecode(response.body);
+        final msg = body['message']?.toString() ?? '';
+
+        if (msg.contains('Email')) {
+          return -2;
+        }
+
         return -3;
       }
-      if (response.statusCode == 401) return -1;
+
       return 0;
     } catch (e) {
-      print("Lỗi Update Profile: $e");
+      debugPrintSafe('Update profile error: $e');
       return 0;
     }
   }
+}
+
+void debugPrintSafe(String message) {
+  // Keep this helper simple so service files can log without importing Flutter.
+  // ignore: avoid_print
+  print(message);
 }

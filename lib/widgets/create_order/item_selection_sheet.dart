@@ -23,6 +23,7 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
   List<WardrobeItemModel> _allItems = [];
   List<WardrobeItemModel> _filteredItems = [];
   List<WardrobeItemModel> _currentSelected = [];
+
   bool _isLoading = true;
   String _errorMessage = '';
 
@@ -36,30 +37,33 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
   Future<void> _fetchItems() async {
     try {
       final items = await widget.wardrobeService.getMyWardrobeItems();
-      if (mounted) {
-        setState(() {
-          _allItems = items;
-          _filteredItems = items;
-          _isLoading = false;
-        });
-      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _allItems = items;
+        _filteredItems = items;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
   void _filterItems(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+
     setState(() {
-      if (query.isEmpty) {
+      if (normalizedQuery.isEmpty) {
         _filteredItems = _allItems;
       } else {
         _filteredItems = _allItems.where((item) {
-          return item.itemName.toLowerCase().contains(query.toLowerCase());
+          return item.itemName.toLowerCase().contains(normalizedQuery);
         }).toList();
       }
     });
@@ -67,9 +71,14 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
 
   void _toggleSelection(WardrobeItemModel item) {
     setState(() {
-      final isSelected = _currentSelected.any((element) => element.itemId == item.itemId);
+      final isSelected = _currentSelected.any(
+            (element) => element.itemId == item.itemId,
+      );
+
       if (isSelected) {
-        _currentSelected.removeWhere((element) => element.itemId == item.itemId);
+        _currentSelected.removeWhere(
+              (element) => element.itemId == item.itemId,
+        );
       } else {
         _currentSelected.add(item);
       }
@@ -86,7 +95,9 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
         return Container(
           decoration: const BoxDecoration(
             color: AppColors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
           ),
           child: Column(
             children: [
@@ -100,34 +111,53 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      "Chọn sản phẩm",
-                      style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+                      "Select Items",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     ElevatedButton(
-                      onPressed: () => widget.onSelectionConfirmed(_currentSelected),
+                      onPressed: () =>
+                          widget.onSelectionConfirmed(_currentSelected),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pink,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: Text("Xác nhận (${_currentSelected.length})", style: const TextStyle(color: Colors.white)),
-                    )
+                      child: Text(
+                        "Confirm (${_currentSelected.length})",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
                   ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: TextField(
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black),
                   onChanged: _filterItems,
                   decoration: InputDecoration(
-                    hintText: 'Tìm kiếm tên sản phẩm...',
+                    hintText: 'Search item name...',
                     hintStyle: const TextStyle(color: Colors.black54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Colors.black54,
+                    ),
                     filled: true,
                     fillColor: Colors.black.withOpacity(0.05),
                     border: OutlineInputBorder(
@@ -140,66 +170,117 @@ class _ItemSelectionSheetState extends State<ItemSelectionSheet> {
               ),
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.pinkAccent))
+                    ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.pinkAccent,
+                  ),
+                )
                     : _errorMessage.isNotEmpty
-                    ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)))
+                    ? Center(
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                )
                     : _filteredItems.isEmpty
-                    ? const Center(child: Text("Không tìm thấy sản phẩm nào.", style: TextStyle(color: Colors.white54)))
+                    ? const Center(
+                  child: Text(
+                    "No items found.",
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                )
                     : ListView.separated(
                   controller: controller,
                   padding: const EdgeInsets.all(20),
                   itemCount: _filteredItems.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) =>
+                  const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final item = _filteredItems[index];
-                    final isSelected = _currentSelected.any((element) => element.itemId == item.itemId);
+                    final isSelected = _currentSelected.any(
+                          (element) =>
+                      element.itemId == item.itemId,
+                    );
 
                     return GestureDetector(
                       onTap: () => _toggleSelection(item),
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.pink.withOpacity(0.2) : Colors.black.withOpacity(0.05),
+                          color: isSelected
+                              ? Colors.pink.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isSelected ? Colors.pinkAccent : Colors.white10),
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.pinkAccent
+                                : Colors.white10,
+                          ),
                         ),
                         child: Row(
                           children: [
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius:
+                              BorderRadius.circular(8),
                               child: Image.network(
-                                item.imageUrl != null && item.imageUrl!.isNotEmpty
+                                item.imageUrl != null &&
+                                    item.imageUrl!.isNotEmpty
                                     ? item.imageUrl!
                                     : 'https://via.placeholder.com/150',
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 50, height: 50, color: Colors.grey[800],
-                                  child: const Icon(Icons.image, color: Colors.white54),
-                                ),
+                                errorBuilder: (_, __, ___) =>
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      color: Colors.grey[800],
+                                      child: const Icon(
+                                        Icons.image,
+                                        color: Colors.white54,
+                                      ),
+                                    ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     item.itemName,
-                                    style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    item.brand ?? 'Không có thương hiệu',
-                                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                    item.brand != null &&
+                                        item.brand!
+                                            .trim()
+                                            .isNotEmpty
+                                        ? item.brand!.trim()
+                                        : 'No brand',
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             Icon(
-                              isSelected ? Icons.check_circle : Icons.circle_outlined,
-                              color: isSelected ? Colors.pinkAccent : AppColors.backgroundTertiary,
+                              isSelected
+                                  ? Icons.check_circle
+                                  : Icons.circle_outlined,
+                              color: isSelected
+                                  ? Colors.pinkAccent
+                                  : AppColors.backgroundTertiary,
                             ),
                           ],
                         ),

@@ -1,97 +1,169 @@
-import 'package:intl/intl.dart';
-import 'account_model.dart';
 import 'order_detail_model.dart';
 
 class OrderModel {
   final int orderId;
+  final String orderCode;
+
   final int buyerId;
+  final String buyerName;
+
   final int sellerId;
+  final String sellerName;
+
   final double subTotal;
   final double serviceFee;
   final double totalAmount;
+
   final String status;
   final String? note;
+  final String? cancelReason;
   final String? shippingAddress;
   final String? receiverName;
   final String? receiverPhone;
-  final DateTime createdAt;
+
+  final DateTime? createdAt;
   final DateTime? updatedAt;
-  final AccountModel? buyer;
-  final AccountModel? seller;
+  final DateTime? paidAt;
+  final DateTime? deliveredAt;
+  final DateTime? completedAt;
+  final DateTime? cancelledAt;
+
   final List<OrderDetailModel> orderDetails;
 
   OrderModel({
     required this.orderId,
+    required this.orderCode,
     required this.buyerId,
+    required this.buyerName,
     required this.sellerId,
+    required this.sellerName,
     required this.subTotal,
     required this.serviceFee,
     required this.totalAmount,
     required this.status,
     this.note,
+    this.cancelReason,
     this.shippingAddress,
     this.receiverName,
     this.receiverPhone,
-    required this.createdAt,
+    this.createdAt,
     this.updatedAt,
-    this.buyer,
-    this.seller,
+    this.paidAt,
+    this.deliveredAt,
+    this.completedAt,
+    this.cancelledAt,
     required this.orderDetails,
   });
 
-  String get displayItemName {
-    if (orderDetails.isEmpty) return 'Đơn hàng';
-    if (orderDetails.length == 1) return orderDetails.first.itemName;
-    return '${orderDetails.first.itemName} và ${orderDetails.length - 1} sản phẩm khác';
-  }
-
-  String get firstItemImage {
-    if (orderDetails.isNotEmpty) {
-      return orderDetails.first.itemImage;
-    }
-    return '';
-  }
-
   factory OrderModel.fromJson(Map<String, dynamic> json) {
-    DateTime? parseDateSafe(dynamic dateValue) {
-      if (dateValue == null) return null;
-      String dateStr = dateValue.toString();
-      if (!dateStr.endsWith('Z')) {
-        dateStr += 'Z';
-      }
-      return DateTime.parse(dateStr).toLocal();
-    }
-
     return OrderModel(
-      orderId: json['orderId'] ?? 0,
-      buyerId: json['buyerId'] ?? 0,
-      sellerId: json['sellerId'] ?? 0,
-      subTotal: (json['subTotal'] ?? 0).toDouble(),
-      serviceFee: (json['serviceFee'] ?? 0).toDouble(),
-      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
-      status: json['status'] ?? 'PENDING',
-      note: json['note'],
-      shippingAddress: json['shippingAddress'],
-      receiverName: json['receiverName'],
-      receiverPhone: json['receiverPhone'],
-      createdAt: parseDateSafe(json['createdAt']) ?? DateTime.now(),
-      updatedAt: parseDateSafe(json['updatedAt']),
-      buyer: json['buyer'] != null ? AccountModel.fromJson(json['buyer']) : AccountModel(accountId: json['buyerId'] ?? 0, name: json['buyerName'] ?? 'Người mua'),
-      seller: json['seller'] != null ? AccountModel.fromJson(json['seller']) : AccountModel(accountId: json['sellerId'] ?? 0, name: json['sellerName'] ?? 'Người bán'),
-      orderDetails: (json['orderDetails'] as List?)?.map((e) => OrderDetailModel.fromJson(e)).toList() ?? [],
+      orderId: _parseInt(json['orderId']),
+      orderCode: json['orderCode']?.toString() ?? '',
+
+      buyerId: _parseInt(json['buyerId']),
+      buyerName: json['buyerName']?.toString() ?? 'Unknown',
+
+      sellerId: _parseInt(json['sellerId']),
+      sellerName: json['sellerName']?.toString() ?? 'Unknown',
+
+      subTotal: _parseDouble(json['subTotal']),
+      serviceFee: _parseDouble(json['serviceFee']),
+      totalAmount: _parseDouble(json['totalAmount']),
+
+      status: json['status']?.toString() ?? '',
+
+      note: json['note']?.toString(),
+      cancelReason: json['cancelReason']?.toString(),
+      shippingAddress: json['shippingAddress']?.toString(),
+      receiverName: json['receiverName']?.toString(),
+      receiverPhone: json['receiverPhone']?.toString(),
+
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
+      paidAt: _parseDate(json['paidAt']),
+      deliveredAt: _parseDate(json['deliveredAt']),
+      completedAt: _parseDate(json['completedAt']),
+      cancelledAt: _parseDate(json['cancelledAt']),
+
+      orderDetails: (json['orderDetails'] as List<dynamic>? ?? [])
+          .map((e) => OrderDetailModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
-  String get formattedTotalAmount {
-    return NumberFormat.decimalPattern('vi_VN').format(totalAmount);
+  static int _parseInt(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value.toString()) ?? 0;
   }
 
-  String get formattedCreatedAt {
-    return DateFormat('dd/MM/yyyy HH:mm').format(createdAt);
+  static double _parseDouble(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+
+    if (value is double) {
+      return value;
+    }
+
+    if (value is int) {
+      return value.toDouble();
+    }
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value.toString()) ?? 0;
   }
 
-  String get formattedUpdatedAt {
-    if (updatedAt == null) return '--';
-    return DateFormat('dd/MM/yyyy HH:mm').format(updatedAt!);
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    final text = value.toString().trim();
+
+    if (text.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(text);
   }
+
+  String get displayItemName {
+    return orderDetails.isNotEmpty ? orderDetails.first.itemName : 'Unknown';
+  }
+
+  String get firstItemImage {
+    return orderDetails.isNotEmpty ? orderDetails.first.imageUrl ?? '' : '';
+  }
+
+  bool get isPendingPayment => status.toLowerCase() == 'pendingpayment';
+
+  bool get isProcessing => status.toLowerCase() == 'processing';
+
+  bool get isShipping => status.toLowerCase() == 'shipping';
+
+  bool get isDelivered => status.toLowerCase() == 'delivered';
+
+  bool get isCompleted => status.toLowerCase() == 'completed';
+
+  bool get isDone => status.toLowerCase() == 'done';
+
+  bool get isCancelled => status.toLowerCase() == 'cancelled';
+
+  bool get isRefunding => status.toLowerCase() == 'refunding';
+
+  bool get isRefunded => status.toLowerCase() == 'refunded';
 }

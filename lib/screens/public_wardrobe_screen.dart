@@ -1,132 +1,88 @@
 import 'dart:math' as math;
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../models/public_wardrobe_item_model.dart';
 import '../models/try_on_source_item.dart';
-import '../models/wardrobe_item_model.dart';
+import '../screens/ai_suggestion_screen.dart';
+import '../screens/public_item_detail_screen.dart';
+import '../screens/try_on_screen.dart';
 import '../services/item_service.dart';
 import '../services/wardrobe_service.dart';
-import '../widgets/public_clothing_item.dart';
 import '../utils/app_toast.dart';
 import '../utils/route_transitions.dart';
-import '../screens/ai_suggestion_screen.dart';
-import '../screens/try_on_screen.dart';
-import '../screens/public_item_detail_screen.dart';
+import '../widgets/public_clothing_item.dart';
 
 class PublicWardrobeScreen extends StatefulWidget {
   final int accountId;
+  final bool isOwnerView;
 
   const PublicWardrobeScreen({
     super.key,
     required this.accountId,
+    this.isOwnerView = false,
   });
 
   @override
   State<PublicWardrobeScreen> createState() => _PublicWardrobeScreenState();
 }
 
-class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with SingleTickerProviderStateMixin {
+class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
+    with SingleTickerProviderStateMixin {
   final WardrobeService _wardrobeService = WardrobeService();
-  final ScrollController _scrollController = ScrollController();
+  final ItemService _itemService = ItemService();
 
   bool _isLoading = true;
   String? _error;
 
   Map<String, dynamic>? _profile;
-  List<WardrobeItemModel> _items = [];
+  List<PublicWardrobeItemModel> _items = [];
 
-  String _selectedFilter = "All";
+  String _selectedFilter = 'All';
 
   late AnimationController _fabricController;
 
   @override
   void initState() {
     super.initState();
+
     _fabricController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 12),
     )..repeat();
+
     _loadData();
   }
 
   @override
   void dispose() {
     _fabricController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  List<String> _getDynamicFilters() {
-    Set<String> filters = {"All"};
-    for (var item in _items) {
-      if (item.category != null && item.category!.isNotEmpty) {
-        filters.add(item.category!);
-      }
+  String _normalizeError(Object error) {
+    final text = error.toString();
+
+    if (text.startsWith('Exception: ')) {
+      return text.replaceFirst('Exception: ', '').trim();
     }
-    return filters.toList();
+
+    return text;
   }
 
-  void _showActionMenu(BuildContext context, WardrobeItemModel item) {
-    HapticFeedback.mediumImpact();
+  List<String> _getDynamicFilters() {
+    final filters = <String>{'All'};
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                item.itemName.toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.black45,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ListTile(
-                leading: const Icon(Icons.auto_awesome, color: Colors.black),
-                title: const Text("AI Mix & Match", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                      context,
-                      SlideRoute(page: AISuggestionScreen(selectedItem: item))
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.face, color: Colors.black),
-                title: const Text("Virtual Try-on", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TryOnScreen(
-                        sourceItem: TryOnSourceItem(
-                          itemId: item.itemId,
-                          itemName: item.itemName,
-                          imageUrl: item.imageUrl,
-                          brand: item.brand,
-                          category: item.category,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    for (final item in _items) {
+      final category = item.category?.trim();
+
+      if (category != null && category.isNotEmpty) {
+        filters.add(category);
+      }
+    }
+
+    return filters.toList();
   }
 
   Future<void> _loadData() async {
@@ -137,78 +93,315 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with Single
       });
 
       final profile = await _wardrobeService.getPublicProfile(widget.accountId);
-      final items = await _wardrobeService.getPublicWardrobeItems(widget.accountId);
+      final items = await _wardrobeService.getPublicWardrobeItems(
+        widget.accountId,
+      );
 
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _items = items;
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _profile = profile;
+        _items = items;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _error = _normalizeError(e);
+      });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   String get _userName {
     final name = _profile?['userName']?.toString().trim();
-    if (name == null || name.isEmpty) return 'User';
+
+    if (name == null || name.isEmpty) {
+      return 'User';
+    }
+
     return name;
   }
 
   String? get _avatarUrl {
-    final url = _profile?['avatarUrl']?.toString();
-    if (url == null || url.isEmpty) return null;
+    final url = _profile?['avatarUrl']?.toString().trim();
+
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+
     return url;
   }
 
   int get _totalPublicItems {
     final value = _profile?['totalPublicItems'];
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? _items.length;
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is String) {
+      return int.tryParse(value) ?? _items.length;
+    }
+
     return _items.length;
   }
 
   int get _countFollower {
     final value = _profile?['countFollower'];
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+
     return 0;
   }
 
   int get _countFollowing {
     final value = _profile?['countFollowing'];
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+
     return 0;
+  }
+
+  String get _title {
+    if (widget.isOwnerView) {
+      return 'MY WARDROBE';
+    }
+
+    return "$_userName's Wardrobe".toUpperCase();
+  }
+
+  bool _isOwnItem(PublicWardrobeItemModel item) {
+    return widget.isOwnerView || (item.isOwner ?? false);
+  }
+
+  List<PublicWardrobeItemModel> get _filteredItems {
+    if (_selectedFilter == 'All') {
+      return _items;
+    }
+
+    return _items.where((item) => item.category == _selectedFilter).toList();
+  }
+
+  Future<void> _toggleSaveItem(PublicWardrobeItemModel item) async {
+    if (_isOwnItem(item)) {
+      AppToast.show(context, 'You cannot save your own item.');
+      return;
+    }
+
+    try {
+      if (item.isSaved == true) {
+        await _itemService.unsaveItem(item.itemId);
+      } else {
+        await _itemService.saveItem(item.itemId);
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      final newSavedState = !(item.isSaved ?? false);
+
+      setState(() {
+        final index = _items.indexWhere((i) => i.itemId == item.itemId);
+
+        if (index != -1) {
+          _items[index] = item.copyWith(isSaved: newSavedState);
+        }
+      });
+
+      AppToast.show(
+        context,
+        newSavedState ? 'Saved to favorites!' : 'Removed from favorites!',
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(
+        context,
+        _normalizeError(e),
+        isError: true,
+      );
+    }
+  }
+
+  void _showActionMenu(BuildContext context, PublicWardrobeItemModel item) {
+    HapticFeedback.mediumImpact();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  item.itemName?.trim().isNotEmpty == true
+                      ? item.itemName!.toUpperCase()
+                      : 'UNNAMED ITEM',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSheetAction(
+                  icon: Icons.auto_awesome,
+                  title: 'AI Mix & Match',
+                  subtitle: 'Find outfits that match this item',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      SlideRoute(
+                        page: AISuggestionScreen(selectedItem: item),
+                      ),
+                    );
+                  },
+                ),
+                _buildSheetAction(
+                  icon: Icons.face,
+                  title: 'Virtual Try-on',
+                  subtitle: 'Preview this item on your model',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TryOnScreen(
+                          sourceItem: TryOnSourceItem(
+                            itemId: item.itemId,
+                            itemName: item.itemName,
+                            imageUrl: item.thumbnailUrl,
+                            brand: item.brand,
+                            category: item.category,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSheetAction({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 4,
+      ),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.black,
+          size: 22,
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w900,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          color: Colors.black45,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: Colors.black12,
+        size: 14,
+      ),
+    );
+  }
+
+  void _openItemDetail(PublicWardrobeItemModel item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicItemDetailScreen(
+          itemId: item.itemId,
+          isOwnerView: _isOwnItem(item),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final filters = _getDynamicFilters();
-    final List<WardrobeItemModel> filteredItems = _selectedFilter == "All"
-        ? _items
-        : _items.where((i) => i.category == _selectedFilter).toList();
-
-    Map<String, List<WardrobeItemModel>> groupedItems = {};
-    for (var item in filteredItems) {
-      final cat = item.category ?? 'Others';
-      if (!groupedItems.containsKey(cat)) groupedItems[cat] = [];
-      groupedItems[cat]!.add(item);
-    }
+    final filteredItems = _filteredItems;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F5F5),
       body: Stack(
         children: [
           Positioned.fill(
@@ -223,7 +416,11 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with Single
           ),
           Positioned.fill(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.black))
+                ? const Center(
+              child: CircularProgressIndicator(
+                color: Colors.black,
+              ),
+            )
                 : _error != null
                 ? _buildError()
                 : RefreshIndicator(
@@ -231,127 +428,80 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with Single
               color: Colors.black,
               backgroundColor: Colors.white,
               child: CustomScrollView(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 slivers: [
-                  SliverAppBar(
-                    expandedHeight: 240.0,
-                    pinned: true,
-                    backgroundColor: Colors.transparent,
-                    leading: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    flexibleSpace: FlexibleSpaceBar(
-                      title: Text(
-                        "$_userName's Wardrobe".toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
-                          color: Colors.black,
-                        ),
-                      ),
-                      centerTitle: true,
-                      background: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          _avatarUrl != null
-                              ? Image.network(
-                            _avatarUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildPlaceholderCover(),
-                          )
-                              : _buildPlaceholderCover(),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.white.withOpacity(0.8),
-                                  Colors.white.withOpacity(0.2),
-                                  Colors.white,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
+                  _buildSliverAppBar(),
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildStatItem("$_totalPublicItems", "ITEMS"),
-                          _buildStatItem("$_countFollower", "FOLLOWERS"),
-                          _buildStatItem("$_countFollowing", "FOLLOWING"),
-                        ],
-                      ),
-                    ),
+                    child: _buildProfileSummary(),
                   ),
-
-                  SliverToBoxAdapter(
-                    child: _buildCategoryTabs(filters),
-                  ),
-
-                  if (_items.isEmpty)
-                    const SliverToBoxAdapter(
+                  if (widget.isOwnerView)
+                    SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 60),
-                        child: Center(
-                          child: Text(
-                            "This user has no public items yet.",
-                            style: TextStyle(color: Colors.black45, fontSize: 14, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                        padding:
+                        const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: _buildOwnerNotice(),
+                      ),
+                    ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _CategoryHeaderDelegate(
+                      child: _buildCategoryTabs(filters),
+                    ),
+                  ),
+                  if (_items.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(
+                        widget.isOwnerView
+                            ? 'You have no public wardrobe items yet.'
+                            : 'This user has no public items yet.',
+                      ),
+                    )
+                  else if (filteredItems.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(
+                        'No items found in this category.',
                       ),
                     )
                   else
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                          final category = groupedItems.keys.elementAt(index);
-                          final itemsInCategory = groupedItems[category]!;
-                          return CategoryDrawerShelf(
-                            categoryName: category,
-                            items: itemsInCategory,
-                            scrollController: _scrollController,
-                            onItemTap: (item) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => PublicItemDetailScreen(itemId: item.itemId),
-                                ),
-                              );
-                            },
-                            onItemSave: (item) async {
-                              bool success = item.isSaved ? await ItemService().unsaveItem(item.itemId) : await ItemService().saveItem(item.itemId);
-                              if (success && mounted) {
-                                setState(() {
-                                  final itemIndex = _items.indexWhere((i) => i.itemId == item.itemId);
-                                  if (itemIndex != -1) {
-                                    _items[itemIndex] = item.copyWith(isSaved: !item.isSaved);
-                                  }
-                                });
-                                AppToast.show(context, item.isSaved ? "Unsaved!" : "Saved to favorites!");
-                              }
-                            },
-                            onItemLongPress: (item) => _showActionMenu(context, item),
-                          );
-                        },
-                        childCount: groupedItems.length,
+                    SliverPadding(
+                      padding:
+                      const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.72,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                            final item = filteredItems[index];
+
+                            return PublicClothingItem(
+                              itemId: item.itemId,
+                              title: item.itemName ?? '',
+                              imageUrl: item.thumbnailUrl ?? '',
+                              isSaved: item.isSaved ?? false,
+                              showSaveButton: !_isOwnItem(item),
+                              likes: 0,
+                              isForSale: item.isForSale,
+                              listedPrice: item.listedPrice,
+                              onTap: () => _openItemDetail(item),
+                              onSave: () => _toggleSaveItem(item),
+                              onLongPress: () {
+                                _showActionMenu(context, item);
+                              },
+                            );
+                          },
+                          childCount: filteredItems.length,
+                        ),
                       ),
                     ),
-
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: 100),
-                  ),
                 ],
               ),
             ),
@@ -361,52 +511,307 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with Single
     );
   }
 
-  Widget _buildCategoryTabs(List<String> filters) {
-    if (filters.length <= 1) return const SizedBox.shrink();
-
-    return Container(
-      height: 50,
-      margin: const EdgeInsets.only(top: 5, bottom: 15),
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: filters.length,
-        itemBuilder: (context, index) {
-          final name = filters[index];
-          final isSelected = _selectedFilter == name;
-          return Padding(
-            padding: const EdgeInsets.only(right: 25),
-            child: GestureDetector(
-              onTap: () {
-                setState(() => _selectedFilter = name);
-                HapticFeedback.selectionClick();
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 260,
+      pinned: true,
+      backgroundColor: const Color(0xFFF5F5F5),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.black,
+          size: 20,
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        _title,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.8,
+        ),
+      ),
+      centerTitle: true,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            _avatarUrl != null
+                ? Image.network(
+              _avatarUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) {
+                return _buildPlaceholderCover();
               },
-              child: Container(
-                decoration: BoxDecoration(border: isSelected ? const Border(bottom: BorderSide(color: Colors.black, width: 2)) : null),
-                alignment: Alignment.center,
-                child: Text(
-                    name.toUpperCase(),
-                    style: TextStyle(
-                        color: isSelected ? Colors.black : Colors.black26,
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                        letterSpacing: 0
-                    )
+            )
+                : _buildPlaceholderCover(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0.25),
+                    Colors.white.withOpacity(0.75),
+                    const Color(0xFFF5F5F5),
+                  ],
                 ),
               ),
             ),
-          );
-        },
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 24,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 78,
+                    height: 78,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: _avatarUrl != null
+                          ? Image.network(
+                        _avatarUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) {
+                          return _avatarPlaceholderIcon();
+                        },
+                      )
+                          : _avatarPlaceholderIcon(),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _userName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.isOwnerView
+                                ? 'Public wardrobe preview'
+                                : 'Public wardrobe collection',
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileSummary() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
+        decoration: _cardDecoration(),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildStatItem(
+                '$_totalPublicItems',
+                'ITEMS',
+              ),
+            ),
+            _verticalDivider(),
+            Expanded(
+              child: _buildStatItem(
+                '$_countFollower',
+                'FOLLOWERS',
+              ),
+            ),
+            _verticalDivider(),
+            Expanded(
+              child: _buildStatItem(
+                '$_countFollowing',
+                'FOLLOWING',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _verticalDivider() {
+    return Container(
+      width: 1,
+      height: 34,
+      color: const Color(0xFFEDEDED),
+    );
+  }
+
+  Widget _buildCategoryTabs(List<String> filters) {
+    return Container(
+      color: const Color(0xFFF5F5F5),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: SizedBox(
+        height: 40,
+        child: filters.length <= 1
+            ? Align(
+          alignment: Alignment.centerLeft,
+          child: _categoryChip(
+            name: 'All',
+            isSelected: true,
+          ),
+        )
+            : ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: filters.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            final name = filters[index];
+            final isSelected = _selectedFilter == name;
+
+            return _categoryChip(
+              name: name,
+              isSelected: isSelected,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryChip({
+    required String name,
+    required bool isSelected,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = name;
+        });
+        HapticFeedback.selectionClick();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? Colors.black : Colors.black.withOpacity(0.06),
+          ),
+          boxShadow: isSelected
+              ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ]
+              : null,
+        ),
+        child: Text(
+          name.toUpperCase(),
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black54,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.4,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildPlaceholderCover() {
     return Container(
-      color: Colors.black12,
+      color: const Color(0xFFEDEDED),
       child: const Center(
-        child: Icon(Icons.checkroom, color: Colors.black26, size: 80),
+        child: Icon(
+          Icons.checkroom,
+          color: Colors.black26,
+          size: 84,
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarPlaceholderIcon() {
+    return Container(
+      color: const Color(0xFFF1F1F1),
+      child: const Icon(
+        Icons.person,
+        color: Colors.black26,
+        size: 36,
+      ),
+    );
+  }
+
+  Widget _buildOwnerNotice() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: _cardDecoration(),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Colors.black,
+            size: 22,
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'This is your public wardrobe view. Other users can see these public items, but owner-only actions are hidden here.',
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -415,26 +820,88 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with Single
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: _cardDecoration(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.black,
+                size: 48,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Failed to load public wardrobe',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error ?? 'An unknown error occurred',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loadData,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'TRY AGAIN',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.black, size: 48),
-            const SizedBox(height: 12),
-            const Text(
-              'Failed to load public wardrobe',
-              style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error ?? 'An unknown error occurred',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black54),
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 72,
+              color: Colors.black12,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadData,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-              child: const Text('Try Again', style: TextStyle(color: Colors.white)),
+            Text(
+              message.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black26,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
+              ),
             ),
           ],
         ),
@@ -447,203 +914,69 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen> with Single
       children: [
         Text(
           value,
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 22),
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: const TextStyle(
+            color: Colors.black45,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: Colors.black.withOpacity(0.05),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
         ),
       ],
     );
   }
 }
 
-class CategoryDrawerShelf extends StatefulWidget {
-  final String categoryName;
-  final List<WardrobeItemModel> items;
-  final ScrollController scrollController;
-  final Function(WardrobeItemModel) onItemTap;
-  final Function(WardrobeItemModel) onItemSave;
-  final Function(WardrobeItemModel) onItemLongPress;
+class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
 
-  const CategoryDrawerShelf({
-    super.key,
-    required this.categoryName,
-    required this.items,
-    required this.scrollController,
-    required this.onItemTap,
-    required this.onItemSave,
-    required this.onItemLongPress,
+  _CategoryHeaderDelegate({
+    required this.child,
   });
 
   @override
-  State<CategoryDrawerShelf> createState() => _CategoryDrawerShelfState();
-}
-
-class _CategoryDrawerShelfState extends State<CategoryDrawerShelf> {
-  final GlobalKey _shelfKey = GlobalKey();
-  double _revealProgress = 0.0;
+  double get minExtent => 60;
 
   @override
-  void initState() {
-    super.initState();
-    widget.scrollController.addListener(_calculateProgress);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _calculateProgress());
+  double get maxExtent => 60;
+
+  @override
+  Widget build(
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
+    return child;
   }
 
   @override
-  void dispose() {
-    widget.scrollController.removeListener(_calculateProgress);
-    super.dispose();
-  }
-
-  void _calculateProgress() {
-    if (_shelfKey.currentContext == null || !mounted) return;
-
-    final RenderBox? box = _shelfKey.currentContext!.findRenderObject() as RenderBox?;
-    if (box == null) return;
-
-    final positionY = box.localToGlobal(Offset.zero).dy;
-    final screenH = MediaQuery.of(context).size.height;
-    final itemH = box.size.height;
-
-    double progress = 1.0;
-
-    if (positionY > screenH - 200) {
-      progress = (screenH - positionY) / 200;
-    }
-    else if (positionY < 120) {
-      progress = (positionY + itemH) / 120;
-    }
-
-    progress = progress.clamp(0.0, 1.0);
-
-    if (_revealProgress != progress) {
-      setState(() {
-        _revealProgress = progress;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    return Container(
-      key: _shelfKey,
-      height: 280,
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.only(left: 20, right: 20, top: 40),
-              itemCount: widget.items.length,
-              itemBuilder: (context, index) {
-                final item = widget.items[index];
-                return Container(
-                  width: 160,
-                  margin: const EdgeInsets.only(right: 16),
-                  child: PublicClothingItem(
-                    itemId: item.itemId,
-                    title: item.itemName,
-                    imageUrl: item.imageUrl ?? '',
-                    isSaved: item.isSaved,
-                    showSaveButton: !item.isOwner,
-                    likes: 0,
-                    onTap: () => widget.onItemTap(item),
-                    onSave: () => widget.onItemSave(item),
-                    onLongPress: () => widget.onItemLongPress(item),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          Positioned(
-            left: 20,
-            top: 0,
-            child: Text(
-              widget.categoryName.toUpperCase(),
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-
-          Positioned(
-            top: 40,
-            bottom: 0,
-            right: 0,
-            width: screenWidth,
-            child: IgnorePointer(
-              ignoring: _revealProgress > 0.5,
-              child: Transform.translate(
-                offset: Offset(screenWidth * _revealProgress, 0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 20,
-                        offset: const Offset(-5, 0),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                    ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.55),
-                          border: Border(
-                            left: BorderSide(color: Colors.white.withOpacity(0.15), width: 1),
-                            top: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-                            bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-                          ),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.lock_outline, color: Colors.white70, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                widget.categoryName.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  bool shouldRebuild(covariant _CategoryHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child;
   }
 }
 
@@ -654,48 +987,53 @@ class FabricPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint1 = Paint()..color = Colors.black.withOpacity(0.04)..style = PaintingStyle.fill;
-    final paint2 = Paint()..color = Colors.black.withOpacity(0.06)..style = PaintingStyle.fill;
-    final paint3 = Paint()..color = Colors.black.withOpacity(0.03)..style = PaintingStyle.fill;
-    final paint4 = Paint()..color = Colors.black.withOpacity(0.05)..style = PaintingStyle.fill;
-    final paint5 = Paint()..color = Colors.black.withOpacity(0.02)..style = PaintingStyle.fill;
+    final paint1 = Paint()
+      ..color = Colors.black.withOpacity(0.025)
+      ..style = PaintingStyle.fill;
+    final paint2 = Paint()
+      ..color = Colors.black.withOpacity(0.035)
+      ..style = PaintingStyle.fill;
+    final paint3 = Paint()
+      ..color = Colors.black.withOpacity(0.02)
+      ..style = PaintingStyle.fill;
 
-    Path path1 = Path();
-    path1.moveTo(0, size.height * 0.1);
-    path1.quadraticBezierTo(size.width * 0.5, size.height * 0.2 + math.sin(animationValue * 2 * math.pi) * 60, size.width, size.height * 0.05);
-    path1.lineTo(size.width, 0);
-    path1.lineTo(0, 0);
-    path1.close();
+    final path1 = Path()
+      ..moveTo(0, size.height * 0.12)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * 0.2 + math.sin(animationValue * 2 * math.pi) * 50,
+        size.width,
+        size.height * 0.08,
+      )
+      ..lineTo(size.width, 0)
+      ..lineTo(0, 0)
+      ..close();
 
-    Path path2 = Path();
-    path2.moveTo(0, size.height * 0.8);
-    path2.quadraticBezierTo(size.width * 0.4, size.height * 0.7 + math.cos(animationValue * 2 * math.pi) * 80, size.width * 0.8, size.height * 0.9);
-    path2.quadraticBezierTo(size.width * 0.95, size.height * 0.95 + math.sin(animationValue * math.pi) * 30, size.width, size.height * 0.8);
-    path2.lineTo(size.width, size.height);
-    path2.lineTo(0, size.height);
-    path2.close();
+    final path2 = Path()
+      ..moveTo(0, size.height * 0.8)
+      ..quadraticBezierTo(
+        size.width * 0.4,
+        size.height * 0.7 + math.cos(animationValue * 2 * math.pi) * 70,
+        size.width,
+        size.height * 0.88,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
 
-    Path path3 = Path();
-    path3.moveTo(size.width * 0.2, 0);
-    path3.quadraticBezierTo(size.width * 0.6 + math.sin(animationValue * 2 * math.pi + math.pi) * 80, size.height * 0.5, size.width, size.height * 0.4);
-    path3.lineTo(size.width, 0);
-    path3.close();
-
-    Path path4 = Path();
-    path4.moveTo(0, size.height * 0.4);
-    path4.quadraticBezierTo(size.width * 0.3 + math.cos(animationValue * 2 * math.pi) * 50, size.height * 0.5 + math.sin(animationValue * 2 * math.pi) * 50, 0, size.height * 0.7);
-    path4.close();
-
-    Path path5 = Path();
-    path5.moveTo(size.width, size.height * 0.3);
-    path5.quadraticBezierTo(size.width * 0.7 + math.sin(animationValue * 2 * math.pi) * 70, size.height * 0.6 + math.cos(animationValue * 2 * math.pi) * 40, size.width, size.height * 0.7);
-    path5.close();
+    final path3 = Path()
+      ..moveTo(size.width, size.height * 0.24)
+      ..quadraticBezierTo(
+        size.width * 0.72 + math.sin(animationValue * 2 * math.pi) * 60,
+        size.height * 0.54,
+        size.width,
+        size.height * 0.72,
+      )
+      ..close();
 
     canvas.drawPath(path1, paint1);
     canvas.drawPath(path2, paint2);
     canvas.drawPath(path3, paint3);
-    canvas.drawPath(path4, paint4);
-    canvas.drawPath(path5, paint5);
   }
 
   @override
