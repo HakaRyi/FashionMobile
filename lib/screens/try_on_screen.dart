@@ -15,7 +15,6 @@ import '../constants/notification_type.dart';
 import '../utils/app_notification.dart';
 import '../utils/global_event_bus.dart';
 import '../utils/model_manager.dart';
-import '../widgets/price_info_widget.dart';
 import '../utils/try_on_manager.dart';
 import './create_post_screens.dart';
 import 'package:gal/gal.dart';
@@ -68,7 +67,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
 
   TryOnModelSource _selectedModel = const TryOnModelSource(
     assetPath: "assets/images/human1.jpg",
-    displayName: "Model mặc định",
+    displayName: "Default Model",
   );
 
   late AnimationController _curtainController;
@@ -200,7 +199,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       final token = prefs.getString('token') ?? '';
 
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.getAllMyItemEndpoint}'),
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.getAllMyItemsEndpoint}'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -278,8 +277,8 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
         if (!mounted) return;
         NotificationService.show(
           context,
-          title: "Lỗi",
-          message: "Không thể tải món đồ để thử",
+          title: "Error",
+          message: "Failed to load item for try-on",
           type: NotificationType.error,
         );
         return;
@@ -292,7 +291,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       NotificationService.show(
         context,
         title: "Notification",
-        message: "Vui Lòng Chọn Đồ trước khi thử",
+        message: "Please select an item before trying on",
         type: NotificationType.info,
       );
       return;
@@ -301,8 +300,8 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
     if (mounted) {
       NotificationService.show(
         context,
-        title: "Thành công",
-        message: "Hệ thống đang xử lý ngầm. Bạn có thể lướt xem các mục khác!",
+        title: "Success",
+        message: "Processing in the background. You can browse other items!",
         type: NotificationType.success,
       );
     }
@@ -356,7 +355,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
             setState(() => _selectedModel = model);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text("Đã chọn ${_selectedModel.displayName}", style: const TextStyle(color: Colors.white)),
+                content: Text("Selected ${_selectedModel.displayName}", style: const TextStyle(color: Colors.white)),
                 backgroundColor: Colors.black,
               ),
             );
@@ -404,6 +403,22 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
             letterSpacing: 2,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report_outlined, color: Colors.black),
+            onPressed: () {
+              if (_curtainController.status == AnimationStatus.completed || _curtainController.status == AnimationStatus.forward) {
+                _magicController.stop();
+                _progressController.stop();
+                _curtainController.reverse();
+              } else {
+                _curtainController.forward();
+                _magicController.repeat();
+                _progressController.forward(from: 0.0);
+              }
+            },
+          ),
+        ],
       ),
       body: ListenableBuilder(
         listenable: tryOnManager,
@@ -614,8 +629,8 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                 if (result == true && context.mounted) {
                                   NotificationService.show(
                                     context,
-                                    title: "Thành Công",
-                                    message: "Lưu đồ vào tủ đồ thành công",
+                                    title: "Success",
+                                    message: "Saved to wardrobe successfully",
                                     type: NotificationType.success,
                                   );
                                   _clearTryOnResult();
@@ -658,7 +673,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
-                            "CHỌN MÓN ĐỒ",
+                            "SELECT ITEM",
                             style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5),
                           ),
                         ),
@@ -681,7 +696,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
-                            "LỊCH SỬ THỬ ĐỒ",
+                            "TRY-ON HISTORY",
                             style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5),
                           ),
                         ),
@@ -701,72 +716,94 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                     color: Colors.white,
                     border: Border(top: BorderSide(color: Colors.black.withOpacity(0.1))),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              PriceInfoWidget(
-                                label: "Số dư:",
-                                value: _isLoadingBalance ? "..." : "${_currentBalance.toInt()} đ",
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              "BALANCE",
+                              style: TextStyle(
                                 color: Colors.black54,
-                                valueTextColor: Colors.black54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
                               ),
-                              const SizedBox(height: 8),
-                              PriceInfoWidget(
-                                label: "Chi phí:",
-                                value: "${_tryOnCost.toInt()} đ",
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _isLoadingBalance ? "..." : "${_currentBalance.toInt()} VND",
+                              style: const TextStyle(
                                 color: Colors.black,
-                                valueTextColor: Colors.black,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
                               ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Container(
-                            height: 50,
-                            width: MediaQuery.of(context).size.width * 0.45,
-                            decoration: BoxDecoration(
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "COST",
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "${_tryOnCost.toInt()} VND",
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 54,
+                        width: MediaQuery.of(context).size.width * 0.45,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: isNotEnoughBalance
+                              ? Colors.black54
+                              : (canProceed && !isProcessing
+                              ? Colors.black
+                              : Colors.black12),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: isNotEnoughBalance
+                              ? () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => DepositScreen()))
+                                .then((_) => _fetchWalletBalance());
+                          }
+                              : (canProceed && !isProcessing ? _handleStartTryOn : null),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              color: isNotEnoughBalance
-                                  ? Colors.black54
-                                  : (canProceed && !isProcessing
-                                  ? Colors.black
-                                  : Colors.black12),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: isNotEnoughBalance
-                                  ? () {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => DepositScreen()))
-                                    .then((_) => _fetchWalletBalance());
-                              }
-                                  : (canProceed && !isProcessing ? _handleStartTryOn : null),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Text(
-                                isNotEnoughBalance
-                                    ? "NẠP THÊM"
-                                    : (_isPreparingNetworkCloth
-                                    ? "ĐANG CHUẨN BỊ..."
-                                    : "THỬ ĐỒ NGAY"),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
                             ),
                           ),
-                        ],
+                          child: Text(
+                            isNotEnoughBalance
+                                ? "TOP UP"
+                                : (_isPreparingNetworkCloth
+                                ? "PREPARING..."
+                                : "TRY IT ON"),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -815,8 +852,8 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text("Vui lòng cấp quyền truy cập ảnh trong Cài đặt.", style: TextStyle(color: Colors.white)),
-              action: SnackBarAction(label: "Mở Cài đặt", onPressed: openAppSettings, textColor: Colors.white),
+              content: const Text("Storage permission required.", style: TextStyle(color: Colors.white)),
+              action: SnackBarAction(label: "Settings", onPressed: openAppSettings, textColor: Colors.white),
               backgroundColor: Colors.black,
             ),
           );
@@ -832,7 +869,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Đã lưu ảnh vào thư viện thành công!", style: TextStyle(color: Colors.white)),
+            content: Text("Image saved to gallery successfully!", style: TextStyle(color: Colors.white)),
             backgroundColor: Colors.black,
           ),
         );
@@ -841,7 +878,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Lỗi khi lưu ảnh: ${e.type.message}", style: const TextStyle(color: Colors.white)),
+            content: Text("Error saving image: ${e.type.message}", style: const TextStyle(color: Colors.white)),
             backgroundColor: Colors.black,
           ),
         );
@@ -849,7 +886,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lỗi không xác định: $e", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.black),
+          SnackBar(content: Text("Unknown error: $e", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.black),
         );
       }
     }
