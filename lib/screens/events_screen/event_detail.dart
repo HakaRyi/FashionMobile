@@ -5,6 +5,7 @@ import 'dart:ui';
 import '../../models/event_model.dart';
 import '../../models/post_feed_model.dart';
 import '../../services/event_service.dart';
+import '../../services/wallet_service.dart'; // IMPORT WalletService
 import 'package:intl/intl.dart';
 
 import '../../utils/route_transitions.dart';
@@ -29,12 +30,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   bool _isLoading = true;
   bool _isLoadingPosts = true;
 
+  // Wallet
+  final WalletService _walletService = WalletService();
+  double _currentBalance = 0;
+  bool _isLoadingBalance = true;
+
+  final NumberFormat _currencyFormatter = NumberFormat('#,##0', 'vi_VN');
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _tabController = TabController(length: 2, vsync: this);
-    // Vẫn giữ controller nhưng sẽ làm hiệu ứng nhẹ nhàng hơn
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -52,18 +59,30 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 
   Future<void> _loadAllData() async {
+    // Chạy song song cả 3 API: Event, Posts và Balance
     final results = await Future.wait([
       EventService().getEventById(widget.eventId),
       EventService().getEventPosts(widget.eventId),
+      _fetchBalanceSafe(), // Hàm lấy số dư bọc try-catch
     ]);
 
     if (mounted) {
       setState(() {
         _event = results[0] as EventModel?;
         _eventPosts = results[1] as List<PostFeedModel>;
+        _currentBalance = results[2] as double;
         _isLoading = false;
         _isLoadingPosts = false;
+        _isLoadingBalance = false;
       });
+    }
+  }
+
+  Future<double> _fetchBalanceSafe() async {
+    try {
+      return await _walletService.getMyWalletBalance();
+    } catch (e) {
+      return 0.0;
     }
   }
 
@@ -96,7 +115,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // Nền xám cực nhẹ
+      backgroundColor: const Color(0xFFF5F5F5),
       body: Stack(
         children: [
           NestedScrollView(
@@ -109,7 +128,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                   delegate: _SliverAppBarDelegate(
                     TabBar(
                       controller: _tabController,
-                      indicatorColor: Colors.black, // Đổi sang đen
+                      indicatorColor: Colors.black,
                       indicatorWeight: 2.5,
                       labelColor: Colors.black,
                       unselectedLabelColor: Colors.black45,
@@ -139,7 +158,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 380, // Tăng chiều cao banner lên một chút cho đẹp
+      expandedHeight: 380,
       pinned: true,
       backgroundColor: Colors.white,
       leading: IconButton(
@@ -278,6 +297,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 
   Widget _buildMainStats() {
+    String feeText = _event!.entryFee <= 0 ? "Free" : "${_currencyFormatter.format(_event!.entryFee)} ₫";
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
@@ -292,7 +313,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
           Container(width: 1, height: 30, color: const Color(0xFFE0E0E0)),
           _buildStatItem(Icons.emoji_events_outlined, NumberFormat.compact().format(_event!.totalPrizePool), "PRIZE POOL"),
           Container(width: 1, height: 30, color: const Color(0xFFE0E0E0)),
-          _buildStatItem(Icons.verified_user_outlined, "Free", "ENTRY FEE"),
+          _buildStatItem(Icons.account_balance_wallet_outlined, feeText, "ENTRY FEE"),
         ],
       ),
     );
@@ -408,19 +429,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     IconData prizeIcon;
     Color prizeColor;
 
-    // Giữ tông màu kim loại nhưng làm mờ đi cho sang (Muted tones)
     switch (p.ranked) {
       case 1:
         prizeIcon = Icons.emoji_events;
-        prizeColor = const Color(0xFFD4AF37); // Muted Gold
+        prizeColor = const Color(0xFFD4AF37);
         break;
       case 2:
         prizeIcon = Icons.military_tech;
-        prizeColor = const Color(0xFF9E9E9E); // Silver
+        prizeColor = const Color(0xFF9E9E9E);
         break;
       case 3:
         prizeIcon = Icons.stars;
-        prizeColor = const Color(0xFF8D6E63); // Bronze
+        prizeColor = const Color(0xFF8D6E63);
         break;
       default:
         prizeIcon = Icons.card_giftcard;
@@ -511,42 +531,78 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     final bool isPastDeadline = _event!.submissionDeadline != null &&
         DateTime.now().isAfter(_event!.submissionDeadline!);
 
+    // Kiểm tra số dư nếu sự kiện có phí
+    bool hasEnoughBalance = true;
+    if (_event!.entryFee > 0) {
+      hasEnoughBalance = _currentBalance >= _event!.entryFee;
+    }
+
+    String btnText = "JOIN NOW";
+    if (_event!.entryFee > 0 && !joined && !isPastDeadline) {
+      btnText = "JOIN - ${_currencyFormatter.format(_event!.entryFee)}đ";
+    }
+
     return Positioned(
       bottom: 0, left: 0, right: 0,
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.9),
               border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text("STATUS", style: TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                      const SizedBox(height: 4),
-                      Text(
-                        isPastDeadline ? "EXPIRED" : "ACTIVE",
-                        style: TextStyle(
-                            color: isPastDeadline ? Colors.black45 : Colors.black,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5
+                // Dòng cảnh báo khi không đủ tiền
+                if (_event!.entryFee > 0 && !hasEnoughBalance && !joined && !isPastDeadline && !_isLoadingBalance)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.error_outline, color: Colors.redAccent, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          "Insufficient balance. Please top up.",
+                          style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w700),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(
-                  height: 52,
-                  width: 180,
-                  child: (joined || isPastDeadline) ? _buildDisabledState(isPastDeadline) : _buildActiveState(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text("STATUS", style: TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          const SizedBox(height: 4),
+                          Text(
+                            isPastDeadline ? "EXPIRED" : "ACTIVE",
+                            style: TextStyle(
+                                color: isPastDeadline ? Colors.black45 : Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 52,
+                      width: 180,
+                      child: (joined || isPastDeadline)
+                          ? _buildDisabledState(isPastDeadline ? "EXPIRED" : "JOINED")
+                          : (!hasEnoughBalance && !_isLoadingBalance)
+                          ? _buildDisabledState("INSUFFICIENT FUNDS") // Disable button nếu không đủ tiền
+                          : _buildActiveState(btnText),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -556,7 +612,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  Widget _buildDisabledState(bool isPastDeadline) {
+  Widget _buildDisabledState(String label) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -565,11 +621,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
       ),
       child: Center(
         child: Text(
-          isPastDeadline ? "EXPIRED" : "JOINED",
+          label,
           style: const TextStyle(
             color: Colors.black45,
             fontWeight: FontWeight.w800,
-            fontSize: 13,
+            fontSize: 12,
             letterSpacing: 1.0,
           ),
         ),
@@ -577,17 +633,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     );
   }
 
-  Widget _buildActiveState() {
+  Widget _buildActiveState(String btnText) {
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (context, child) {
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: Colors.black, // Đen tuyền chuẩn Minimalist
+            color: Colors.black,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15 * _pulseController.value), // Hiệu ứng pulse đen mờ
+                color: Colors.black.withOpacity(0.15 * _pulseController.value),
                 blurRadius: 15,
                 spreadRadius: 2,
               ),
@@ -608,13 +664,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                   ),
                 );
               },
-              child: const Center(
+              child: Center(
                 child: Text(
-                  "JOIN NOW",
-                  style: TextStyle(
+                  btnText,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                    fontSize: 12,
                     letterSpacing: 1.0,
                   ),
                 ),
@@ -635,7 +691,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
             width: 3,
             height: 16,
             decoration: BoxDecoration(
-              color: Colors.black, // Vạch đen dọc làm điểm nhấn
+              color: Colors.black,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -647,7 +703,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 }
 
-// --- HELPER DELEGATE CHO TABBAR ---
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar);
   final TabBar _tabBar;
@@ -682,7 +737,7 @@ class _ParticleOverlayState extends State<ParticleOverlay> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 15))..repeat(); // Chạy chậm lại
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 15))..repeat();
   }
 
   @override
@@ -698,8 +753,8 @@ class _ParticleOverlayState extends State<ParticleOverlay> with SingleTickerProv
       builder: (context, child) {
         return Stack(
           children: _particles.map((p) {
-            double y = (p.initialY - _controller.value * p.speed * 300) % 400; // Bay chậm hơn
-            double opacity = (math.sin(_controller.value * 2 * math.pi * p.blinkSpeed) + 1) / 2 * 0.4; // Làm mờ đi
+            double y = (p.initialY - _controller.value * p.speed * 300) % 400;
+            double opacity = (math.sin(_controller.value * 2 * math.pi * p.blinkSpeed) + 1) / 2 * 0.4;
             return Positioned(
               top: y,
               left: p.initialX,
@@ -722,7 +777,7 @@ class _ParticleOverlayState extends State<ParticleOverlay> with SingleTickerProv
 class Particle {
   final double initialX = math.Random().nextDouble() * 400;
   final double initialY = math.Random().nextDouble() * 400;
-  final double size = math.Random().nextDouble() * 2 + 1; // Hạt nhỏ lại
+  final double size = math.Random().nextDouble() * 2 + 1;
   final double speed = math.Random().nextDouble() * 0.3 + 0.1;
   final double blinkSpeed = math.Random().nextDouble() * 1.5 + 0.5;
 }

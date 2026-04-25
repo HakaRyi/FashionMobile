@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:fashion_mobile/screens/physical_profile_screen.dart';
 import 'package:fashion_mobile/utils/app_notification.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../constants/notification_type.dart';
 import '../services/user_profile_service.dart';
@@ -175,11 +176,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               child: Column(
                 children: [
                   const SizedBox(height: 80),
-                  Image.asset(
-                    'assets/images/logowapo.png',
-                    height: 45,
-                    fit: BoxFit.contain,
-                    color: Colors.black,
+                  // Image.asset(
+                  //   'assets/images/logowapo.png',
+                  //   height: 45,
+                  //   fit: BoxFit.contain,
+                  //   color: Colors.black,
+                  // ),
+                  Text(
+                    "WAPO",
+                    style: GoogleFonts.playfairDisplay(
+                      textStyle: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 44,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3.0,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Text(

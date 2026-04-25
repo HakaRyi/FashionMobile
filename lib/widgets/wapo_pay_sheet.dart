@@ -80,7 +80,7 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.backgroundSecondary,
+              color: AppColors.surface2,
               borderRadius: BorderRadius.circular(16),
 
             ),

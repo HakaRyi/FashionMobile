@@ -19,6 +19,7 @@ class EventModel {
   final double appliedFee;
   final double expertWeight;
   final double userWeight;
+  final double entryFee;
   final List<PrizeModel> prizes;
   final List<ExpertModel> experts;
 
@@ -42,6 +43,7 @@ class EventModel {
     required this.userWeight,
     this.prizes = const [],
     this.experts = const [],
+    required this.entryFee,
   });
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
@@ -67,6 +69,7 @@ class EventModel {
       prizes: (json['prizes'] as List?)?.map((p) => PrizeModel.fromJson(p)).toList() ?? [],
       experts: (json['experts'] as List?)?.map((e) => ExpertModel.fromJson(e)).toList() ?? [],
       creatorAvatarUrl: json['creatorAvatarUrl'],
+      entryFee: (json['entryFee'] ?? 0).toDouble(),
     );
   }
 

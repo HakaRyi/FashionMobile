@@ -1,3 +1,4 @@
+// lib/screens/event_list_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -5,7 +6,6 @@ import '../../models/event_model.dart';
 import '../../services/event_service.dart';
 import '../../utils/route_transitions.dart';
 import '../../widgets/animated_fabric_background.dart';
-import 'event_access_screen.dart';
 import 'event_detail.dart' hide EventModel;
 import 'event_result_screen.dart';
 import 'package:intl/intl.dart';
@@ -73,40 +73,40 @@ class _EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-        child: AnimatedFabricBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          elevation: 0,
+      child: AnimatedFabricBackground(
+        child: Scaffold(
           backgroundColor: Colors.transparent,
-          titleSpacing: 20,
-          title: const Text(
-              "Fashion Events",
-              style: TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 26,
-                  letterSpacing: -0.5
-              )
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            titleSpacing: 20,
+            title: const Text(
+                "Fashion Events",
+                style: TextStyle(
+                    color: Color(0xFF1A1A1A),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    letterSpacing: -0.5
+                )
+            ),
+            centerTitle: false,
+            bottom: const TabBar(
+              dividerColor: Colors.transparent,
+              indicatorColor: Colors.black,
+              indicatorSize: TabBarIndicatorSize.label,
+              indicatorWeight: 3,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.black45,
+              labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0),
+              tabs: [
+                Tab(text: "EXPLORE"),
+                Tab(text: "MY EVENTS")
+              ],
+            ),
           ),
-          centerTitle: false,
-          bottom: const TabBar(
-            dividerColor: Colors.transparent,
-            indicatorColor: Colors.black,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicatorWeight: 3,
-            labelColor: Colors.black,
-            unselectedLabelColor: Colors.black45,
-            labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0),
-            tabs: [
-              Tab(text: "EXPLORE"),
-              Tab(text: "MY EVENTS")
-            ],
-          ),
+          body: _buildBody(),
         ),
-        body: _buildBody(),
       ),
-        ),
     );
   }
 
@@ -201,14 +201,15 @@ class EventCard extends StatelessWidget {
     final String endTimeStr = DateFormat('HH:mm - dd/MM/yyyy').format(event.endTime.toLocal());
     final String timeRange = "$startTimeStr - $endTimeStr";
 
+    final NumberFormat currencyFormatter = NumberFormat('#,##0', 'vi_VN');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24), // Bo góc mượt mà
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1), // Viền xám tinh tế
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
         boxShadow: [
-          // Bóng đổ cực nhẹ, không làm nặng mắt
           BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
@@ -261,7 +262,7 @@ class EventCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, color: Colors.black54, size: 14), // Đổi màu icon
+                          const Icon(Icons.calendar_today_rounded, color: Colors.black54, size: 14),
                           const SizedBox(width: 6),
                           Expanded(
                               child: Text(
@@ -283,7 +284,7 @@ class EventCard extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: AspectRatio(
-                          aspectRatio: 1.6, // Tỉ lệ đẹp cho hình ảnh banner
+                          aspectRatio: 1.6,
                           child: Image.network(
                             event.imageUrl,
                             fit: BoxFit.cover,
@@ -306,6 +307,35 @@ class EventCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // BADGE FEE GÓC TRÊN BÊN PHẢI
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: event.entryFee <= 0 ? Colors.green.withOpacity(0.9) : Colors.black.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                event.entryFee <= 0 ? Icons.check_circle_outline : Icons.monetization_on_outlined,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                event.entryFee <= 0 ? "FREE" : "${currencyFormatter.format(event.entryFee)} ₫",
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // STATS BÊN DƯỚI
                       Positioned(
                         bottom: 12,
                         left: 12,
@@ -345,7 +375,7 @@ class EventCard extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.white, size: 16), // Chuyển từ hồng sang trắng
+              Icon(icon, color: Colors.white, size: 16),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,22 +398,21 @@ class EventCard extends StatelessWidget {
     Color bgColor;
     Color borderColor;
 
-    // Logic phối màu Monochrome chuẩn
     if (status.toUpperCase() == "COMPLETED") {
       displayStatus = "COMPLETED";
-      textColor = Colors.black45; // Xám nhạt cho sự kiện đã qua
+      textColor = Colors.black45;
       bgColor = const Color(0xFFF5F5F5);
       borderColor = const Color(0xFFEEEEEE);
     }
     else if (isJoined) {
       displayStatus = "JOINED";
-      textColor = Colors.white; // Chữ trắng nền đen nổi bật việc đã tham gia
+      textColor = Colors.white;
       bgColor = Colors.black;
       borderColor = Colors.black;
     }
     else {
       displayStatus = status.toUpperCase();
-      textColor = Colors.black; // Chữ đen viền đen cho sự kiện mới
+      textColor = Colors.black;
       bgColor = Colors.transparent;
       borderColor = Colors.black26;
     }
