@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:fashion_mobile/screens/deposit_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -28,6 +30,7 @@ import '../widgets/try_on/cloth_selection_row.dart';
 import '../widgets/try_on/try_on_history_list.dart';
 import '../widgets/try_on/try_on_image_preview.dart';
 import '../services/wallet_service.dart';
+import 'dart:async';
 
 class TryOnScreen extends StatefulWidget {
   final TryOnSourceItem? sourceItem;
@@ -41,7 +44,7 @@ class TryOnScreen extends StatefulWidget {
   State<TryOnScreen> createState() => _TryOnScreenState();
 }
 
-class _TryOnScreenState extends State<TryOnScreen> {
+class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin {
   File? selectedClothFile;
   final int currentBalance = 0;
   final int tryOnCost = 0;
@@ -68,11 +71,32 @@ class _TryOnScreenState extends State<TryOnScreen> {
     displayName: "Model mặc định",
   );
 
+  late AnimationController _curtainController;
+  late Animation<double> _curtainAnimation;
+  late AnimationController _magicController;
+  late AnimationController _progressController;
+  late AnimationController _sweepController;
+  late Animation<double> _sweepAnimation;
+  bool _wasProcessing = false;
+
   @override
   void initState() {
     super.initState();
+    _curtainController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    _curtainAnimation = CurvedAnimation(parent: _curtainController, curve: Curves.easeInOutCubic);
+    _magicController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
+    _progressController = AnimationController(vsync: this, duration: const Duration(seconds: 40));
+
+    _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _sweepAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(CurvedAnimation(parent: _sweepController, curve: Curves.easeInOutSine));
+    Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted) _sweepController.forward(from: 0.0);
+    });
+
     modelManager.fetchMyModels();
     tryOnManager.fetchHistory();
+    tryOnManager.addListener(_onTryOnStateChanged);
+
     _fetchWardrobeItems();
     _fetchMyOutfits();
     _fetchWalletBalance();
@@ -82,6 +106,37 @@ class _TryOnScreenState extends State<TryOnScreen> {
       _selectedClothName = widget.sourceItem!.itemName;
       _selectedCategoryId = _mapCategoryToInt(widget.sourceItem!.category ?? '');
     }
+
+    if (tryOnManager.isProcessing) {
+      _curtainController.value = 1.0;
+      _magicController.repeat();
+      _progressController.forward();
+      _wasProcessing = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    tryOnManager.removeListener(_onTryOnStateChanged);
+    _curtainController.dispose();
+    _magicController.dispose();
+    _progressController.dispose();
+    _sweepController.dispose();
+    super.dispose();
+  }
+
+  void _onTryOnStateChanged() {
+    final isProcessing = tryOnManager.isProcessing;
+    if (isProcessing && !_wasProcessing) {
+      _curtainController.forward();
+      _magicController.repeat();
+      _progressController.forward(from: 0.0);
+    } else if (!isProcessing && _wasProcessing) {
+      _magicController.stop();
+      _progressController.stop();
+      _curtainController.reverse();
+    }
+    _wasProcessing = isProcessing;
   }
 
   int _mapCategoryToInt(String category) {
@@ -105,7 +160,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error fetching wallet balance: $e');
       if (mounted) setState(() => _isLoadingBalance = false);
     }
   }
@@ -136,7 +190,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
         if (mounted) setState(() => _isLoadingOutfits = false);
       }
     } catch (e) {
-      debugPrint('Error fetching outfits: $e');
       if (mounted) setState(() => _isLoadingOutfits = false);
     }
   }
@@ -167,7 +220,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
         if (mounted) setState(() => _isLoadingWardrobe = false);
       }
     } catch (e) {
-      debugPrint('Error fetching wardrobe: $e');
       if (mounted) setState(() => _isLoadingWardrobe = false);
     }
   }
@@ -187,9 +239,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
           _selectedCategoryId = null;
         });
       }
-    } catch (e) {
-      debugPrint(e.toString());
-    }
+    } catch (e) {}
   }
 
   Future<File?> _downloadNetworkImageToTempFile(String imageUrl) async {
@@ -205,7 +255,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
       await file.writeAsBytes(response.bodyBytes);
       return file;
     } catch (e) {
-      debugPrint('Download network cloth error: $e');
       return null;
     }
   }
@@ -221,8 +270,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
         _selectedNetworkClothUrl!.trim().isNotEmpty) {
       setState(() => _isPreparingNetworkCloth = true);
 
-      final downloadedFile =
-      await _downloadNetworkImageToTempFile(_selectedNetworkClothUrl!);
+      final downloadedFile = await _downloadNetworkImageToTempFile(_selectedNetworkClothUrl!);
 
       setState(() => _isPreparingNetworkCloth = false);
 
@@ -241,13 +289,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
     }
 
     if (clothPath == null || clothPath.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng chọn món đồ trước khi thử.'),
-          backgroundColor: Colors.orange,
-        ),
+      NotificationService.show(
+        context,
+        title: "Notification",
+        message: "Vui Lòng Chọn Đồ trước khi thử",
+        type: NotificationType.info,
       );
-
       return;
     }
 
@@ -268,20 +315,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
       category: _selectedCategoryId,
     );
     await _fetchWalletBalance();
-
-    // if (tryOnManager.resultImageBytes != null) {
-    //   GlobalEventBus().eventBus.fire(
-    //     TryOnCompletedEvent(
-    //       imageBytes: tryOnManager.resultImageBytes,
-    //     ),
-    //   );
-    // }
   }
 
   void _showFullWardrobeBottomSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -304,7 +343,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
   void _showModelSelectionBottomSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -317,8 +356,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
             setState(() => _selectedModel = model);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text("Đã chọn ${_selectedModel.displayName}"),
-                backgroundColor: Colors.green,
+                content: Text("Đã chọn ${_selectedModel.displayName}", style: const TextStyle(color: Colors.white)),
+                backgroundColor: Colors.black,
               ),
             );
           },
@@ -347,22 +386,22 @@ class _TryOnScreenState extends State<TryOnScreen> {
     bool canProceed = hasSelectedCloth && !isNotEnoughBalance && !_isPreparingNetworkCloth;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundSecondary,
+        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Thử đồ ảo",
+          "VIRTUAL TRY-ON",
           style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
+            color: Colors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2,
           ),
         ),
       ),
@@ -377,26 +416,173 @@ class _TryOnScreenState extends State<TryOnScreen> {
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(), // Hiệu ứng cuộn mượt mà
+                  physics: const BouncingScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TryOnImagePreview(
-                        resultBytes: resultBytes,
-                        isProcessing: isProcessing,
-                        selectedModel: _selectedModel,
-                        hasSelectedCloth: hasSelectedCloth,
-                        selectedClothFile: selectedClothFile,
-                        selectedNetworkClothUrl: _selectedNetworkClothUrl,
-                        onRemoveCloth: () {
-                          setState(() {
-                            selectedClothFile = null;
-                            _selectedNetworkClothUrl = null;
-                            _selectedClothName = null;
-                            _selectedCategoryId = null;
-                          });
-                        },
-                        onEditModel: _showModelSelectionBottomSheet,
+                      Stack(
+                        children: [
+                          TryOnImagePreview(
+                            resultBytes: resultBytes,
+                            isProcessing: isProcessing,
+                            selectedModel: _selectedModel,
+                            hasSelectedCloth: hasSelectedCloth,
+                            selectedClothFile: selectedClothFile,
+                            selectedNetworkClothUrl: _selectedNetworkClothUrl,
+                            onRemoveCloth: () {
+                              setState(() {
+                                selectedClothFile = null;
+                                _selectedNetworkClothUrl = null;
+                                _selectedClothName = null;
+                                _selectedCategoryId = null;
+                              });
+                            },
+                            onEditModel: _showModelSelectionBottomSheet,
+                          ),
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: AnimatedBuilder(
+                                animation: _curtainAnimation,
+                                builder: (context, child) {
+                                  final val = _curtainAnimation.value;
+                                  if (val == 0.0) return const SizedBox.shrink();
+                                  final width = MediaQuery.of(context).size.width / 2;
+                                  return Stack(
+                                    children: [
+                                      Positioned(
+                                        left: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: width * val,
+                                        child: ClipRect(
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.6)],
+                                                ),
+                                                border: Border(
+                                                  right: BorderSide(color: Colors.white.withOpacity(0.15), width: 1),
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.4),
+                                                    blurRadius: 20,
+                                                    offset: const Offset(10, 0),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: width * val,
+                                        child: ClipRect(
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.9)],
+                                                ),
+                                                border: Border(
+                                                  left: BorderSide(color: Colors.white.withOpacity(0.15), width: 1),
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.4),
+                                                    blurRadius: 20,
+                                                    offset: const Offset(-10, 0),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (val > 0.8)
+                                        Positioned.fill(
+                                          child: AnimatedBuilder(
+                                            animation: _magicController,
+                                            builder: (context, child) {
+                                              return CustomPaint(
+                                                painter: StageMagicPainter(_magicController.value),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      if (val > 0.8)
+                                        Positioned(
+                                          left: 40,
+                                          right: 40,
+                                          bottom: 40,
+                                          child: AnimatedBuilder(
+                                            animation: _progressController,
+                                            builder: (context, child) {
+                                              return Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  ClipRect(
+                                                    child: BackdropFilter(
+                                                      filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                                                      child: const Text(
+                                                        "AI IS FITTING YOUR OUTFIT...",
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w900,
+                                                          letterSpacing: 2,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  ClipRRect(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                    child: LinearProgressIndicator(
+                                                      value: _progressController.value,
+                                                      backgroundColor: Colors.white.withOpacity(0.2),
+                                                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                                      minHeight: 4,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    "${(_progressController.value * 100).toInt()}%",
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      if (val > 0.8)
+                                        Positioned.fill(
+                                          child: AnimatedBuilder(
+                                            animation: _sweepAnimation,
+                                            builder: (context, child) {
+                                              return CustomPaint(
+                                                painter: MirrorSweepPainter(_sweepAnimation.value),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                       if (resultBytes != null && !isProcessing)
@@ -405,12 +591,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _actionButton(Icons.delete_outline, "Xóa", Colors.redAccent, _clearTryOnResult),
-                              _actionButton(Icons.file_download_outlined, "Tải về", Colors.blueAccent, () async {
+                              _actionButton(Icons.delete_outline, "DELETE", Colors.black, _clearTryOnResult),
+                              _actionButton(Icons.file_download_outlined, "DOWNLOAD", Colors.black, () async {
                                 await _saveImageToGallery(resultBytes);
                                 _clearTryOnResult();
                               }),
-                              _actionButton(Icons.save_alt_outlined, "Lưu", Colors.amber, () async {
+                              _actionButton(Icons.save_alt_outlined, "SAVE", Colors.black, () async {
                                 final result = await showGeneralDialog<bool>(
                                   context: context,
                                   barrierDismissible: true,
@@ -435,7 +621,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   _clearTryOnResult();
                                 }
                               }),
-                              _actionButton(Icons.share_outlined, "Chia sẻ", Colors.green, () {
+                              _actionButton(Icons.share_outlined, "SHARE", Colors.black, () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -447,20 +633,20 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           ),
                         ),
 
-                      if (resultBytes == null && !isProcessing)
+                      if (resultBytes == null)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                           child: Row(
                             children: [
-                              const Icon(Icons.person, color: AppColors.textPrimary, size: 18),
+                              const Icon(Icons.person, color: Colors.black, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  "Model hiện tại: ${_selectedModel.displayName ?? 'Model mặc định'}",
+                                  "Model: ${_selectedModel.displayName ?? 'Default Model'}",
                                   style: const TextStyle(
-                                    color: AppColors.textPrimary,
+                                    color: Colors.black,
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
@@ -468,12 +654,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           ),
                         ),
 
-                      if (resultBytes == null && !isProcessing) ...[
+                      if (resultBytes == null) ...[
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
-                            "Chọn món đồ để thử",
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                            "CHỌN MÓN ĐỒ",
+                            style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5),
                           ),
                         ),
 
@@ -495,8 +681,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
-                            "Lịch sử thử đồ",
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                            "LỊCH SỬ THỬ ĐỒ",
+                            style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5),
                           ),
                         ),
 
@@ -508,12 +694,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 ),
               ),
 
-              if (resultBytes == null && !isProcessing)
+              if (resultBytes == null)
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
                   decoration: BoxDecoration(
-                    color: AppColors.mainBackground,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Colors.black.withOpacity(0.1))),
                   ),
                   child: Column(
                     children: [
@@ -525,17 +711,16 @@ class _TryOnScreenState extends State<TryOnScreen> {
                               PriceInfoWidget(
                                 label: "Số dư:",
                                 value: _isLoadingBalance ? "..." : "${_currentBalance.toInt()} đ",
-                                color: Colors.grey,
-                                valueTextColor: AppColors.textSecondary,
+                                color: Colors.black54,
+                                valueTextColor: Colors.black54,
                               ),
                               const SizedBox(height: 8),
                               PriceInfoWidget(
                                 label: "Chi phí:",
                                 value: "${_tryOnCost.toInt()} đ",
-                                color: AppColors.textPink,
-                                valueTextColor: AppColors.textPrimary,
+                                color: Colors.black,
+                                valueTextColor: Colors.black,
                               ),
-
                             ],
                           ),
                           const Spacer(),
@@ -543,33 +728,27 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             height: 50,
                             width: MediaQuery.of(context).size.width * 0.45,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              gradient: isNotEnoughBalance
-                                  ? const LinearGradient(colors: [Colors.orange, Colors.deepOrange])
+                              borderRadius: BorderRadius.circular(12),
+                              color: isNotEnoughBalance
+                                  ? Colors.black54
                                   : (canProceed && !isProcessing
-                                  ? const LinearGradient(colors: [Color(0xFFFC00A6), Color(0xFFB50076)])
-                                  : null),
-                              color: (!canProceed && !isNotEnoughBalance || isProcessing)
-                                  ? AppColors.textPrimary.withOpacity(0.1)
-                                  : null,
+                                  ? Colors.black
+                                  : Colors.black12),
                             ),
                             child: ElevatedButton(
                               onPressed: isNotEnoughBalance
                                   ? () {
-
                                 Navigator.push(
                                     context,
                                     MaterialPageRoute(builder: (_) => DepositScreen()))
                                     .then((_) => _fetchWalletBalance());
-
                               }
                                   : (canProceed && !isProcessing ? _handleStartTryOn : null),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
                                 shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                  side: BorderSide(color: AppColors.borderPrimary, width: 2)
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: Text(
@@ -582,6 +761,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
                             ),
@@ -604,10 +784,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.05),
               shape: BoxShape.circle,
+              border: Border.all(color: color.withOpacity(0.1)),
             ),
             child: Icon(icon, color: color),
           ),
@@ -616,8 +797,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
             label,
             style: TextStyle(
               color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
           ),
         ],
@@ -633,8 +815,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text("Vui lòng cấp quyền truy cập ảnh trong Cài đặt."),
-              action: SnackBarAction(label: "Mở Cài đặt", onPressed: openAppSettings),
+              content: const Text("Vui lòng cấp quyền truy cập ảnh trong Cài đặt.", style: TextStyle(color: Colors.white)),
+              action: SnackBarAction(label: "Mở Cài đặt", onPressed: openAppSettings, textColor: Colors.white),
+              backgroundColor: Colors.black,
             ),
           );
         }
@@ -649,8 +832,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Đã lưu ảnh vào thư viện thành công!"),
-            backgroundColor: Colors.green,
+            content: Text("Đã lưu ảnh vào thư viện thành công!", style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.black,
           ),
         );
       }
@@ -658,17 +841,139 @@ class _TryOnScreenState extends State<TryOnScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Lỗi khi lưu ảnh: ${e.type.message}"),
-            backgroundColor: Colors.red,
+            content: Text("Lỗi khi lưu ảnh: ${e.type.message}", style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.black,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lỗi không xác định: $e"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Lỗi không xác định: $e", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.black),
         );
       }
     }
+  }
+}
+
+class StageMagicPainter extends CustomPainter {
+  final double animationValue;
+
+  StageMagicPainter(this.animationValue);
+
+  void drawDiamond(Canvas canvas, Offset center, double size, Paint paint) {
+    Path path = Path();
+    path.moveTo(center.dx, center.dy - size);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx + size, center.dy);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx - size, center.dy);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = math.Random(42);
+    final centerX = size.width / 2;
+    final wandX = centerX;
+    final wandY = size.height / 2 + math.sin(animationValue * 2 * math.pi) * 10;
+
+    const Color paleYellowWhite = Color(0xFFFFFDE7);
+    const Color pureWhite = Colors.white;
+
+    final double gradientRadius = 50.0;
+    final Paint shaderPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFFFDF2B7).withOpacity(0.8),
+          pureWhite.withOpacity(0.7),
+          pureWhite.withOpacity(0.0),
+        ],
+        stops: const [0.0, 0.6, 1.0],
+      ).createShader(Rect.fromCircle(center: Offset(wandX, wandY), radius: gradientRadius));
+
+    canvas.drawCircle(Offset(wandX, wandY), gradientRadius, shaderPaint);
+
+    final Paint starPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = SweepGradient(
+        center: Alignment.center,
+        colors: const [
+          Colors.red,
+          Colors.orange,
+          Colors.yellow,
+          Colors.green,
+          Colors.blue,
+          Colors.indigo,
+          Colors.purple,
+          Colors.red,
+        ],
+        transform: GradientRotation(animationValue * 2 * math.pi),
+      ).createShader(Rect.fromCircle(center: Offset(wandX, wandY), radius: 15));
+
+    drawDiamond(canvas, Offset(wandX, wandY), 15, starPaint);
+
+    final Paint dustPaint = Paint()..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 40; i++) {
+      double speed = 0.5 + random.nextDouble() * 1.5;
+      double yProgress = (animationValue * speed + random.nextDouble()) % 1.0;
+
+      double angle = random.nextDouble() * 2 * math.pi;
+      double radius = 40 + (size.width / 2 - 40) * math.pow(yProgress, 1.2);
+
+      double dropX = wandX + radius * math.cos(angle);
+      double dropY = wandY + radius * math.sin(angle);
+
+      double diamondSize = random.nextDouble() * 5 + 2.0;
+
+      final opacity = (1.0 - yProgress) * (0.5 + 0.5 * math.sin((animationValue * 10 + i) * math.pi));
+
+      Color dustColor = random.nextDouble() < 0.2 ? paleYellowWhite : pureWhite;
+      dustPaint.color = dustColor.withOpacity(opacity.clamp(0.0, 1.0));
+
+      drawDiamond(canvas, Offset(dropX, dropY), diamondSize, dustPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant StageMagicPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
+  }
+}
+
+class MirrorSweepPainter extends CustomPainter {
+  final double sweepProgress;
+
+  MirrorSweepPainter(this.sweepProgress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.0),
+          Colors.white.withOpacity(0.0),
+          Colors.white.withOpacity(0.15),
+          Colors.white.withOpacity(0.0),
+          Colors.white.withOpacity(0.0),
+        ],
+        stops: const [0.0, 0.45, 0.5, 0.55, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+
+    canvas.save();
+    canvas.translate(size.width * sweepProgress, 0);
+    canvas.drawRect(Rect.fromLTWH(-size.width, 0, size.width * 2, size.height), paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant MirrorSweepPainter oldDelegate) {
+    return oldDelegate.sweepProgress != sweepProgress;
   }
 }

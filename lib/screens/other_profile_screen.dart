@@ -1,6 +1,6 @@
 // lib/screens/other_profile_screen.dart
 import 'dart:async';
-
+import 'package:fashion_mobile/screens/user_storefront_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
@@ -48,6 +48,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       }
     });
   }
+
   @override
   void dispose() {
     _profileUpdateSubscription?.cancel();
@@ -62,11 +63,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     });
     _checkFollowStatus();
   }
+
   Future<void> _handleStartChat(String name, String avatar) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.pink)),
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
     );
     try {
       final groupId = await ChatService().createOrGet1v1Room(widget.userId);
@@ -90,7 +92,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       }
     } catch (e) {
       Navigator.pop(context);
-      print("Lỗi điều hướng: $e");
+      debugPrint("Lỗi điều hướng: $e");
     }
   }
 
@@ -134,14 +136,14 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: const Color(0xFF1E1E1E),
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             title: const Text(
               'Unfollow?',
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -149,7 +151,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
             content: const Text(
               'Are you sure you want to unfollow this user?',
               style: TextStyle(
-                color: Colors.white70,
+                color: Colors.black54,
                 fontSize: 14,
               ),
             ),
@@ -158,7 +160,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
                   'Cancel',
-                  style: TextStyle(color: Colors.white54),
+                  style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -230,13 +232,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     const double profileOverlap = 80.0;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _profileFuture,
         builder: (context, profileSnapshot) {
           if (profileSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.pink),
+              child: CircularProgressIndicator(color: Colors.black),
             );
           }
 
@@ -246,7 +248,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Text(
                   'Failed to load profile: ${profileSnapshot.error}',
-                  style: const TextStyle(color: Colors.white70),
+                  style: const TextStyle(color: Colors.black54),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -261,7 +263,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 padding: EdgeInsets.all(24),
                 child: Text(
                   'User information not found.',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: Colors.black54),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -271,16 +273,11 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           final String avatar = (user['avatar'] ?? '').toString();
           final String name = (user['username'] ?? 'User').toString();
           final String email = (user['email'] ?? 'Updating...').toString();
-          final String bio = (user['description'] ?? 'No bio available.')
-              .toString();
+          final String bio = (user['description'] ?? 'No bio available.').toString();
 
-          final int baseFollowerCount =
-          (user['followerCount'] ?? user['followers'] ?? 0) as int;
-          final String followerCount =
-          (baseFollowerCount + _followerOffset).toString();
-
-          final String followingCount =
-          (user['followingCount'] ?? user['following'] ?? 0).toString();
+          final int baseFollowerCount = (user['followerCount'] ?? user['followers'] ?? 0) as int;
+          final String followerCount = (baseFollowerCount + _followerOffset).toString();
+          final String followingCount = (user['followingCount'] ?? user['following'] ?? 0).toString();
 
           final ImageProvider avatarProvider = avatar.isNotEmpty
               ? NetworkImage(avatar)
@@ -288,13 +285,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
           final ImageProvider coverProvider = avatar.isNotEmpty
               ? NetworkImage(avatar)
-              : const NetworkImage(
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s',
-          );
+              : const NetworkImage('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s');
 
           return RefreshIndicator(
             onRefresh: _refreshData,
-            color: Colors.pink,
+            color: Colors.black,
+            backgroundColor: Colors.white,
             child: Stack(
               children: [
                 Positioned(
@@ -315,9 +311,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.4),
+                            Colors.black.withOpacity(0.5),
                             Colors.transparent,
-                            Colors.black.withOpacity(0.9),
+                            Colors.white, // Vuốt tiệp màu với container nền trắng bên dưới
                           ],
                         ),
                       ),
@@ -334,17 +330,18 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                       pinned: true,
                       elevation: 0,
                       leading: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
                       title: Text(
-                        name,
+                        name.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                           fontSize: 16,
+                          letterSpacing: 1.5,
                           shadows: [
-                            Shadow(color: Colors.white, blurRadius: 5),
+                            Shadow(color: Colors.black87, blurRadius: 10),
                           ],
                         ),
                       ),
@@ -354,64 +351,43 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                       child: SizedBox(
                         height: coverHeight - kToolbarHeight - profileOverlap,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 20,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(3),
+                                padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
-                                    colors: [
-                                      Colors.purpleAccent,
-                                      Colors.pinkAccent,
-                                    ],
+                                    colors: [Colors.black87, Colors.black45],
                                   ),
                                 ),
                                 child: CircleAvatar(
                                   radius: 42,
-                                  backgroundColor: AppColors.surface,
+                                  backgroundColor: Colors.white,
                                   backgroundImage: avatarProvider,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 16),
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Row(
-                                    mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
                                       FutureBuilder<List<PostFeedModel>>(
                                         future: _postsFuture,
                                         builder: (context, snapshot) {
-                                          if (snapshot.connectionState ==
-                                              ConnectionState.waiting) {
+                                          if (snapshot.connectionState == ConnectionState.waiting) {
                                             return const StatSkeletonItem();
                                           }
-
-                                          final postCount = snapshot.hasData
-                                              ? snapshot.data!.length.toString()
-                                              : '0';
-
-                                          return _buildStatItem(
-                                            postCount,
-                                            'Posts',
-                                          );
+                                          final postCount = snapshot.hasData ? snapshot.data!.length.toString() : '0';
+                                          return _buildStatItem(postCount, 'POSTS');
                                         },
                                       ),
-                                      _buildStatItem(
-                                        followerCount,
-                                        'Followers',
-                                      ),
-                                      _buildStatItem(
-                                        followingCount,
-                                        'Following',
-                                      ),
+                                      _buildStatItem(followerCount, 'FOLLOWERS'),
+                                      _buildStatItem(followingCount, 'FOLLOWING'),
                                     ],
                                   ),
                                 ),
@@ -424,10 +400,8 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     SliverToBoxAdapter(
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(30),
-                          ),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,13 +412,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                 width: 40,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: Colors.white24,
+                                  color: Colors.black12,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(20),
+                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -452,97 +426,80 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                     name,
                                     style: const TextStyle(
                                       color: Colors.black,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.2,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     email,
                                     style: const TextStyle(
-                                      color: Colors.black38,
+                                      color: Colors.black54,
                                       fontSize: 14,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 16),
                                   Text(
                                     bio,
                                     style: const TextStyle(
-                                      color: Colors.black,
+                                      color: Colors.black87,
                                       fontSize: 14,
-                                      height: 1.4,
+                                      height: 1.5,
                                     ),
                                   ),
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: 24),
+
+                                  // Hàng nút 1: Follow & Message
                                   Row(
                                     children: [
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed:
-                                          isLoadingFollow ? null : _toggleFollow,
+                                          onPressed: isLoadingFollow ? null : _toggleFollow,
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: isFollowing
-                                                ? Colors.white24
-                                                : Colors.pink,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
+                                            backgroundColor: isFollowing ? Colors.black12 : Colors.black,
+                                            foregroundColor: isFollowing ? Colors.black : Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            elevation: 0,
                                           ),
                                           child: isLoadingFollow
                                               ? const SizedBox(
                                             height: 16,
                                             width: 16,
-                                            child:
-                                            CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                           )
                                               : Text(
-                                            isFollowing
-                                                ? 'Following'
-                                                : 'Follow',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
+                                            isFollowing ? 'FOLLOWING' : 'FOLLOW',
+                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.0),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 12),
                                       Expanded(
-                                        child: ElevatedButton(
+                                        child: OutlinedButton(
                                           onPressed: () => _handleStartChat(name, avatar),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                            Colors.pinkAccent,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.black,
+                                            side: const BorderSide(color: Colors.black, width: 1.5),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
                                           ),
                                           child: const Text(
-                                            'Message',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
+                                            'MESSAGE',
+                                            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.0),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+
+                                  const SizedBox(height: 12),
+
+                                  // Hàng nút 2: Wardrobe & Visit Store
                                   Row(
                                     children: [
                                       Expanded(
@@ -550,32 +507,44 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                           onPressed: () {
                                             Navigator.push(
                                               context,
-                                              SlideRoute(
-                                                page: PublicWardrobeScreen(
-                                                  accountId: widget.userId,
-                                                ),
-                                              ),
+                                              SlideRoute(page: PublicWardrobeScreen(accountId: widget.userId)),
                                             );
                                           },
                                           style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.white,
-                                            side: const BorderSide(
-                                              color: Colors.pink,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 12,
-                                            ),
+                                            foregroundColor: Colors.black,
+                                            side: BorderSide(color: Colors.black.withOpacity(0.2), width: 1.5),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
                                           ),
                                           child: const Text(
-                                            'View Public Wardrobe',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.pinkAccent,
+                                            'WARDROBE',
+                                            style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              SlideRoute(page: UserStorefrontScreen(userId: widget.userId, userName: name)),
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: Colors.black,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              side: const BorderSide(color: Colors.black, width: 1.5),
                                             ),
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            elevation: 0,
+                                          ),
+                                          child: const Text(
+                                            'VISIT STORE',
+                                            style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 1.0),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
@@ -593,15 +562,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     FutureBuilder<List<PostFeedModel>>(
                       future: _postsFuture,
                       builder: (context, postSnapshot) {
-                        if (postSnapshot.connectionState ==
-                            ConnectionState.waiting) {
+                        if (postSnapshot.connectionState == ConnectionState.waiting) {
                           return const SliverToBoxAdapter(
                             child: Center(
                               child: Padding(
                                 padding: EdgeInsets.all(40),
-                                child: CircularProgressIndicator(
-                                  color: Colors.pink,
-                                ),
+                                child: CircularProgressIndicator(color: Colors.black),
                               ),
                             ),
                           );
@@ -614,9 +580,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'Failed to load posts: ${postSnapshot.error}',
-                                  style: const TextStyle(
-                                    color: Colors.black26,
-                                  ),
+                                  style: const TextStyle(color: Colors.black54),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -633,7 +597,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'No posts yet.',
-                                  style: TextStyle(color: Colors.black26),
+                                  style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
@@ -644,13 +608,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                           delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                               final post = posts[index];
-
                               return Container(
-                                color: AppColors.background,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
+                                color: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 child: PostItem(
                                   post: post,
                                   isMyPost: false,
@@ -677,35 +637,28 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   }
 
   Widget _buildStatItem(String value, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
