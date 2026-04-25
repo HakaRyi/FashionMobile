@@ -92,6 +92,18 @@ flutter:
     - assets/images/human1.jpg
     - assets/images/logowapo.png
     - assets/images/default_avatar.png
+    - assets/images/aodo.png
+    - assets/images/casual.png
+    - assets/images/formalclothes.png
+    - assets/images/sporty.png
+    - assets/images/vintage.png
+    - assets/images/streetwear.png
+    - assets/images/minimalist.png
+    - assets/images/phukien.png
+    - assets/images/quanxanh.png
+    - assets/images/giay.png
+    - assets/images/fullbody.png
+    - assets/images/all.png
     - .env
 
 #    - assets/icons/

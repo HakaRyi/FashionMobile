@@ -412,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               final post = posts[index];
                               return Container(
                                 color: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: const EdgeInsets.symmetric(vertical: 4),
                                 child: PostItem(
                                   post: post,
                                   isMyPost: true,
@@ -445,28 +445,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatItem(String value, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w900,
-            fontSize: 20,
+    return Container(
+      // Padding giúp tạo khoảng cách từ chữ đẩy ra viền đen
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.4), // Nền đen mờ 40% (bạn có thể tăng giảm tùy ý)
+        borderRadius: BorderRadius.circular(13), // Bo góc cho mềm mại
+        border: Border.all(color: Colors.white24, width: 0.5), // Tùy chọn: Thêm dòng này nếu muốn có viền trắng mờ bao quanh
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              // Giữ lại shadow để chữ nổi bật hẳn lên trên nền mờ
+              shadows: [
+                Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2)),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black54,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              shadows: [
+                Shadow(color: Colors.black87, blurRadius: 4),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

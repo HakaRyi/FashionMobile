@@ -1,6 +1,6 @@
 // lib/screens/other_profile_screen.dart
 import 'dart:async';
-import 'package:fashion_mobile/screens/user_storefront_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
@@ -48,7 +48,6 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       }
     });
   }
-
   @override
   void dispose() {
     _profileUpdateSubscription?.cancel();
@@ -63,12 +62,11 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     });
     _checkFollowStatus();
   }
-
   Future<void> _handleStartChat(String name, String avatar) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.pink)),
     );
     try {
       final groupId = await ChatService().createOrGet1v1Room(widget.userId);
@@ -92,7 +90,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       }
     } catch (e) {
       Navigator.pop(context);
-      debugPrint("Lỗi điều hướng: $e");
+      print("Lỗi điều hướng: $e");
     }
   }
 
@@ -151,7 +149,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
             content: const Text(
               'Are you sure you want to unfollow this user?',
               style: TextStyle(
-                color: Colors.black54,
+                color: Colors.black87,
                 fontSize: 14,
               ),
             ),
@@ -160,7 +158,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
                   'Cancel',
-                  style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.black54),
                 ),
               ),
               TextButton(
@@ -232,13 +230,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
     const double profileOverlap = 80.0;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _profileFuture,
         builder: (context, profileSnapshot) {
           if (profileSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.black),
+              child: CircularProgressIndicator(color: Colors.pink),
             );
           }
 
@@ -248,7 +246,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Text(
                   'Failed to load profile: ${profileSnapshot.error}',
-                  style: const TextStyle(color: Colors.black54),
+                  style: const TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -263,7 +261,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 padding: EdgeInsets.all(24),
                 child: Text(
                   'User information not found.',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -273,11 +271,16 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
           final String avatar = (user['avatar'] ?? '').toString();
           final String name = (user['username'] ?? 'User').toString();
           final String email = (user['email'] ?? 'Updating...').toString();
-          final String bio = (user['description'] ?? 'No bio available.').toString();
+          final String bio = (user['description'] ?? 'No bio available.')
+              .toString();
 
-          final int baseFollowerCount = (user['followerCount'] ?? user['followers'] ?? 0) as int;
-          final String followerCount = (baseFollowerCount + _followerOffset).toString();
-          final String followingCount = (user['followingCount'] ?? user['following'] ?? 0).toString();
+          final int baseFollowerCount =
+          (user['followerCount'] ?? user['followers'] ?? 0) as int;
+          final String followerCount =
+          (baseFollowerCount + _followerOffset).toString();
+
+          final String followingCount =
+          (user['followingCount'] ?? user['following'] ?? 0).toString();
 
           final ImageProvider avatarProvider = avatar.isNotEmpty
               ? NetworkImage(avatar)
@@ -285,12 +288,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
           final ImageProvider coverProvider = avatar.isNotEmpty
               ? NetworkImage(avatar)
-              : const NetworkImage('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s');
+              : const NetworkImage(
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNh6H5iL48BL9Ad0XApi7Q7hNrpNpukI3Xfw&s',
+          );
 
           return RefreshIndicator(
             onRefresh: _refreshData,
-            color: Colors.black,
-            backgroundColor: Colors.white,
+            color: Colors.pink,
             child: Stack(
               children: [
                 Positioned(
@@ -311,9 +315,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.5),
+                            Colors.black.withOpacity(0.4),
                             Colors.transparent,
-                            Colors.white, // Vuốt tiệp màu với container nền trắng bên dưới
+                            Colors.black.withOpacity(0.9),
                           ],
                         ),
                       ),
@@ -330,18 +334,17 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                       pinned: true,
                       elevation: 0,
                       leading: IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
                       title: Text(
-                        name.toUpperCase(),
+                        name,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          letterSpacing: 1.5,
                           shadows: [
-                            Shadow(color: Colors.black87, blurRadius: 10),
+                            Shadow(color: Colors.white, blurRadius: 5),
                           ],
                         ),
                       ),
@@ -351,43 +354,64 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                       child: SizedBox(
                         height: coverHeight - kToolbarHeight - profileOverlap,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 20,
+                          ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(4),
+                                padding: const EdgeInsets.all(3),
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
-                                    colors: [Colors.black87, Colors.black45],
+                                    colors: [
+                                      Colors.purpleAccent,
+                                      Colors.pinkAccent,
+                                    ],
                                   ),
                                 ),
                                 child: CircleAvatar(
                                   radius: 42,
-                                  backgroundColor: Colors.white,
+                                  backgroundColor: AppColors.surface,
                                   backgroundImage: avatarProvider,
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                     children: [
                                       FutureBuilder<List<PostFeedModel>>(
                                         future: _postsFuture,
                                         builder: (context, snapshot) {
-                                          if (snapshot.connectionState == ConnectionState.waiting) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
                                             return const StatSkeletonItem();
                                           }
-                                          final postCount = snapshot.hasData ? snapshot.data!.length.toString() : '0';
-                                          return _buildStatItem(postCount, 'POSTS');
+
+                                          final postCount = snapshot.hasData
+                                              ? snapshot.data!.length.toString()
+                                              : '0';
+
+                                          return _buildStatItem(
+                                            postCount,
+                                            'Posts',
+                                          );
                                         },
                                       ),
-                                      _buildStatItem(followerCount, 'FOLLOWERS'),
-                                      _buildStatItem(followingCount, 'FOLLOWING'),
+                                      _buildStatItem(
+                                        followerCount,
+                                        'Followers',
+                                      ),
+                                      _buildStatItem(
+                                        followingCount,
+                                        'Following',
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -400,8 +424,10 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     SliverToBoxAdapter(
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(30),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,149 +438,127 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                                 width: 40,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: Colors.black12,
+                                  color: Colors.white24,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              padding: const EdgeInsets.fromLTRB(20, 20, 10, 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    name,
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    email,
-                                    style: const TextStyle(
-                                      color: Colors.black54,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    bio,
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  // Hàng nút 1: Follow & Message
-                                  Row(
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: isLoadingFollow ? null : _toggleFollow,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: isFollowing ? Colors.black12 : Colors.black,
-                                            foregroundColor: isFollowing ? Colors.black : Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
-                                            elevation: 0,
-                                          ),
-                                          child: isLoadingFollow
-                                              ? const SizedBox(
-                                            height: 16,
-                                            width: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                          )
-                                              : Text(
-                                            isFollowing ? 'FOLLOWING' : 'FOLLOW',
-                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.0),
-                                            textAlign: TextAlign.center,
-                                          ),
+                                      Text(
+                                        name,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.5,
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () => _handleStartChat(name, avatar),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.black,
-                                            side: const BorderSide(color: Colors.black, width: 1.5),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
-                                          ),
-                                          child: const Text(
-                                            'MESSAGE',
-                                            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.0),
-                                            textAlign: TextAlign.center,
-                                          ),
+                                      Text(
+                                        email,
+                                        style: const TextStyle(
+                                          color: Colors.black38,
+                                          fontSize: 14,
                                         ),
                                       ),
                                     ],
                                   ),
-
-                                  const SizedBox(height: 12),
-
-                                  // Hàng nút 2: Wardrobe & Visit Store
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              SlideRoute(page: PublicWardrobeScreen(accountId: widget.userId)),
-                                            );
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors.black,
-                                            side: BorderSide(color: Colors.black.withOpacity(0.2), width: 1.5),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.push(context, SlideRoute(page: PublicWardrobeScreen(accountId: widget.userId)));
+                                    },
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(10), // Tăng nhẹ padding
+                                      decoration: BoxDecoration(
+                                        color: Colors.black, // Nền đen sâu
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
                                           ),
-                                          child: const Text(
-                                            'WARDROBE',
-                                            style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              SlideRoute(page: UserStorefrontScreen(userId: widget.userId, userName: name)),
-                                            );
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            foregroundColor: Colors.black,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                              side: const BorderSide(color: Colors.black, width: 1.5),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
-                                            elevation: 0,
-                                          ),
-                                          child: const Text(
-                                            'VISIT STORE',
-                                            style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
+                                      child: const Icon(
+                                        Icons.checkroom_rounded, // Icon cái móc treo nhìn "thời trang" hơn cánh cửa
+                                        color: Colors.white,
+                                        size: 20,
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 20),
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                children: [
+                                  // NÚT FOLLOW CHIẾM 2 PHẦN
+                                  Expanded(
+                                    flex: 2,
+                                    child: GestureDetector(
+                                      onTap: isLoadingFollow ? null : _toggleFollow,
+                                      child: Container(
+                                        height: 46,
+                                        decoration: BoxDecoration(
+                                          color: isFollowing ? Colors.transparent : Colors.black,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: isFollowing ? Border.all(color: Colors.black12, width: 1.5) : null,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: isLoadingFollow
+                                            ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                            : Text(
+                                          isFollowing ? 'Following' : 'Follow',
+                                          style: TextStyle(
+                                            color: isFollowing ? Colors.black : Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  // NÚT MESSAGE CHIẾM 1 PHẦN
+                                  Expanded(
+                                    flex: 1,
+                                    child: GestureDetector(
+                                      onTap: () => _handleStartChat(name, avatar),
+                                      child: Container(
+                                        height: 46,
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: Colors.black12, width: 1.5),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.messenger_outline_rounded, size: 18, color: Colors.black),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Chat',
+                                              style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
                           ],
                         ),
                       ),
@@ -562,12 +566,15 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                     FutureBuilder<List<PostFeedModel>>(
                       future: _postsFuture,
                       builder: (context, postSnapshot) {
-                        if (postSnapshot.connectionState == ConnectionState.waiting) {
+                        if (postSnapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const SliverToBoxAdapter(
                             child: Center(
                               child: Padding(
                                 padding: EdgeInsets.all(40),
-                                child: CircularProgressIndicator(color: Colors.black),
+                                child: CircularProgressIndicator(
+                                  color: Colors.pink,
+                                ),
                               ),
                             ),
                           );
@@ -580,7 +587,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'Failed to load posts: ${postSnapshot.error}',
-                                  style: const TextStyle(color: Colors.black54),
+                                  style: const TextStyle(
+                                    color: Colors.black26,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -597,7 +606,7 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'No posts yet.',
-                                  style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: Colors.black26),
                                 ),
                               ),
                             ),
@@ -608,9 +617,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                           delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                               final post = posts[index];
+
                               return Container(
-                                color: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                color: AppColors.background,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 2,
+                                ),
                                 child: PostItem(
                                   post: post,
                                   isMyPost: false,
@@ -637,28 +649,35 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   }
 
   Widget _buildStatItem(String value, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w900,
-            fontSize: 20,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black54,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

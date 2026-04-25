@@ -191,10 +191,12 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
         itemBuilder: (context, index) {
           final item = _savedItems[index];
           return ClothingItem(
-            title: item['itemName'] ?? "Không tên",
-            imageUrl: item['primaryImageUrl'],
+            itemData: item,
             onTap: () => _openItemDetail(item),
-            onLongPress: () => _showUnsaveOptions(item)
+            customActionIcon: Icons.bookmark_remove,
+            customActionLabel: "Unsave Item",
+            customActionColor: Colors.orange,
+            onCustomAction: () => _handleUnsave(item['itemId']),
           );
         },
       ),

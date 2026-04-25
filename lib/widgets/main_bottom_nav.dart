@@ -13,18 +13,18 @@ class MainBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      // Tạo khoảng cách để thanh Nav nổi lên như viên thuốc
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+      // Giảm khoảng cách xung quanh để thanh gọn hơn và không bị nổi quá cao
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Container(
-        height: 80,
+        height: 68, // Giảm chiều cao từ 80 xuống 68
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(40), // Bo tròn tối đa 2 đầu
+          borderRadius: BorderRadius.circular(34), // Bo tròn tối đa (bằng phân nửa chiều cao)
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withOpacity(0.4), // Giảm độ đậm của bóng đổ cho thanh thoát hơn
               blurRadius: 20,
-              offset: const Offset(0, 10),
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -50,24 +50,30 @@ class MainBottomNav extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isSelected ? activeIcon : icon,
-            size: 26,
-            color: isSelected ? Colors.black : Colors.black38,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+      child: SizedBox(
+        width: 56, // Giới hạn chiều rộng để các nút không bị dính vào nhau
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 24, // Giảm từ 26 xuống chuẩn 24
               color: isSelected ? Colors.black : Colors.black38,
             ),
-          ),
-        ],
+            const SizedBox(height: 2), // Giảm khoảng cách chữ và icon
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10, // Giảm cỡ chữ từ 12 xuống 10
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.black : Colors.black38,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -78,23 +84,23 @@ class MainBottomNav extends StatelessWidget {
       onTap: () => onTap(2),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 65,
-        height: 65,
+        width: 52, // Giảm kích thước nút giữa từ 65 xuống 52
+        height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.black, // Màu đen tuyền giống ảnh
+          color: Colors.black,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: const Icon(
           Icons.style,
           color: Colors.white,
-          size: 32,
+          size: 24, // Giảm icon nút giữa từ 32 xuống 24 cho cân xứng
         ),
       ),
     );

@@ -120,7 +120,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         title: const Text(
           "EDIT PROFILE",
-          style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 2),
+          style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 0),
         ),
         centerTitle: true,
         actions: [
@@ -137,7 +137,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
               ),
-              child: const Text("DONE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              child: const Text("DONE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0)),
             ),
           ),
         ],
@@ -212,7 +212,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+          style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0),
         ),
         const SizedBox(height: 12),
         TextFormField(

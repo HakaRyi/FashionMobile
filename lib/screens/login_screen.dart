@@ -1,9 +1,11 @@
 
 import 'dart:math' as math;
+import 'package:fashion_mobile/screens/physical_profile_screen.dart';
 import 'package:fashion_mobile/utils/app_notification.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/notification_type.dart';
+import '../services/user_profile_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/google_login_button.dart';
 import 'main_screen.dart';
@@ -69,10 +71,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _isLoading = false);
 
     if (result['success']) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
+      final profileService = UserProfileService();
+      final profile = await profileService.getMe();
+      if (mounted) {
+        if (profile != null && profile['hasCompletedOnboarding'] == false) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PhysicalProfileScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+          );
+        }
+      }
     } else {
       NotificationService.show(
         context,
