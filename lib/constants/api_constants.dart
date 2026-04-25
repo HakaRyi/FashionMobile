@@ -1,13 +1,13 @@
 class ApiConstants {
-  // static const String baseUrl = "http://10.0.2.2:5196/api";
+  static const String baseUrl = "http://10.0.2.2:5196/api";
   // static const String baseUrl = "http://192.168.1.7:5196/api";
-  static const String baseUrl = "http://192.168.102.24:5196/api";
+  //static const String baseUrl = "http://192.168.102.24:5196/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
 
-  // static const String baseSignalRUrl = "http://10.0.2.2:5196";
+   static const String baseSignalRUrl = "http://10.0.2.2:5196";
   // static const String baseSignalRUrl = "http://192.168.1.7:5196";
-  static const String baseSignalRUrl = "http://192.168.102.24:5196";
+  //static const String baseSignalRUrl = "http://192.168.102.24:5196";
 
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
 
@@ -63,6 +63,7 @@ class ApiConstants {
   static const String uploadItemEndpoint = "/items";
   static const String AIidentityClothesEndpoint = "/analyze-fashion";
   static const String getAllMyItemEndpoint = "/items/me";
+  static const String getAllMyItemsEndpoint = "/items/my-item";
   static const String updateItemEndpoint = "/items/{itemId}";
   static const String deleteItemEndpoint = "/items/{itemId}";
   static const String smartMatchEndpoint = "/items/smart-match";
