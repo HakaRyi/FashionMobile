@@ -5,8 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/notification_type.dart';
 import '../managers/post_manager.dart';
 import '../services/account_service.dart';
+import '../utils/app_notification.dart';
 import 'main_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
@@ -112,8 +114,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     } catch (e) {
       debugPrint('Pick image error: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể chọn ảnh: $e')),
+      NotificationService.show(
+        context,
+        title: "Info",
+        message: "Cannot Choose Image",
+        type: NotificationType.info,
       );
     }
   }
@@ -123,15 +128,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     if (_selectedImages.isEmpty && title.isEmpty && content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bài viết không được để trống!")),
+      NotificationService.show(
+        context,
+        title: "Warning",
+        message: "Please fill the content",
+        type: NotificationType.warning,
       );
       return;
     }
     // Check điều kiện ảnh
     if (!_isEditMode && _selectedImages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng chọn ít nhất 1 ảnh để đăng bài!")),
+      NotificationService.show(
+        context,
+        title: "Info",
+        message: "Please Choose At least 1 image",
+        type: NotificationType.info,
       );
       return;
     }
@@ -156,8 +167,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           content: content,
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Cập nhật bài viết thành công")),
+          NotificationService.show(
+            context,
+            title: "Success",
+            message: "Update Successful",
+            type: NotificationType.warning,
           );
         }
       } else {
@@ -177,10 +191,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             (Route<dynamic> route) => false,
       );
     } catch (e) {
-      debugPrint('Handle post error: $e');
+      debugPrint('Handle post error');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Thao tác thất bại: $e")),
+        SnackBar(content: Text("Thao tác thất bại")),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
