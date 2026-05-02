@@ -15,16 +15,18 @@ class OrderManager {
       _service.getPurchasesOrders(),
     ]);
 
-    sales = results[0];
-    purchases = results[1];
+    sales = results[0].items;
+    purchases = results[1].items;
   }
 
   Future<void> refreshSales() async {
-    sales = await _service.getSalesOrders();
+    final result = await _service.getSalesOrders();
+    sales = result.items;
   }
 
   Future<void> refreshPurchases() async {
-    purchases = await _service.getPurchasesOrders();
+    final result = await _service.getPurchasesOrders();
+    purchases = result.items;
   }
 
   Future<OrderModel> getOrderById(int orderId) async {

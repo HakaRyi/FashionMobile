@@ -1,20 +1,18 @@
-
 import 'dart:math' as math;
+
 import 'package:fashion_mobile/screens/physical_profile_screen.dart';
 import 'package:fashion_mobile/utils/app_notification.dart';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+
 import '../constants/notification_type.dart';
+import '../managers/google_auth_manager.dart';
+import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/google_login_button.dart';
 import 'main_screen.dart';
-import '../services/auth_service.dart';
-import 'register_screen.dart';
-
-import '../managers/google_auth_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'onboarding_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,12 +21,13 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   final AuthService _authService = AuthService();
   final GoogleAuthManager _googleAuthManager = GoogleAuthManager();
-  final NotificationService _appNotification = NotificationService();
 
   late AnimationController _fabricController;
   bool _isLoading = false;
@@ -36,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+
     _fabricController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 12),
@@ -51,14 +51,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _handleLogin() async {
-    String email = _emailController.text.trim();
-    String pass = _passwordController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (email.isEmpty || pass.isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       NotificationService.show(
         context,
-        title: "Thông báo",
-        message: "Vui lòng nhập đầy đủ thông tin",
+        title: "Notice",
+        message: "Please enter both email and password.",
         type: NotificationType.warning,
       );
       return;
@@ -66,31 +66,38 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     setState(() => _isLoading = true);
 
-    final result = await _authService.login(email, pass);
+    final result = await _authService.login(email, password);
+
+    if (!mounted) return;
 
     setState(() => _isLoading = false);
 
-    if (result['success']) {
+    if (result['success'] == true) {
       final profileService = UserProfileService();
       final profile = await profileService.getMe();
-      if (mounted) {
-        if (profile != null && profile['hasCompletedOnboarding'] == false) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PhysicalProfileScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainScreen()),
-          );
-        }
+
+      if (!mounted) return;
+
+      if (profile != null && profile['hasCompletedOnboarding'] == false) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PhysicalProfileScreen(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MainScreen(),
+          ),
+        );
       }
     } else {
       NotificationService.show(
         context,
-        title: "Lỗi",
-        message: result['message'],
+        title: "Error",
+        message: result['message'] ?? "Login failed. Please try again.",
         type: NotificationType.error,
       );
     }
@@ -102,6 +109,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       final idToken = await _googleAuthManager.getGoogleIdToken();
 
+      if (!mounted) return;
+
       if (idToken == null) {
         setState(() => _isLoading = false);
         return;
@@ -109,39 +118,38 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       final result = await _authService.loginWithGoogle(idToken);
 
-      if (result['success']) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', result['data']['accessToken']);
+      if (!mounted) return;
 
-        if (mounted) {
-          if (result['isNewUser'] == true) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MainScreen()),
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          NotificationService.show(
+      if (result['success'] == true) {
+        if (result['isNewUser'] == true) {
+          Navigator.pushReplacement(
             context,
-            title: "Lỗi",
-            message: "Đăng nnập thất bại, vui lòng thử lại",
-            type: NotificationType.error,
+            MaterialPageRoute(
+              builder: (context) => const OnboardingScreen(),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MainScreen(),
+            ),
           );
         }
+      } else {
+        NotificationService.show(
+          context,
+          title: "Error",
+          message: result['message'] ?? "Google login failed. Please try again.",
+          type: NotificationType.error,
+        );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         NotificationService.show(
           context,
-          title: "Lỗi",
-          message: "Đăng nnập thất bại, vui lòng thử lại",
+          title: "Error",
+          message: "Google login failed. Please try again.",
           type: NotificationType.error,
         );
       }
@@ -168,7 +176,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               },
             ),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -192,7 +199,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(height: 60),
-
                   CustomTextField(
                     hintText: "Email",
                     icon: Icons.email_outlined,
@@ -200,20 +206,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                   const SizedBox(height: 16),
                   CustomTextField(
-                    hintText: "Mật khẩu",
+                    hintText: "Password",
                     icon: Icons.lock_outline,
                     isPassword: true,
                     controller: _passwordController,
                   ),
-
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
-                      child: const Text("Quên mật khẩu?", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600)),
+                      child: const Text(
+                        "Forgot password?",
+                        style: TextStyle(
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
                   Container(
                     width: double.infinity,
@@ -229,48 +239,77 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: _handleLogin,
+                      onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
+                        disabledBackgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(height: 20, width: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2))
-                          : const Text("ĐĂNG NHẬP",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              letterSpacing: 2,
-                              fontWeight: FontWeight.bold)),
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                          : const Text(
+                        "LOGIN",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-                  const Text("HOẶC", style: TextStyle(color: Colors.black38, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                  const Text(
+                    "OR",
+                    style: TextStyle(
+                      color: Colors.black38,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                   const SizedBox(height: 30),
-
                   GoogleLoginButton(
                     onTap: _isLoading ? () {} : _handleGoogleLogin,
                   ),
-
                   const SizedBox(height: 40),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Chưa có tài khoản?", style: TextStyle(color: Colors.black54)),
+                      const Text(
+                        "Don't have an account?",
+                        style: TextStyle(color: Colors.black54),
+                      ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: _isLoading
+                            ? null
+                            : () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (context) =>
+                              const RegisterScreen(),
+                            ),
                           );
                         },
-                        child: const Text("Đăng ký ngay", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          "Sign up now",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -311,64 +350,64 @@ class FabricPainter extends CustomPainter {
       ..color = Colors.black.withOpacity(0.02)
       ..style = PaintingStyle.fill;
 
-    Path path1 = Path();
+    final path1 = Path();
     path1.moveTo(0, size.height * 0.1);
     path1.quadraticBezierTo(
-        size.width * 0.5,
-        size.height * 0.2 + math.sin(animationValue * 2 * math.pi) * 60,
-        size.width,
-        size.height * 0.05
+      size.width * 0.5,
+      size.height * 0.2 + math.sin(animationValue * 2 * math.pi) * 60,
+      size.width,
+      size.height * 0.05,
     );
     path1.lineTo(size.width, 0);
     path1.lineTo(0, 0);
     path1.close();
 
-    Path path2 = Path();
+    final path2 = Path();
     path2.moveTo(0, size.height * 0.8);
     path2.quadraticBezierTo(
-        size.width * 0.4,
-        size.height * 0.7 + math.cos(animationValue * 2 * math.pi) * 80,
-        size.width * 0.8,
-        size.height * 0.9
+      size.width * 0.4,
+      size.height * 0.7 + math.cos(animationValue * 2 * math.pi) * 80,
+      size.width * 0.8,
+      size.height * 0.9,
     );
     path2.quadraticBezierTo(
-        size.width * 0.95,
-        size.height * 0.95 + math.sin(animationValue * math.pi) * 30,
-        size.width,
-        size.height * 0.8
+      size.width * 0.95,
+      size.height * 0.95 + math.sin(animationValue * math.pi) * 30,
+      size.width,
+      size.height * 0.8,
     );
     path2.lineTo(size.width, size.height);
     path2.lineTo(0, size.height);
     path2.close();
 
-    Path path3 = Path();
+    final path3 = Path();
     path3.moveTo(size.width * 0.2, 0);
     path3.quadraticBezierTo(
-        size.width * 0.6 + math.sin(animationValue * 2 * math.pi + math.pi) * 80,
-        size.height * 0.5,
-        size.width,
-        size.height * 0.4
+      size.width * 0.6 + math.sin(animationValue * 2 * math.pi + math.pi) * 80,
+      size.height * 0.5,
+      size.width,
+      size.height * 0.4,
     );
     path3.lineTo(size.width, 0);
     path3.close();
 
-    Path path4 = Path();
+    final path4 = Path();
     path4.moveTo(0, size.height * 0.4);
     path4.quadraticBezierTo(
-        size.width * 0.3 + math.cos(animationValue * 2 * math.pi) * 50,
-        size.height * 0.5 + math.sin(animationValue * 2 * math.pi) * 50,
-        0,
-        size.height * 0.7
+      size.width * 0.3 + math.cos(animationValue * 2 * math.pi) * 50,
+      size.height * 0.5 + math.sin(animationValue * 2 * math.pi) * 50,
+      0,
+      size.height * 0.7,
     );
     path4.close();
 
-    Path path5 = Path();
+    final path5 = Path();
     path5.moveTo(size.width, size.height * 0.3);
     path5.quadraticBezierTo(
-        size.width * 0.7 + math.sin(animationValue * 2 * math.pi) * 70,
-        size.height * 0.6 + math.cos(animationValue * 2 * math.pi) * 40,
-        size.width,
-        size.height * 0.7
+      size.width * 0.7 + math.sin(animationValue * 2 * math.pi) * 70,
+      size.height * 0.6 + math.cos(animationValue * 2 * math.pi) * 40,
+      size.width,
+      size.height * 0.7,
     );
     path5.close();
 

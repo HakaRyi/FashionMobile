@@ -92,8 +92,10 @@ class ApiClient {
     final token = prefs.getString('token');
     final refreshToken = prefs.getString('refreshToken');
 
-    return (refreshToken != null && refreshToken.trim().isNotEmpty) ||
-        (token != null && token.trim().isNotEmpty);
+    return token != null &&
+        token.trim().isNotEmpty &&
+        refreshToken != null &&
+        refreshToken.trim().isNotEmpty;
   }
 
   static Future<bool> _refreshToken() async {
@@ -136,7 +138,7 @@ class ApiClient {
           .timeout(timeout);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = _decodeResponseBody(response.body);
 
         final newAccessToken =
         (data['accessToken'] ?? data['data']?['accessToken'])?.toString();
@@ -165,6 +167,20 @@ class ApiClient {
     }
   }
 
+  static Map<String, dynamic> _decodeResponseBody(String body) {
+    if (body.trim().isEmpty) {
+      return {};
+    }
+
+    final decoded = jsonDecode(body);
+
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+
+    return {};
+  }
+
   static void _completeRefresh(bool value) {
     if (_refreshTokenCompleter != null &&
         !_refreshTokenCompleter!.isCompleted) {
@@ -190,7 +206,11 @@ class ApiClient {
         return response;
       }
 
-      throw Exception('Session expired. Please log in again.');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+      await prefs.remove('refreshToken');
+
+      throw Exception('Your session has expired. Please log in again.');
     }
 
     return response;

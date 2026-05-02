@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../managers/item_manager.dart';
 import '../models/item_variant_model.dart';
+import '../models/order_model.dart';
 import '../models/public_item_detail_model.dart';
 import '../models/try_on_source_item.dart';
 import '../models/wardrobe_item_model.dart';
@@ -15,9 +16,10 @@ import '../services/order_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/route_transitions.dart';
 import 'chat_screen.dart';
+import 'manage_item_variants_screen.dart';
 import 'publish_item_for_sale_screen.dart';
-import 'refund_request_screen.dart';
 import 'try_on_screen.dart';
+import 'order_detail_screen.dart';
 
 class PublicItemDetailScreen extends StatefulWidget {
   final int itemId;
@@ -34,6 +36,14 @@ class PublicItemDetailScreen extends StatefulWidget {
 }
 
 class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
+  static const Color _pageBackground = Color(0xFFFAF8F5);
+  static const Color _cardBackground = Colors.white;
+  static const Color _softBackground = Color(0xFFF4F1ED);
+  static const Color _warmAccent = Color(0xFFEDE4D8);
+  static const Color _darkText = Color(0xFF111111);
+  static const Color _mutedText = Color(0xFF6F6A64);
+  static const Color _borderColor = Color(0xFFE8E1D8);
+
   final ItemService _itemService = ItemService();
   final OrderService _orderService = OrderService();
   final PageController _pageController = PageController();
@@ -41,10 +51,12 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
   bool _isLoading = true;
   bool _isCreatingOrder = false;
   bool _isConsulting = false;
+  bool _isLoadingOwnerVariants = false;
 
   String? _error;
   PublicItemDetailModel? _item;
   ItemVariantModel? _selectedVariant;
+  List<ItemVariantModel> _ownerVariants = [];
 
   int _currentImageIndex = 0;
   int _cooldownSeconds = 0;
@@ -92,6 +104,10 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
         _item = result;
         _selectedVariant = initialVariant;
       });
+
+      if (_isOwnItem) {
+        await _loadOwnerVariants();
+      }
     } catch (e) {
       if (!mounted) {
         return;
@@ -109,6 +125,58 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadOwnerVariants() async {
+    final item = _item;
+
+    if (item == null || !_isOwnItem) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoadingOwnerVariants = true;
+      });
+
+      final variants = await _itemService.getItemVariants(item.itemId);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ownerVariants = variants;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ownerVariants = [];
+      });
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoadingOwnerVariants = false;
+      });
+    }
+  }
+
+  bool get _isOwnItem {
+    return widget.isOwnerView;
+  }
+
+  bool get _canPublishAgain {
+    return _ownerVariants.any((variant) {
+      return variant.status == 1 &&
+          variant.availableQuantity > 0 &&
+          variant.price > 0;
+    });
   }
 
   bool _hasText(String? value) {
@@ -140,10 +208,6 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
 
     final formatter = NumberFormat('#,##0', 'en_US');
     return '${formatter.format(value)} VND';
-  }
-
-  bool get _isOwnItem {
-    return widget.isOwnerView;
   }
 
   WardrobeItemModel _mapPublicItemToWardrobeItem(PublicItemDetailModel item) {
@@ -200,6 +264,112 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
     }
   }
 
+  Future<void> _openManageVariantsScreen() async {
+    final item = _item;
+
+    if (item == null) {
+      return;
+    }
+
+    if (!_isOwnItem) {
+      AppToast.show(context, 'Only the owner can manage variants.');
+      return;
+    }
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => ItemManager(),
+          child: ManageItemVariantsScreen(
+            itemId: item.itemId,
+            itemName: item.itemName ?? 'Unnamed Item',
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result == true) {
+      await _loadItem();
+    }
+  }
+
+  Future<void> _publishAgainItem() async {
+    final item = _item;
+
+    if (item == null) {
+      return;
+    }
+
+    if (!_isOwnItem) {
+      AppToast.show(context, 'Only the owner can publish this item.');
+      return;
+    }
+
+    final sellableVariants = _ownerVariants
+        .where(
+          (variant) =>
+      variant.status == 1 &&
+          variant.availableQuantity > 0 &&
+          variant.price > 0,
+    )
+        .toList();
+
+    if (sellableVariants.isEmpty) {
+      AppToast.show(
+        context,
+        'Please add at least one active variant with available stock before publishing.',
+        isError: true,
+      );
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final lowestPrice = sellableVariants
+          .map((variant) => variant.price)
+          .reduce((a, b) => a < b ? a : b);
+
+      await _itemService.publishItem(
+        itemId: item.itemId,
+        listedPrice: lowestPrice,
+        condition: item.condition ?? 'Used - Good',
+        variants: const [],
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(context, 'Item has been published again.');
+      await _loadItem();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(
+        context,
+        _normalizeError(e),
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _unpublishItem() async {
     final item = _item;
 
@@ -226,6 +396,106 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
 
       AppToast.show(context, 'Item has been unpublished.');
       await _loadItem();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(
+        context,
+        _normalizeError(e),
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteItem() async {
+    final item = _item;
+
+    if (item == null) {
+      return;
+    }
+
+    if (!_isOwnItem) {
+      AppToast.show(context, 'Only the owner can delete this item.');
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: const Text(
+            'Delete item?',
+            style: TextStyle(
+              color: _darkText,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: const Text(
+            'This item will be removed from your wardrobe. You cannot delete it if it has reserved variants or active orders.',
+            style: TextStyle(
+              color: _mutedText,
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'CANCEL',
+                style: TextStyle(
+                  color: Colors.black38,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'DELETE',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      await _itemService.deleteItem(item.itemId);
+
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(context, 'Item has been deleted.');
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) {
         return;
@@ -367,377 +637,37 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       return;
     }
 
-    final receiverNameController = TextEditingController();
-    final receiverPhoneController = TextEditingController();
-    final addressController = TextEditingController();
-    final noteController = TextEditingController();
-
-    int quantity = 1;
-    bool isSubmitting = false;
-    bool isSheetClosed = false;
-
-    await showModalBottomSheet(
+    final OrderModel? order = await showModalBottomSheet<OrderModel>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final double subTotal = variant.price * quantity;
-            const double serviceFee = 15000;
-            final double totalAmount = subTotal + serviceFee;
-
-            Future<void> submitOrder() async {
-              final receiverName = receiverNameController.text.trim();
-              final receiverPhone = receiverPhoneController.text.trim();
-              final address = addressController.text.trim();
-              final note = noteController.text.trim();
-
-              if (receiverName.isEmpty) {
-                AppToast.show(context, 'Please enter receiver name.');
-                return;
-              }
-
-              if (receiverName.length < 2) {
-                AppToast.show(context, 'Receiver name is too short.');
-                return;
-              }
-
-              if (receiverPhone.isEmpty) {
-                AppToast.show(context, 'Please enter receiver phone.');
-                return;
-              }
-
-              if (!RegExp(r'^\d+$').hasMatch(receiverPhone)) {
-                AppToast.show(context, 'Phone number must contain digits only.');
-                return;
-              }
-
-              if (!RegExp(r'^(0\d{9,10})$').hasMatch(receiverPhone)) {
-                AppToast.show(context, 'Invalid phone number.');
-                return;
-              }
-
-              if (address.isEmpty) {
-                AppToast.show(context, 'Please enter shipping address.');
-                return;
-              }
-
-              if (address.length < 5) {
-                AppToast.show(context, 'Shipping address is too short.');
-                return;
-              }
-
-              if (quantity <= 0) {
-                AppToast.show(context, 'Quantity must be greater than 0.');
-                return;
-              }
-
-              if (quantity > variant.availableQuantity) {
-                AppToast.show(context, 'Not enough stock.');
-                return;
-              }
-
-              final buyerId = await _getCurrentUserId();
-
-              if (buyerId == null || buyerId <= 0) {
-                AppToast.show(
-                  context,
-                  'Cannot get current user. Please login again.',
-                );
-                return;
-              }
-
-              final int? sellerId = item.ownerId;
-
-              if (sellerId == null || sellerId <= 0) {
-                AppToast.show(context, 'Seller information is missing.');
-                return;
-              }
-
-              if (buyerId == sellerId) {
-                AppToast.show(context, 'You cannot buy your own item.');
-                return;
-              }
-
-              if (isSheetClosed) {
-                return;
-              }
-
-              setSheetState(() {
-                isSubmitting = true;
-              });
-
-              if (mounted) {
-                setState(() {
-                  _isCreatingOrder = true;
-                });
-              }
-
-              try {
-                final body = {
-                  'buyerId': buyerId,
-                  'note': note.isEmpty ? null : note,
-                  'receiverName': receiverName,
-                  'receiverPhone': receiverPhone,
-                  'shippingAddress': address,
-                  'details': [
-                    {
-                      'itemVariantId': variant.itemVariantId,
-                      'quantity': quantity,
-                    }
-                  ],
-                };
-
-                final order = await _orderService.createOrder(
-                  sellerId,
-                  body,
-                );
-
-                if (!mounted) {
-                  return;
-                }
-
-                isSheetClosed = true;
-
-                if (Navigator.canPop(sheetContext)) {
-                  Navigator.pop(sheetContext);
-                }
-
-                await _loadItem();
-
-                if (!mounted) {
-                  return;
-                }
-
-                _showOrderCreatedDialog(order.orderId);
-              } catch (e) {
-                if (!mounted || isSheetClosed) {
-                  return;
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(_normalizeError(e)),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-              } finally {
-                if (mounted) {
-                  setState(() {
-                    _isCreatingOrder = false;
-                  });
-                }
-
-                if (!isSheetClosed) {
-                  setSheetState(() {
-                    isSubmitting = false;
-                  });
-                }
-              }
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'CREATE ORDER',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      _buildOrderItemPreview(item, variant),
-                      const SizedBox(height: 16),
-                      _buildQuantitySelector(
-                        quantity: quantity,
-                        maxQuantity: variant.availableQuantity,
-                        onMinus: quantity <= 1
-                            ? null
-                            : () {
-                          if (isSheetClosed) {
-                            return;
-                          }
-
-                          setSheetState(() {
-                            quantity--;
-                          });
-                        },
-                        onPlus: quantity >= variant.availableQuantity
-                            ? null
-                            : () {
-                          if (isSheetClosed) {
-                            return;
-                          }
-
-                          setSheetState(() {
-                            quantity++;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildBuyTextField(
-                        controller: receiverNameController,
-                        label: 'Receiver name',
-                        icon: Icons.person_outline,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildBuyTextField(
-                        controller: receiverPhoneController,
-                        label: 'Receiver phone',
-                        icon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildBuyTextField(
-                        controller: addressController,
-                        label: 'Shipping address',
-                        icon: Icons.location_on_outlined,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildBuyTextField(
-                        controller: noteController,
-                        label: 'Note',
-                        icon: Icons.note_alt_outlined,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPriceSummary(
-                        subTotal: subTotal,
-                        serviceFee: serviceFee,
-                        totalAmount: totalAmount,
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: isSubmitting ? null : submitOrder,
-                          icon: isSubmitting
-                              ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                              : const Icon(Icons.shopping_bag_outlined),
-                          label: Text(
-                            isSubmitting ? 'CREATING...' : 'CREATE ORDER',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: const Color(0xFFEDEDED),
-                            disabledForegroundColor: Colors.black38,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (_) => _CreateOrderSheet(
+        item: item,
+        variant: variant,
+        orderService: _orderService,
+        getCurrentUserId: _getCurrentUserId,
+        normalizeError: _normalizeError,
+      ),
     );
-  }
 
-  void _showOrderCreatedDialog(int orderId) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            'Order created',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          content: Text(
-            'Your order #$orderId has been created successfully. Please go to Order History to pay.',
-            style: const TextStyle(
-              color: Colors.black54,
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'LATER',
-                style: TextStyle(
-                  color: Colors.black38,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                AppToast.show(
-                  context,
-                  'Open Order History and pay this order.',
-                );
-              },
-              child: const Text(
-                'OK',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    if (!mounted || order == null) {
+      return;
+    }
+
+    await _loadItem();
+
+    if (!mounted) {
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderDetailScreen(
+          orderId: order.orderId,
+          isPurchase: true,
+        ),
+      ),
     );
   }
 
@@ -774,7 +704,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
     final item = _item;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: _pageBackground,
       body: _isLoading
           ? const Center(
         child: CircularProgressIndicator(
@@ -797,7 +727,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             SliverAppBar(
               expandedHeight: 390,
               pinned: true,
-              backgroundColor: const Color(0xFFF5F5F5),
+              backgroundColor: _pageBackground,
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
@@ -828,8 +758,12 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  32,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -882,7 +816,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
   Widget _buildImageSlider(PublicItemDetailModel item) {
     if (item.imageUrls.isEmpty) {
       return Container(
-        color: const Color(0xFFEDEDED),
+        color: _softBackground,
         alignment: Alignment.center,
         child: const Icon(
           Icons.checkroom_outlined,
@@ -909,7 +843,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) {
                 return Container(
-                  color: const Color(0xFFEDEDED),
+                  color: _softBackground,
                   alignment: Alignment.center,
                   child: const Icon(
                     Icons.broken_image_outlined,
@@ -924,7 +858,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 }
 
                 return Container(
-                  color: const Color(0xFFEDEDED),
+                  color: _softBackground,
                   alignment: Alignment.center,
                   child: const CircularProgressIndicator(
                     color: Colors.black,
@@ -940,9 +874,9 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.white.withOpacity(0.15),
-                Colors.white.withOpacity(0.2),
-                const Color(0xFFF5F5F5),
+                Colors.white.withOpacity(0.08),
+                Colors.white.withOpacity(0.18),
+                _pageBackground,
               ],
             ),
           ),
@@ -988,7 +922,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           Text(
             _hasText(item.itemName) ? item.itemName! : 'Unnamed Item',
             style: const TextStyle(
-              color: Colors.black,
+              color: _darkText,
               fontSize: 24,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.4,
@@ -1016,7 +950,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       children: [
         CircleAvatar(
           radius: 25,
-          backgroundColor: const Color(0xFFF1F1F1),
+          backgroundColor: _softBackground,
           backgroundImage:
           _hasText(item.ownerAvatarUrl) ? NetworkImage(item.ownerAvatarUrl!) : null,
           child: !_hasText(item.ownerAvatarUrl)
@@ -1044,7 +978,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               Text(
                 _hasText(item.ownerUserName) ? item.ownerUserName! : 'User',
                 style: const TextStyle(
-                  color: Colors.black,
+                  color: _darkText,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1074,7 +1008,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             child: Text(
               'This is your own item. Buying and consultation actions are disabled.',
               style: TextStyle(
-                color: Colors.black54,
+                color: _mutedText,
                 fontSize: 13,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
@@ -1088,27 +1022,71 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
 
   Widget _buildOwnerSaleAction(PublicItemDetailModel item) {
     if (!item.isForSale) {
-      return SizedBox(
+      return Container(
         width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _openPublishItemForSaleScreen,
-          icon: const Icon(Icons.sell_outlined),
-          label: const Text(
-            'SELL THIS ITEM',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
+        padding: const EdgeInsets.all(16),
+        decoration: _cardDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.storefront_outlined,
+                  color: Colors.black,
+                  size: 22,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Owner actions',
+                    style: TextStyle(
+                      color: _darkText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.black,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+            const SizedBox(height: 12),
+            if (_isLoadingOwnerVariants)
+              _buildCheckingVariantsButton()
+            else if (_canPublishAgain)
+              _buildPublishAgainButton()
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _openPublishItemForSaleScreen,
+                  icon: const Icon(Icons.sell_outlined),
+                  label: const Text(
+                    'SELL THIS ITEM',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                  style: _primaryButtonStyle(),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Text(
+              _canPublishAgain
+                  ? 'This item already has active variants and can be published again.'
+                  : 'Create variants first if this item has not been sold before.',
+              style: const TextStyle(
+                color: Colors.black45,
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+            const SizedBox(height: 10),
+            _buildManageVariantsButton(),
+            const SizedBox(height: 10),
+            _buildDeleteItemButton(),
+          ],
         ),
       );
     }
@@ -1132,7 +1110,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 child: Text(
                   'This item is currently for sale.',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: _darkText,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1145,7 +1123,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             Text(
               'Listed price: ${_formatPrice(item.listedPrice)}',
               style: const TextStyle(
-                color: Colors.black,
+                color: _darkText,
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
@@ -1155,7 +1133,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             Text(
               'Condition: ${item.condition}',
               style: const TextStyle(
-                color: Colors.black54,
+                color: _mutedText,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -1180,12 +1158,117 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 backgroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 10),
+          _buildManageVariantsButton(),
+          const SizedBox(height: 10),
+          _buildDeleteItemButton(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCheckingVariantsButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: null,
+        icon: const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        ),
+        label: const Text(
+          'CHECKING VARIANTS...',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+          ),
+        ),
+        style: _primaryButtonStyle(),
+      ),
+    );
+  }
+
+  Widget _buildPublishAgainButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _publishAgainItem,
+        icon: const Icon(Icons.storefront_outlined),
+        label: const Text(
+          'PUBLISH AGAIN',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+          ),
+        ),
+        style: _primaryButtonStyle(),
+      ),
+    );
+  }
+
+  Widget _buildManageVariantsButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _openManageVariantsScreen,
+        icon: const Icon(Icons.category_outlined),
+        label: const Text(
+          'MANAGE VARIANTS',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.black,
+          side: const BorderSide(
+            color: Colors.black,
+            width: 1.1,
+          ),
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteItemButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _deleteItem,
+        icon: const Icon(Icons.delete_outline),
+        label: const Text(
+          'DELETE ITEM',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.redAccent,
+          side: const BorderSide(
+            color: Colors.redAccent,
+            width: 1.1,
+          ),
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
     );
   }
@@ -1223,17 +1306,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             fontSize: 12,
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFFEDEDED),
-          disabledForegroundColor: Colors.black38,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
+        style: _primaryButtonStyle(),
       ),
     );
   }
@@ -1274,10 +1347,10 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             width: 1.2,
           ),
           disabledForegroundColor: Colors.black26,
-          backgroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 15),
+          backgroundColor: _cardBackground,
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
@@ -1288,7 +1361,20 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: _cardDecoration(),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.black.withOpacity(0.08),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1298,7 +1384,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             Text(
               _formatPrice(item.listedPrice),
               style: const TextStyle(
-                color: Colors.black,
+                color: _darkText,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
               ),
@@ -1308,7 +1394,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             Text(
               'Condition: ${item.condition}',
               style: const TextStyle(
-                color: Colors.black54,
+                color: _mutedText,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1319,7 +1405,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             const Text(
               'No variants available.',
               style: TextStyle(
-                color: Colors.black54,
+                color: _mutedText,
                 fontWeight: FontWeight.w600,
               ),
             )
@@ -1347,12 +1433,10 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                       vertical: 11,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.black : const Color(0xFFF7F7F7),
+                      color: isSelected ? Colors.black : _softBackground,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isSelected
-                            ? Colors.black
-                            : Colors.black.withOpacity(0.06),
+                        color: isSelected ? Colors.black : _borderColor,
                       ),
                     ),
                     child: Column(
@@ -1369,6 +1453,21 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                             fontWeight: FontWeight.w900,
                           ),
                         ),
+                        if (_hasText(variant.color)) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            variant.color!,
+                            style: TextStyle(
+                              color: isOutOfStock
+                                  ? Colors.black26
+                                  : isSelected
+                                  ? Colors.white70
+                                  : _mutedText,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Text(
                           _formatPrice(variant.price),
@@ -1377,7 +1476,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                                 ? Colors.black26
                                 : isSelected
                                 ? Colors.white70
-                                : Colors.black54,
+                                : _mutedText,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1409,7 +1508,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               'Selected: ${_selectedVariant!.sizeCode ?? 'Default'}'
                   '${_selectedVariant!.color != null ? ' - ${_selectedVariant!.color}' : ''}',
               style: const TextStyle(
-                color: Colors.black,
+                color: _darkText,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
@@ -1424,17 +1523,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   _isCreatingOrder)
                   ? null
                   : _openBuySheet,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFFEDEDED),
-                disabledForegroundColor: Colors.black38,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
+              style: _primaryButtonStyle(),
               child: _isCreatingOrder
                   ? const SizedBox(
                 width: 20,
@@ -1475,7 +1564,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 ? Container(
               width: 72,
               height: 72,
-              color: const Color(0xFFF1F1F1),
+              color: _softBackground,
               child: const Icon(
                 Icons.checkroom_outlined,
                 color: Colors.black26,
@@ -1490,7 +1579,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 return Container(
                   width: 72,
                   height: 72,
-                  color: const Color(0xFFF1F1F1),
+                  color: _softBackground,
                   child: const Icon(
                     Icons.broken_image_outlined,
                     color: Colors.black26,
@@ -1509,7 +1598,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Colors.black,
+                    color: _darkText,
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
                   ),
@@ -1519,7 +1608,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                   'Variant: ${variant.sizeCode ?? 'Default'}'
                       '${variant.color != null ? ' - ${variant.color}' : ''}',
                   style: const TextStyle(
-                    color: Colors.black54,
+                    color: _mutedText,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1528,7 +1617,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 Text(
                   _formatPrice(variant.price),
                   style: const TextStyle(
-                    color: Colors.black,
+                    color: _darkText,
                     fontWeight: FontWeight.w900,
                     fontSize: 14,
                   ),
@@ -1556,7 +1645,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             child: Text(
               'Quantity\nAvailable: $maxQuantity',
               style: const TextStyle(
-                color: Colors.black,
+                color: _darkText,
                 fontSize: 14,
                 height: 1.4,
                 fontWeight: FontWeight.w700,
@@ -1572,7 +1661,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           Text(
             '$quantity',
             style: const TextStyle(
-              color: Colors.black,
+              color: _darkText,
               fontWeight: FontWeight.w900,
               fontSize: 17,
             ),
@@ -1600,7 +1689,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       style: const TextStyle(
-        color: Colors.black,
+        color: _darkText,
         fontWeight: FontWeight.w600,
       ),
       decoration: InputDecoration(
@@ -1614,15 +1703,15 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           color: Colors.black,
         ),
         filled: true,
-        fillColor: const Color(0xFFF7F7F7),
+        fillColor: _softBackground,
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: Colors.black.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: _borderColor,
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(
             color: Colors.black,
           ),
@@ -1647,7 +1736,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(
-              color: Color(0xFFEDEDED),
+              color: _borderColor,
               height: 1,
             ),
           ),
@@ -1668,7 +1757,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: isTotal ? Colors.black : Colors.black54,
+              color: isTotal ? _darkText : _mutedText,
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600,
             ),
@@ -1677,7 +1766,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
         Text(
           _formatPrice(value),
           style: TextStyle(
-            color: Colors.black,
+            color: _darkText,
             fontSize: isTotal ? 17 : 14,
             fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
           ),
@@ -1690,16 +1779,16 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F1F1),
+        color: _warmAccent,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: Colors.black.withOpacity(0.05),
+          color: _borderColor,
         ),
       ),
       child: Text(
         value,
         style: const TextStyle(
-          color: Colors.black54,
+          color: _darkText,
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),
@@ -1713,6 +1802,13 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: const Text(
         'FOR SALE',
@@ -1739,7 +1835,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
           Text(
             item.description!,
             style: const TextStyle(
-              color: Colors.black54,
+              color: _mutedText,
               fontSize: 14,
               height: 1.5,
               fontWeight: FontWeight.w600,
@@ -1769,7 +1865,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
             const Text(
               'No detailed information available.',
               style: TextStyle(
-                color: Colors.black54,
+                color: _mutedText,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1797,7 +1893,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                       child: Text(
                         entry.value,
                         style: const TextStyle(
-                          color: Colors.black,
+                          color: _darkText,
                           fontSize: 13,
                           height: 1.4,
                           fontWeight: FontWeight.w700,
@@ -1833,7 +1929,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
               const Text(
                 'Failed to load item details',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: _darkText,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1843,7 +1939,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 _error ?? 'An unexpected error occurred',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.black54,
+                  color: _mutedText,
                   height: 1.4,
                 ),
               ),
@@ -1852,15 +1948,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _loadItem,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                  style: _primaryButtonStyle(),
                   child: const Text(
                     'TRY AGAIN',
                     style: TextStyle(
@@ -1882,7 +1970,7 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
       child: Text(
         'Item data is empty.',
         style: TextStyle(
-          color: Colors.black54,
+          color: _mutedText,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -1892,37 +1980,64 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
   Widget _sectionTitle(String title, IconData icon) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: Colors.black,
-          size: 18,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: _softBackground,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: _borderColor,
+            ),
+          ),
+          child: Icon(
+            icon,
             color: Colors.black,
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-            letterSpacing: 0.4,
+            size: 17,
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: _darkText,
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              letterSpacing: 0.4,
+            ),
           ),
         ),
       ],
     );
   }
 
+  ButtonStyle _primaryButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: const Color(0xFFE6E1DA),
+      disabledForegroundColor: Colors.black38,
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    );
+  }
+
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      color: _cardBackground,
+      borderRadius: BorderRadius.circular(24),
       border: Border.all(
-        color: Colors.black.withOpacity(0.05),
+        color: _borderColor,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.03),
-          blurRadius: 14,
-          offset: const Offset(0, 6),
+          color: Colors.black.withOpacity(0.055),
+          blurRadius: 22,
+          offset: const Offset(0, 10),
         ),
       ],
     );
@@ -1930,10 +2045,561 @@ class _PublicItemDetailScreenState extends State<PublicItemDetailScreen> {
 
   BoxDecoration _softCardDecoration() {
     return BoxDecoration(
-      color: const Color(0xFFF7F7F7),
-      borderRadius: BorderRadius.circular(16),
+      color: _softBackground,
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(
-        color: Colors.black.withOpacity(0.04),
+        color: _borderColor,
+      ),
+    );
+  }
+}
+
+class _CreateOrderSheet extends StatefulWidget {
+  final PublicItemDetailModel item;
+  final ItemVariantModel variant;
+  final OrderService orderService;
+  final Future<int?> Function() getCurrentUserId;
+  final String Function(Object error) normalizeError;
+
+  const _CreateOrderSheet({
+    required this.item,
+    required this.variant,
+    required this.orderService,
+    required this.getCurrentUserId,
+    required this.normalizeError,
+  });
+
+  @override
+  State<_CreateOrderSheet> createState() => _CreateOrderSheetState();
+}
+
+class _CreateOrderSheetState extends State<_CreateOrderSheet> {
+  static const Color _cardBackground = Colors.white;
+  static const Color _softBackground = Color(0xFFF4F1ED);
+  static const Color _darkText = Color(0xFF111111);
+  static const Color _mutedText = Color(0xFF6F6A64);
+  static const Color _borderColor = Color(0xFFE8E1D8);
+
+  final TextEditingController _receiverNameController =
+  TextEditingController();
+  final TextEditingController _receiverPhoneController =
+  TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+
+  int _quantity = 1;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _receiverNameController.dispose();
+    _receiverPhoneController.dispose();
+    _addressController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(double? value) {
+    if (value == null) {
+      return '';
+    }
+
+    final formatter = NumberFormat('#,##0', 'en_US');
+    return '${formatter.format(value)} VND';
+  }
+
+  bool _hasText(String? value) {
+    return value != null && value.trim().isNotEmpty;
+  }
+
+  Future<void> _submitOrder() async {
+    final receiverName = _receiverNameController.text.trim();
+    final receiverPhone = _receiverPhoneController.text.trim();
+    final address = _addressController.text.trim();
+    final note = _noteController.text.trim();
+
+    if (receiverName.isEmpty) {
+      AppToast.show(context, 'Please enter receiver name.');
+      return;
+    }
+
+    if (receiverName.length < 2) {
+      AppToast.show(context, 'Receiver name is too short.');
+      return;
+    }
+
+    if (receiverPhone.isEmpty) {
+      AppToast.show(context, 'Please enter receiver phone.');
+      return;
+    }
+
+    if (!RegExp(r'^\d+$').hasMatch(receiverPhone)) {
+      AppToast.show(context, 'Phone number must contain digits only.');
+      return;
+    }
+
+    if (!RegExp(r'^(0\d{9,10})$').hasMatch(receiverPhone)) {
+      AppToast.show(context, 'Invalid phone number.');
+      return;
+    }
+
+    if (address.isEmpty) {
+      AppToast.show(context, 'Please enter shipping address.');
+      return;
+    }
+
+    if (address.length < 5) {
+      AppToast.show(context, 'Shipping address is too short.');
+      return;
+    }
+
+    if (_quantity <= 0) {
+      AppToast.show(context, 'Quantity must be greater than 0.');
+      return;
+    }
+
+    if (_quantity > widget.variant.availableQuantity) {
+      AppToast.show(context, 'Not enough stock.');
+      return;
+    }
+
+    final buyerId = await widget.getCurrentUserId();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (buyerId == null || buyerId <= 0) {
+      AppToast.show(context, 'Cannot get current user. Please login again.');
+      return;
+    }
+
+    final int? sellerId = widget.item.ownerId;
+
+    if (sellerId == null || sellerId <= 0) {
+      AppToast.show(context, 'Seller information is missing.');
+      return;
+    }
+
+    if (buyerId == sellerId) {
+      AppToast.show(context, 'You cannot buy your own item.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final body = {
+        'buyerId': buyerId,
+        'note': note.isEmpty ? null : note,
+        'receiverName': receiverName,
+        'receiverPhone': receiverPhone,
+        'shippingAddress': address,
+        'details': [
+          {
+            'itemVariantId': widget.variant.itemVariantId,
+            'quantity': _quantity,
+          }
+        ],
+      };
+
+      final order = await widget.orderService.createOrder(
+        sellerId,
+        body,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, order);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(widget.normalizeError(e)),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double subTotal = widget.variant.price * _quantity;
+    const double serviceFee = 15000;
+    final double totalAmount = subTotal + serviceFee;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+        decoration: const BoxDecoration(
+          color: _cardBackground,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(30),
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'CREATE ORDER',
+                style: TextStyle(
+                  color: _darkText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _buildOrderItemPreview(),
+              const SizedBox(height: 16),
+              _buildQuantitySelector(),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _receiverNameController,
+                label: 'Receiver name',
+                icon: Icons.person_outline,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _receiverPhoneController,
+                label: 'Receiver phone',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _addressController,
+                label: 'Shipping address',
+                icon: Icons.location_on_outlined,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _noteController,
+                label: 'Note',
+                icon: Icons.note_alt_outlined,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              _buildPriceSummary(
+                subTotal: subTotal,
+                serviceFee: serviceFee,
+                totalAmount: totalAmount,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isSubmitting ? null : _submitOrder,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                      : const Icon(Icons.shopping_bag_outlined),
+                  label: Text(
+                    _isSubmitting ? 'CREATING...' : 'CREATE ORDER',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                  style: _primaryButtonStyle(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderItemPreview() {
+    final imageUrl =
+    widget.item.imageUrls.isNotEmpty ? widget.item.imageUrls.first : null;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: _softCardDecoration(),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: imageUrl == null || imageUrl.trim().isEmpty
+                ? Container(
+              width: 72,
+              height: 72,
+              color: _softBackground,
+              child: const Icon(
+                Icons.checkroom_outlined,
+                color: Colors.black26,
+              ),
+            )
+                : Image.network(
+              imageUrl,
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) {
+                return Container(
+                  width: 72,
+                  height: 72,
+                  color: _softBackground,
+                  child: const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.black26,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.item.itemName ?? 'Unnamed Item',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _darkText,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Variant: ${widget.variant.sizeCode ?? 'Default'}'
+                      '${_hasText(widget.variant.color) ? ' - ${widget.variant.color}' : ''}',
+                  style: const TextStyle(
+                    color: _mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _formatPrice(widget.variant.price),
+                  style: const TextStyle(
+                    color: _darkText,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuantitySelector() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: _softCardDecoration(),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Quantity\nAvailable: ${widget.variant.availableQuantity}',
+              style: const TextStyle(
+                color: _darkText,
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: _quantity <= 1
+                ? null
+                : () {
+              setState(() {
+                _quantity--;
+              });
+            },
+            icon: const Icon(Icons.remove_circle_outline),
+            color: Colors.black,
+            disabledColor: Colors.black26,
+          ),
+          Text(
+            '$_quantity',
+            style: const TextStyle(
+              color: _darkText,
+              fontWeight: FontWeight.w900,
+              fontSize: 17,
+            ),
+          ),
+          IconButton(
+            onPressed: _quantity >= widget.variant.availableQuantity
+                ? null
+                : () {
+              setState(() {
+                _quantity++;
+              });
+            },
+            icon: const Icon(Icons.add_circle_outline),
+            color: Colors.black,
+            disabledColor: Colors.black26,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: const TextStyle(
+        color: _darkText,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(
+          color: Colors.black45,
+          fontWeight: FontWeight.w600,
+        ),
+        prefixIcon: Icon(
+          icon,
+          color: Colors.black,
+        ),
+        filled: true,
+        fillColor: _softBackground,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: _borderColor,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceSummary({
+    required double subTotal,
+    required double serviceFee,
+    required double totalAmount,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: _softCardDecoration(),
+      child: Column(
+        children: [
+          _buildPriceRow('Subtotal', subTotal),
+          const SizedBox(height: 8),
+          _buildPriceRow('Service fee', serviceFee),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(
+              color: _borderColor,
+              height: 1,
+            ),
+          ),
+          _buildPriceRow('Total', totalAmount, isTotal: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(
+      String label,
+      double value, {
+        bool isTotal = false,
+      }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isTotal ? _darkText : _mutedText,
+              fontSize: isTotal ? 16 : 14,
+              fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600,
+            ),
+          ),
+        ),
+        Text(
+          _formatPrice(value),
+          style: TextStyle(
+            color: _darkText,
+            fontSize: isTotal ? 17 : 14,
+            fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  ButtonStyle _primaryButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: const Color(0xFFE6E1DA),
+      disabledForegroundColor: Colors.black38,
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    );
+  }
+
+  BoxDecoration _softCardDecoration() {
+    return BoxDecoration(
+      color: _softBackground,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: _borderColor,
       ),
     );
   }
