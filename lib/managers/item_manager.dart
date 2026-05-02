@@ -145,7 +145,6 @@ class ItemManager extends ChangeNotifier {
 
   Future<bool> createVariant({
     required int itemId,
-    required String sku,
     String? sizeCode,
     String? color,
     required double price,
@@ -159,9 +158,8 @@ class ItemManager extends ChangeNotifier {
       final result = await _itemService.createItemVariant(
         itemId: itemId,
         data: {
-          'sku': sku,
-          'sizeCode': sizeCode,
-          'color': color,
+          'sizeCode': sizeCode?.trim().isEmpty == true ? null : sizeCode?.trim(),
+          'color': color?.trim().isEmpty == true ? null : color?.trim(),
           'price': price,
           'stockQuantity': stockQuantity,
         },
@@ -180,7 +178,6 @@ class ItemManager extends ChangeNotifier {
 
   Future<bool> updateVariant({
     required int itemVariantId,
-    required String sku,
     String? sizeCode,
     String? color,
     required double price,
@@ -195,9 +192,8 @@ class ItemManager extends ChangeNotifier {
       final result = await _itemService.updateItemVariant(
         itemVariantId: itemVariantId,
         data: {
-          'sku': sku,
-          'sizeCode': sizeCode,
-          'color': color,
+          'sizeCode': sizeCode?.trim().isEmpty == true ? null : sizeCode?.trim(),
+          'color': color?.trim().isEmpty == true ? null : color?.trim(),
           'price': price,
           'stockQuantity': stockQuantity,
           'status': status,
@@ -313,7 +309,7 @@ class ItemManager extends ChangeNotifier {
       await _itemService.deleteItem(itemId);
 
       myItems = myItems.where((item) => item.itemId != itemId).toList();
-      savedItems = savedItems.where((item) => item?.itemId != itemId).toList();
+      savedItems = savedItems.where((item) => item.itemId != itemId).toList();
 
       if (commerceInfo?.itemId == itemId) {
         commerceInfo = null;

@@ -19,7 +19,10 @@ import 'public_wardrobe_screen.dart';
 class OtherProfileScreen extends StatefulWidget {
   final int userId;
 
-  const OtherProfileScreen({super.key, required this.userId});
+  const OtherProfileScreen({
+    super.key,
+    required this.userId,
+  });
 
   @override
   State<OtherProfileScreen> createState() => _OtherProfileScreenState();
@@ -30,9 +33,10 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   late Future<List<PostFeedModel>> _postsFuture;
 
   final FollowService _followService = FollowService();
-  StreamSubscription? _profileUpdateSubscription;
-  bool _isActionFromMe = false;
 
+  StreamSubscription? _profileUpdateSubscription;
+
+  bool _isActionFromMe = false;
   bool isFollowing = false;
   bool isLoadingFollow = true;
 
@@ -42,12 +46,15 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   void initState() {
     super.initState();
     _refreshData();
-    _profileUpdateSubscription = GlobalEventBus().eventBus.on<ProfileUpdateEvent>().listen((event) {
-      if (mounted && !_isActionFromMe) {
-        _silentRefresh();
-      }
-    });
+
+    _profileUpdateSubscription =
+        GlobalEventBus().eventBus.on<ProfileUpdateEvent>().listen((event) {
+          if (mounted && !_isActionFromMe) {
+            _silentRefresh();
+          }
+        });
   }
+
   @override
   void dispose() {
     _profileUpdateSubscription?.cancel();
@@ -56,21 +63,40 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
   Future<void> _refreshData() async {
     setState(() {
-      _profileFuture = AccountService().getUserProfile(widget.userId.toString());
-      _postsFuture = PostService().fetchUserPosts(userId: widget.userId);
+      _profileFuture = AccountService().getUserProfile(
+        widget.userId.toString(),
+      );
+      _postsFuture = PostService().fetchUserPosts(
+        userId: widget.userId,
+      );
       _followerOffset = 0;
     });
+
     _checkFollowStatus();
   }
+
   Future<void> _handleStartChat(String name, String avatar) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.pink)),
+      builder: (context) {
+        return const Center(
+          child: CircularProgressIndicator(
+            color: Colors.pink,
+          ),
+        );
+      },
     );
+
     try {
       final groupId = await ChatService().createOrGet1v1Room(widget.userId);
+
+      if (!mounted) {
+        return;
+      }
+
       Navigator.pop(context);
+
       if (groupId != null) {
         Navigator.push(
           context,
@@ -85,10 +111,16 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not connect to chat room!')),
+          const SnackBar(
+            content: Text('Could not connect to chat room!'),
+          ),
         );
       }
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
       Navigator.pop(context);
       print("Lỗi điều hướng: $e");
     }
@@ -97,7 +129,10 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   Future<void> _silentRefresh() async {
     try {
       final status = await _followService.checkIsFollowing(widget.userId);
-      final profile = await AccountService().getUserProfile(widget.userId.toString());
+      final profile = await AccountService().getUserProfile(
+        widget.userId.toString(),
+      );
+
       if (mounted) {
         setState(() {
           isFollowing = status;
@@ -109,10 +144,13 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
   }
 
   Future<void> _checkFollowStatus() async {
-    setState(() => isLoadingFollow = true);
+    setState(() {
+      isLoadingFollow = true;
+    });
 
     try {
       final status = await _followService.checkIsFollowing(widget.userId);
+
       if (mounted) {
         setState(() {
           isFollowing = status;
@@ -158,7 +196,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
                   'Cancel',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(
+                    color: Colors.black54,
+                  ),
                 ),
               ),
               TextButton(
@@ -176,7 +216,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
         },
       );
 
-      if (confirm != true) return;
+      if (confirm != true) {
+        return;
+      }
     }
 
     final currentStatus = isFollowing;
@@ -219,7 +261,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
       }
     } finally {
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _isActionFromMe = false;
+        if (mounted) {
+          _isActionFromMe = false;
+        }
       });
     }
   }
@@ -236,7 +280,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
         builder: (context, profileSnapshot) {
           if (profileSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.pink),
+              child: CircularProgressIndicator(
+                color: Colors.pink,
+              ),
             );
           }
 
@@ -246,7 +292,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Text(
                   'Failed to load profile: ${profileSnapshot.error}',
-                  style: const TextStyle(color: Colors.white70),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -261,7 +309,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                 padding: EdgeInsets.all(24),
                 child: Text(
                   'User information not found.',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(
+                    color: Colors.white70,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -270,12 +320,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
           final String avatar = (user['avatar'] ?? '').toString();
           final String name = (user['username'] ?? 'User').toString();
-          final String email = (user['email'] ?? 'Updating...').toString();
-          final String bio = (user['description'] ?? 'No bio available.')
-              .toString();
+          final String description =
+          (user['description'] ?? 'No description available.').toString();
 
           final int baseFollowerCount =
           (user['followerCount'] ?? user['followers'] ?? 0) as int;
+
           final String followerCount =
           (baseFollowerCount + _followerOffset).toString();
 
@@ -334,17 +384,25 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                       pinned: true,
                       elevation: 0,
                       leading: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                       title: Text(
                         name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           shadows: [
-                            Shadow(color: Colors.white, blurRadius: 5),
+                            Shadow(
+                              color: Colors.white,
+                              blurRadius: 5,
+                            ),
                           ],
                         ),
                       ),
@@ -444,50 +502,71 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 20, 10, 10),
+                              padding:
+                              const EdgeInsets.fromLTRB(20, 20, 10, 10),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: -0.5,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: -0.5,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        email,
-                                        style: const TextStyle(
-                                          color: Colors.black38,
-                                          fontSize: 14,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          description.trim().isEmpty
+                                              ? 'No description available.'
+                                              : description,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.black38,
+                                            fontSize: 14,
+                                            height: 1.35,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
+                                  const SizedBox(width: 8),
                                   IconButton(
                                     onPressed: () {
-                                      Navigator.push(context, SlideRoute(page: PublicWardrobeScreen(accountId: widget.userId)));
+                                      Navigator.push(
+                                        context,
+                                        SlideRoute(
+                                          page: PublicWardrobeScreen(
+                                            accountId: widget.userId,
+                                          ),
+                                        ),
+                                      );
                                     },
                                     icon: Container(
-                                      padding: const EdgeInsets.all(10), // Tăng nhẹ padding
+                                      padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Colors.black, // Nền đen sâu
+                                        color: Colors.black,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
+                                            color:
+                                            Colors.black.withOpacity(0.2),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           ),
                                         ],
                                       ),
                                       child: const Icon(
-                                        Icons.checkroom_rounded, // Icon cái móc treo nhìn "thời trang" hơn cánh cửa
+                                        Icons.checkroom_rounded,
                                         color: Colors.white,
                                         size: 20,
                                       ),
@@ -498,56 +577,105 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                             ),
                             const SizedBox(height: 20),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 20),
                               child: Row(
                                 children: [
-                                  // NÚT FOLLOW CHIẾM 2 PHẦN
                                   Expanded(
                                     flex: 2,
                                     child: GestureDetector(
-                                      onTap: isLoadingFollow ? null : _toggleFollow,
+                                      onTap: isLoadingFollow
+                                          ? null
+                                          : _toggleFollow,
                                       child: Container(
                                         height: 46,
                                         decoration: BoxDecoration(
-                                          color: isFollowing ? Colors.transparent : Colors.black,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: isFollowing ? Border.all(color: Colors.black12, width: 1.5) : null,
+                                          color: isFollowing
+                                              ? Colors.transparent
+                                              : Colors.black,
+                                          borderRadius:
+                                          BorderRadius.circular(12),
+                                          border: isFollowing
+                                              ? Border.all(
+                                            color: Colors.black12,
+                                            width: 1.5,
+                                          )
+                                              : null,
                                         ),
                                         alignment: Alignment.center,
                                         child: isLoadingFollow
-                                            ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                            : Text(
-                                          isFollowing ? 'Following' : 'Follow',
-                                          style: TextStyle(
-                                            color: isFollowing ? Colors.black : Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 13,
+                                            ? SizedBox(
+                                          height: 16,
+                                          width: 16,
+                                          child:
+                                          CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: isFollowing
+                                                ? Colors.black
+                                                : Colors.white,
+                                          ),
+                                        )
+                                            : FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            isFollowing
+                                                ? 'Following'
+                                                : 'Follow',
+                                            maxLines: 1,
+                                            style: TextStyle(
+                                              color: isFollowing
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  // NÚT MESSAGE CHIẾM 1 PHẦN
                                   Expanded(
                                     flex: 1,
                                     child: GestureDetector(
-                                      onTap: () => _handleStartChat(name, avatar),
+                                      onTap: () =>
+                                          _handleStartChat(name, avatar),
                                       child: Container(
                                         height: 46,
                                         decoration: BoxDecoration(
                                           color: Colors.transparent,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.black12, width: 1.5),
+                                          borderRadius:
+                                          BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Colors.black12,
+                                            width: 1.5,
+                                          ),
                                         ),
                                         child: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.messenger_outline_rounded, size: 18, color: Colors.black),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'Chat',
-                                              style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 13),
+                                            Icon(
+                                              Icons.messenger_outline_rounded,
+                                              size: 17,
+                                              color: Colors.black,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Flexible(
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  'Chat',
+                                                  maxLines: 1,
+                                                  style: TextStyle(
+                                                    color: Colors.black,
+                                                    fontWeight:
+                                                    FontWeight.w800,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -558,7 +686,6 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               ),
                             ),
                             const SizedBox(height: 20),
-
                           ],
                         ),
                       ),
@@ -606,7 +733,9 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
                               child: Center(
                                 child: Text(
                                   'No posts yet.',
-                                  style: TextStyle(color: Colors.black26),
+                                  style: TextStyle(
+                                    color: Colors.black26,
+                                  ),
                                 ),
                               ),
                             ),
@@ -650,30 +779,43 @@ class _OtherProfileScreenState extends State<OtherProfileScreen> {
 
   Widget _buildStatItem(String value, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(
+          color: Colors.white10,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

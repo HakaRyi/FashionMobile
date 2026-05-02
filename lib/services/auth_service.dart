@@ -8,6 +8,20 @@ import '../constants/api_constants.dart';
 import '../managers/google_auth_manager.dart';
 
 class AuthService {
+  Map<String, dynamic> _decodeResponseBody(String body) {
+    if (body.trim().isEmpty) {
+      return {};
+    }
+
+    final decoded = jsonDecode(body);
+
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+
+    return {};
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse(
       '${ApiConstants.baseUrl}${ApiConstants.loginEndpoint}',
@@ -26,7 +40,7 @@ class AuthService {
         }),
       );
 
-      final responseData = jsonDecode(response.body);
+      final responseData = _decodeResponseBody(response.body);
 
       if (response.statusCode == 200) {
         await _saveAuthData(responseData);
@@ -46,12 +60,13 @@ class AuthService {
 
       return {
         'success': false,
-        'message': 'System error (${response.statusCode}).',
+        'message': 'System error (${response.statusCode}). Please try again later.',
       };
-    } catch (e) {
+    } catch (_) {
       return {
         'success': false,
-        'message': 'Cannot connect to server: $e',
+        'message':
+        'Unable to connect to the server. Please check your internet connection and try again.',
       };
     }
   }
@@ -73,7 +88,7 @@ class AuthService {
         }),
       );
 
-      final responseData = jsonDecode(response.body);
+      final responseData = _decodeResponseBody(response.body);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> dataObj = responseData['data'] ?? {};
@@ -91,18 +106,20 @@ class AuthService {
       if (response.statusCode == 400 || response.statusCode == 401) {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Authentication failed.',
+          'message':
+          responseData['message'] ?? 'Google authentication failed.',
         };
       }
 
       return {
         'success': false,
-        'message': 'System error (${response.statusCode}).',
+        'message': 'System error (${response.statusCode}). Please try again later.',
       };
-    } catch (e) {
+    } catch (_) {
       return {
         'success': false,
-        'message': 'Cannot connect to server: $e',
+        'message':
+        'Unable to connect to the server. Please check your internet connection and try again.',
       };
     }
   }
@@ -138,10 +155,11 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+        final responseData = _decodeResponseBody(response.body);
 
         final String? newAccessToken =
-        (responseData['accessToken'] ?? responseData['data']?['accessToken'])
+        (responseData['accessToken'] ??
+            responseData['data']?['accessToken'])
             ?.toString();
 
         final String? newRefreshToken =
@@ -162,14 +180,43 @@ class AuthService {
         }
       }
 
+      await prefs.remove('token');
+      await prefs.remove('refreshToken');
       return false;
     } catch (_) {
+      await prefs.remove('token');
+      await prefs.remove('refreshToken');
       return false;
     }
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+
+    final accessToken = prefs.getString('token') ?? '';
+    final refreshToken = prefs.getString('refreshToken') ?? '';
+
+    try {
+      if (accessToken.trim().isNotEmpty && refreshToken.trim().isNotEmpty) {
+        final url = Uri.parse(
+          '${ApiConstants.baseUrl}${ApiConstants.logoutEndpoint}',
+        );
+
+        await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+            'ngrok-skip-browser-warning': '69420',
+          },
+          body: jsonEncode({
+            'refreshToken': refreshToken,
+          }),
+        );
+      }
+    } catch (_) {
+      // Still clear local data even if server logout fails.
+    }
 
     await prefs.clear();
 
@@ -187,7 +234,7 @@ class AuthService {
       ) async {
     try {
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/auth/register'),
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.registerEndpoint}'),
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': '69420',
@@ -200,12 +247,12 @@ class AuthService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _decodeResponseBody(response.body);
 
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'message': data['message'],
+          'message': data['message'] ?? 'Registration successful.',
         };
       }
 
@@ -216,7 +263,8 @@ class AuthService {
     } catch (_) {
       return {
         'success': false,
-        'message': 'Cannot connect to server.',
+        'message':
+        'Unable to connect to the server. Please check your internet connection and try again.',
       };
     }
   }
@@ -235,12 +283,12 @@ class AuthService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _decodeResponseBody(response.body);
 
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'message': data['message'],
+          'message': data['message'] ?? 'Account verified successfully.',
         };
       }
 
@@ -251,7 +299,8 @@ class AuthService {
     } catch (_) {
       return {
         'success': false,
-        'message': 'Cannot connect to server.',
+        'message':
+        'Unable to connect to the server. Please check your internet connection and try again.',
       };
     }
   }

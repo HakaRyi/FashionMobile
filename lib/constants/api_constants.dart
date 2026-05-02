@@ -1,19 +1,22 @@
 class ApiConstants {
-  static const String baseUrl = "http://10.0.2.2:5196/api"; //https://fashionwebbe.onrender.com
+  static const String baseUrl = "http://10.0.2.2:5196/api";
   // static const String baseUrl = "http://192.168.1.7:5196/api";
   //static const String baseUrl = "http://192.168.102.24:5196/api";
+  // static const String baseUrl = "https://fashionwebbe.onrender.com/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
 
    static const String baseSignalRUrl = "http://10.0.2.2:5196";
   // static const String baseSignalRUrl = "http://192.168.1.7:5196";
   //static const String baseSignalRUrl = "http://192.168.102.24:5196";
+  // static const String baseSignalRUrl = "https://fashionwebbe.onrender.com";
 
   static const String signalRHubUrl = "$baseSignalRUrl/chatHub";
 
-  static const String refreshTokenEndpoint = "/auth/refresh-token";
+  static const String refreshTokenEndpoint = "/auth/refresh";
   static const String chatEndpoint = "/Chat";
   static const String groupEndpoint = "/Group";
+  static const String logoutEndpoint = "/auth/logout";
 
   static const String loginEndpoint = "/auth/login";
   static const String registerEndpoint = "/auth/register";
@@ -113,8 +116,8 @@ class ApiConstants {
 
   static String getOrderById(int orderId) => "$orderBase/$orderId";
 
-  static const String getMySales = "$orderBase/me/sales";
-  static const String getMyPurchases = "$orderBase/me/purchases";
+  static const String getMySales = "$orderBase/sales/me";
+  static const String getMyPurchases = "$orderBase/purchases/me";
 
   static String updateOrderStatus(int orderId, String status) =>
       "$orderBase/$orderId/status?status=${Uri.encodeComponent(status)}";
@@ -132,4 +135,78 @@ class ApiConstants {
 
   static String rejectRefund(int orderId, String note) =>
       "$orderBase/$orderId/refund/reject?note=${Uri.encodeComponent(note)}";
+
+  static String getMySalesFiltered({
+    int page = 1,
+    int pageSize = 10,
+    String? status,
+    DateTime? fromDate,
+    DateTime? toDate,
+    String? buyerName,
+    String? orderCode,
+  }) {
+    final query = <String, String>{
+      'page': page.toString(),
+      'pageSize': pageSize.toString(),
+    };
+
+    if (status != null && status.trim().isNotEmpty) {
+      query['status'] = status.trim();
+    }
+
+    if (fromDate != null) {
+      query['fromDate'] = fromDate.toIso8601String();
+    }
+
+    if (toDate != null) {
+      query['toDate'] = toDate.toIso8601String();
+    }
+
+    if (buyerName != null && buyerName.trim().isNotEmpty) {
+      query['buyerName'] = buyerName.trim();
+    }
+
+    if (orderCode != null && orderCode.trim().isNotEmpty) {
+      query['orderCode'] = orderCode.trim();
+    }
+
+    return Uri(path: getMySales, queryParameters: query).toString();
+  }
+
+  static String getMyPurchasesFiltered({
+    int page = 1,
+    int pageSize = 10,
+    String? status,
+    DateTime? fromDate,
+    DateTime? toDate,
+    String? sellerName,
+    String? orderCode,
+  }) {
+    final query = <String, String>{
+      'page': page.toString(),
+      'pageSize': pageSize.toString(),
+    };
+
+    if (status != null && status.trim().isNotEmpty) {
+      query['status'] = status.trim();
+    }
+
+    if (fromDate != null) {
+      query['fromDate'] = fromDate.toIso8601String();
+    }
+
+    if (toDate != null) {
+      query['toDate'] = toDate.toIso8601String();
+    }
+
+    if (sellerName != null && sellerName.trim().isNotEmpty) {
+      query['sellerName'] = sellerName.trim();
+    }
+
+    if (orderCode != null && orderCode.trim().isNotEmpty) {
+      query['orderCode'] = orderCode.trim();
+    }
+
+    return Uri(path: getMyPurchases, queryParameters: query).toString();
+  }
 }
