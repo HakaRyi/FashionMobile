@@ -299,7 +299,13 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
                     Navigator.push(
                       context,
                       SlideRoute(
-                        page: AISuggestionScreen(selectedItem: item),
+                        page: AISuggestionScreen(selectedItem:
+                        {
+                          'itemId': item.itemId,
+                          'itemName': item.itemName,
+                          'primaryImageUrl': item.thumbnailUrl, // Truyền đúng tên key mà bên AI đang hứng
+                        },
+                        ),
                       ),
                     );
                   },

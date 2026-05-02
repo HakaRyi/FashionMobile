@@ -1,9 +1,11 @@
-import 'dart:math' as math;
 
+import 'dart:math' as math;
 import 'package:fashion_mobile/screens/physical_profile_screen.dart';
 import 'package:fashion_mobile/utils/app_notification.dart';
 import 'package:flutter/material.dart';
 
+import 'package:google_fonts/google_fonts.dart';
+import '../constants/app_colors.dart';
 import '../constants/notification_type.dart';
 import '../managers/google_auth_manager.dart';
 import '../services/auth_service.dart';
@@ -176,17 +178,29 @@ class _LoginScreenState extends State<LoginScreen>
               },
             ),
           ),
+
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 children: [
                   const SizedBox(height: 80),
-                  Image.asset(
-                    'assets/images/logowapo.png',
-                    height: 45,
-                    fit: BoxFit.contain,
-                    color: Colors.black,
+                  // Image.asset(
+                  //   'assets/images/logowapo.png',
+                  //   height: 45,
+                  //   fit: BoxFit.contain,
+                  //   color: Colors.black,
+                  // ),
+                  Text(
+                    "WAPO",
+                    style: GoogleFonts.playfairDisplay(
+                      textStyle: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 44,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3.0,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -199,6 +213,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
                   const SizedBox(height: 60),
+
                   CustomTextField(
                     hintText: "Email",
                     icon: Icons.email_outlined,
@@ -211,6 +226,7 @@ class _LoginScreenState extends State<LoginScreen>
                     isPassword: true,
                     controller: _passwordController,
                   ),
+
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -224,6 +240,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 30),
                   Container(
                     width: double.infinity,
@@ -280,9 +297,11 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
                   const SizedBox(height: 30),
+
                   GoogleLoginButton(
                     onTap: _isLoading ? () {} : _handleGoogleLogin,
                   ),
+
                   const SizedBox(height: 40),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

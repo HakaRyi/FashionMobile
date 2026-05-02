@@ -1,6 +1,17 @@
+// lib/widgets/wapo_pay_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../constants/app_colors.dart';
+import '../../screens/create_post_screens.dart';
+import '../../screens/settings_screen.dart';
+import '../../services/account_service.dart';
+import '../../services/post_service.dart';
+import '../../utils/route_transitions.dart';
+import '../../widgets/post_item.dart';
+import '../../models/post_feed_model.dart';
 
+// [THÊM MỚI]
+import '../screens/transaction_history_screen.dart';
 import '../screens/deposit_screen.dart';
 import '../screens/expense_management_screen.dart';
 import '../utils/route_transitions.dart';
@@ -71,8 +82,8 @@ class _WapoPaySheetState extends State<WapoPaySheet> {
               width: 44,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.black12,
-                borderRadius: BorderRadius.circular(999),
+                color: AppColors.text,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 18),
