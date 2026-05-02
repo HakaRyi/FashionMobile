@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = "http://10.0.2.2:5196/api";
+  static const String baseUrl = "http://10.0.2.2:5196/api"; //https://fashionwebbe.onrender.com
   // static const String baseUrl = "http://192.168.1.7:5196/api";
   //static const String baseUrl = "http://192.168.102.24:5196/api";
 

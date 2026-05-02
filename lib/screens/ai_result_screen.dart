@@ -35,7 +35,7 @@ class AIResultScreen extends StatefulWidget {
 class _AIResultScreenState extends State<AIResultScreen> {
   late Future<List<dynamic>> _recommendationsFuture;
   final Map<String, PageController> _controllers = {};
-
+  Map<String, List<dynamic>>? _currentGroupedData;
   int get _baseItemId {
     if (widget.baseItem is WardrobeItemModel) return widget.baseItem.itemId;
     return widget.baseItem['itemId'] ?? 0;
@@ -113,6 +113,11 @@ class _AIResultScreenState extends State<AIResultScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_add_outlined, color: Colors.black, size: 22),
+            tooltip: "Save as Collection",
+            onPressed: _showSaveCollectionDialog,
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
             child: const Text("DONE", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12)),
@@ -140,7 +145,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
           }
 
           final groupedData = _groupAndSortItems(results);
-
+          _currentGroupedData = groupedData;
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(
@@ -304,4 +309,122 @@ class _AIResultScreenState extends State<AIResultScreen> {
       ),
     );
   }
+  // --- BỔ SUNG: LOGIC LƯU COLLECTION ---
+  void _showSaveCollectionDialog() {
+    if (_currentGroupedData == null || _currentGroupedData!.isEmpty) return;
+
+    List<int> selectedItemIds = [];
+
+    // Lấy ID của các item đang nằm chính giữa ở mỗi PageView
+    _currentGroupedData!.forEach((category, items) {
+      if (items.isEmpty) return;
+
+      if (_controllers.containsKey(category) && _controllers[category]!.hasClients) {
+        final controller = _controllers[category]!;
+        // Lấy trang hiện tại (làm tròn để biết index chính xác)
+        int currentPage = controller.page?.round() ?? controller.initialPage;
+        // Tính toán index thực tế trong mảng (vì đã dùng thủ thuật vô hạn % items.length)
+        int actualIndex = currentPage % items.length;
+
+        int itemId = items[actualIndex]['itemId'] ?? items[actualIndex]['id'] ?? 0;
+        if (itemId != 0) selectedItemIds.add(itemId);
+      } else {
+        // Nếu chỉ có 1 item (không scroll)
+        int itemId = items[0]['itemId'] ?? items[0]['id'] ?? 0;
+        if (itemId != 0) selectedItemIds.add(itemId);
+      }
+    });
+
+    if (selectedItemIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Không có món đồ nào để lưu.")));
+      return;
+    }
+
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white, // Gắn nền trắng cứng
+        surfaceTintColor: Colors.transparent, // Tắt hiệu ứng ám màu của Material 3
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+            "Save Collection",
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.black)
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              style: const TextStyle(color: Colors.black), // Chữ người dùng nhập màu đen
+              decoration: const InputDecoration(
+                hintText: "Enter title (Optional)",
+                hintStyle: TextStyle(color: Colors.black54), // Chữ mờ màu xám đen
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              maxLines: 2,
+              style: const TextStyle(color: Colors.black), // Chữ người dùng nhập màu đen
+              decoration: const InputDecoration(
+                hintText: "Enter description (Optional)",
+                hintStyle: TextStyle(color: Colors.black54), // Chữ mờ màu xám đen
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _saveCollectionToApi(titleController.text, descController.text, selectedItemIds);
+            },
+            child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveCollectionToApi(String title, String desc, List<int> itemIds) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+
+      // Nếu user bỏ trống, dùng mặc định
+      final finalTitle = title.trim().isEmpty ? "AI Style ${DateTime.now().toLocal().toString().split(' ')[0]}" : title.trim();
+      final finalDesc = desc.trim().isEmpty ? "Generated by AI Stylist" : desc.trim();
+
+      await ItemService().saveCollection(finalTitle, finalDesc, itemIds);
+
+      if (mounted) {
+        Navigator.pop(context); // Tắt loading
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Collection saved successfully!", style: TextStyle(color: Colors.white)), backgroundColor: Colors.black));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Tắt loading
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to save: $e"), backgroundColor: Colors.red));
+      }
+    }
+  }
+
 }
