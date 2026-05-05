@@ -329,34 +329,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Row(
-                                    mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      FutureBuilder<List<PostFeedModel>?>(
-                                        future: _postsFuture,
-                                        builder: (context, snapshot) {
-                                          if (snapshot.connectionState ==
-                                              ConnectionState.waiting) {
-                                            return const StatSkeletonItem();
-                                          }
+                                      Expanded(
+                                        child: FutureBuilder<List<PostFeedModel>?>(
+                                          future: _postsFuture,
+                                          builder: (context, snapshot) {
+                                            if (snapshot.connectionState == ConnectionState.waiting) {
+                                              return const StatSkeletonItem();
+                                            }
 
-                                          final postCount =
-                                          (snapshot.data?.length ?? 0)
-                                              .toString();
+                                            final postCount = (snapshot.data?.length ?? 0).toString();
 
-                                          return _buildStatItem(
-                                            postCount,
-                                            'POSTS',
-                                          );
-                                        },
+                                            return _buildStatItem(
+                                              postCount,
+                                              'POSTS',
+                                            );
+                                          },
+                                        ),
                                       ),
-                                      _buildStatItem(
-                                        followerCount,
-                                        'FOLLOWERS',
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: _buildStatItem(
+                                          followerCount,
+                                          'FOLLOWERS',
+                                        ),
                                       ),
-                                      _buildStatItem(
-                                        followingCount,
-                                        'FOLLOWING',
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: _buildStatItem(
+                                          followingCount,
+                                          'FOLLOWING',
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -607,8 +610,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildStatItem(String value, String label) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
+        horizontal: 6,
         vertical: 8,
       ),
       decoration: BoxDecoration(
@@ -622,35 +626,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 16,
-              shadows: [
-                Shadow(
-                  color: Colors.black54,
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                shadows: [
+                  Shadow(
+                    color: Colors.black54,
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              shadows: [
-                Shadow(
-                  color: Colors.black87,
-                  blurRadius: 4,
-                ),
-              ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+                shadows: [
+                  Shadow(
+                    color: Colors.black87,
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

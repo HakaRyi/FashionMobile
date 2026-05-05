@@ -28,7 +28,7 @@ class GoogleLoginButton extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             const Text(
-              "Tiếp tục với Google",
+              "Continue with Google",
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ],

@@ -7,6 +7,7 @@ import '../../services/item_service.dart';
 import '../../utils/upload_utils.dart';
 import '../../widgets/clothing_item.dart';
 import '../clothing_detail_screen.dart';
+import '../collection_screen.dart';
 import '../suggestion_screen.dart';
 import '../try_on_screen.dart';
 
@@ -548,6 +549,19 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   MaterialPageRoute(
                     builder: (_) => const TryOnScreen(),
                   ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _CustomActionButton(
+              icon: Icons.collections_bookmark_outlined,
+              label: 'Collection',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CollectionScreen()),
                 );
               },
             ),

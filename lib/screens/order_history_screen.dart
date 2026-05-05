@@ -16,11 +16,32 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     with SingleTickerProviderStateMixin {
   final OrderService _orderService = OrderService();
 
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+
+  final ScrollController _purchaseScrollController = ScrollController();
+  final ScrollController _salesScrollController = ScrollController();
+
   late final TabController _tabController;
+
+  static const int _pageSize = 10;
 
   bool _isLoading = true;
   bool _isRefreshing = false;
+  bool _isLoadingMorePurchase = false;
+  bool _isLoadingMoreSales = false;
+
   String? _error;
+  String? _selectedStatus;
+
+  DateTime? _fromDate;
+  DateTime? _toDate;
+
+  int _purchasePage = 1;
+  int _salesPage = 1;
+
+  bool _purchaseHasMore = false;
+  bool _salesHasMore = false;
 
   List<OrderModel> _purchaseOrders = [];
   List<OrderModel> _salesOrders = [];
@@ -30,12 +51,45 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     super.initState();
 
     _tabController = TabController(length: 2, vsync: this);
+
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+
+    _purchaseScrollController.addListener(() {
+      if (!_purchaseScrollController.hasClients) {
+        return;
+      }
+
+      if (_purchaseScrollController.position.pixels >=
+          _purchaseScrollController.position.maxScrollExtent - 200) {
+        _loadMorePurchases();
+      }
+    });
+
+    _salesScrollController.addListener(() {
+      if (!_salesScrollController.hasClients) {
+        return;
+      }
+
+      if (_salesScrollController.position.pixels >=
+          _salesScrollController.position.maxScrollExtent - 200) {
+        _loadMoreSales();
+      }
+    });
+
     _loadOrders(showFullLoading: true);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
+    _nameController.dispose();
+    _purchaseScrollController.dispose();
+    _salesScrollController.dispose();
     super.dispose();
   }
 
@@ -53,9 +107,28 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     }
 
     try {
+      _purchasePage = 1;
+      _salesPage = 1;
+
       final results = await Future.wait([
-        _orderService.getPurchasesOrders(),
-        _orderService.getSalesOrders(),
+        _orderService.getPurchasesOrders(
+          page: _purchasePage,
+          pageSize: _pageSize,
+          status: _selectedStatus,
+          fromDate: _toUtcStartOfDay(_fromDate),
+          toDate: _toUtcEndOfDay(_toDate),
+          sellerName: _nameController.text,
+          orderCode: _searchController.text,
+        ),
+        _orderService.getSalesOrders(
+          page: _salesPage,
+          pageSize: _pageSize,
+          status: _selectedStatus,
+          fromDate: _toUtcStartOfDay(_fromDate),
+          toDate: _toUtcEndOfDay(_toDate),
+          buyerName: _nameController.text,
+          orderCode: _searchController.text,
+        ),
       ]);
 
       if (!mounted) {
@@ -63,8 +136,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       }
 
       setState(() {
-        _purchaseOrders = results[0];
-        _salesOrders = results[1];
+        _purchaseOrders = results[0].items;
+        _salesOrders = results[1].items;
+
+        _purchaseHasMore = results[0].hasMore;
+        _salesHasMore = results[1].hasMore;
       });
     } catch (e) {
       if (!mounted) {
@@ -82,6 +158,106 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       setState(() {
         _isLoading = false;
         _isRefreshing = false;
+      });
+    }
+  }
+
+  Future<void> _loadMorePurchases() async {
+    if (_isLoadingMorePurchase || !_purchaseHasMore) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMorePurchase = true;
+    });
+
+    try {
+      final nextPage = _purchasePage + 1;
+
+      final result = await _orderService.getPurchasesOrders(
+        page: nextPage,
+        pageSize: _pageSize,
+        status: _selectedStatus,
+        fromDate: _toUtcStartOfDay(_fromDate),
+        toDate: _toUtcEndOfDay(_toDate),
+        sellerName: _nameController.text,
+        orderCode: _searchController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _purchasePage = nextPage;
+        _purchaseOrders.addAll(result.items);
+        _purchaseHasMore = result.hasMore;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_normalizeError(e))),
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoadingMorePurchase = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreSales() async {
+    if (_isLoadingMoreSales || !_salesHasMore) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreSales = true;
+    });
+
+    try {
+      final nextPage = _salesPage + 1;
+
+      final result = await _orderService.getSalesOrders(
+        page: nextPage,
+        pageSize: _pageSize,
+        status: _selectedStatus,
+        fromDate: _toUtcStartOfDay(_fromDate),
+        toDate: _toUtcEndOfDay(_toDate),
+        buyerName: _nameController.text,
+        orderCode: _searchController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _salesPage = nextPage;
+        _salesOrders.addAll(result.items);
+        _salesHasMore = result.hasMore;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_normalizeError(e))),
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoadingMoreSales = false;
       });
     }
   }
@@ -119,7 +295,52 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       return '';
     }
 
-    return DateFormat('dd/MM/yyyy HH:mm').format(date.toLocal());
+    final vietnamTime = date.isUtc
+        ? date.toLocal()
+        : DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+      date.hour,
+      date.minute,
+      date.second,
+      date.millisecond,
+      date.microsecond,
+    ).add(const Duration(hours: 7));
+
+    return DateFormat('dd/MM/yyyy HH:mm').format(vietnamTime);
+  }
+
+  DateTime? _toUtcStartOfDay(DateTime? date) {
+    if (date == null) {
+      return null;
+    }
+
+    final vietnamStart = DateTime(
+      date.year,
+      date.month,
+      date.day,
+    );
+
+    return vietnamStart.subtract(const Duration(hours: 7));
+  }
+
+  DateTime? _toUtcEndOfDay(DateTime? date) {
+    if (date == null) {
+      return null;
+    }
+
+    final vietnamEnd = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    return vietnamEnd.subtract(const Duration(hours: 7));
   }
 
   String _displayStatus(String status) {
@@ -185,6 +406,44 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     if (result == true) {
       await _refreshOrders();
     }
+  }
+
+  Future<DateTime?> _pickDate(DateTime? initialDate) async {
+    return await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+  }
+
+  bool _hasFilter() {
+    return _selectedStatus != null ||
+        _fromDate != null ||
+        _toDate != null ||
+        _searchController.text.trim().isNotEmpty ||
+        _nameController.text.trim().isNotEmpty;
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _selectedStatus = null;
+      _fromDate = null;
+      _toDate = null;
+      _searchController.clear();
+      _nameController.clear();
+    });
+
+    _loadOrders(showFullLoading: true);
+  }
+
+  void _applySearch() {
+    FocusScope.of(context).unfocus();
+    _loadOrders(showFullLoading: true);
+  }
+
+  bool _currentTabHasMore(bool isPurchase) {
+    return isPurchase ? _purchaseHasMore : _salesHasMore;
   }
 
   @override
@@ -277,18 +536,542 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       )
           : _error != null
           ? _buildError()
-          : TabBarView(
-        controller: _tabController,
+          : Column(
         children: [
-          _buildOrderList(
-            orders: _purchaseOrders,
-            isPurchase: true,
-          ),
-          _buildOrderList(
-            orders: _salesOrders,
-            isPurchase: false,
+          _buildFilterArea(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOrderList(
+                  orders: _purchaseOrders,
+                  isPurchase: true,
+                  scrollController: _purchaseScrollController,
+                  isLoadingMore: _isLoadingMorePurchase,
+                  hasMore: _currentTabHasMore(true),
+                ),
+                _buildOrderList(
+                  orders: _salesOrders,
+                  isPurchase: false,
+                  scrollController: _salesScrollController,
+                  isLoadingMore: _isLoadingMoreSales,
+                  hasMore: _currentTabHasMore(false),
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterArea() {
+    return Container(
+      color: const Color(0xFFF5F5F5),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _applySearch(),
+            onChanged: (_) {
+              setState(() {});
+            },
+            decoration: InputDecoration(
+              hintText: 'Search order code...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _searchController.text.trim().isEmpty
+                  ? null
+                  : IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {});
+                  _loadOrders(showFullLoading: true);
+                },
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.black.withOpacity(0.06),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.black.withOpacity(0.06),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Colors.black),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _applySearch(),
+                  onChanged: (_) {
+                    setState(() {});
+                  },
+                  decoration: InputDecoration(
+                    hintText: _tabController.index == 0
+                        ? 'Seller name'
+                        : 'Buyer name',
+                    prefixIcon: const Icon(Icons.person_search_rounded),
+                    suffixIcon: _nameController.text.trim().isEmpty
+                        ? null
+                        : IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () {
+                        _nameController.clear();
+                        setState(() {});
+                        _loadOrders(showFullLoading: true);
+                      },
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.black.withOpacity(0.06),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.black.withOpacity(0.06),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Colors.black),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterButton(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    final hasFilter = _hasFilter();
+
+    return InkWell(
+      onTap: _showFilterSheet,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: hasFilter ? Colors.black : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.black.withOpacity(0.06),
+          ),
+        ),
+        child: Icon(
+          Icons.tune_rounded,
+          color: hasFilter ? Colors.white : Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showFilterSheet() async {
+    String? tempStatus = _selectedStatus;
+    DateTime? tempFromDate = _fromDate;
+    DateTime? tempToDate = _toDate;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                MediaQuery.of(context).padding.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: Text(
+                      'Filter Orders',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildStatusChoice(
+                        label: 'All',
+                        value: null,
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = null;
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Pending Payment',
+                        value: 'PENDING_PAYMENT',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'PENDING_PAYMENT';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Processing',
+                        value: 'PROCESSING',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'PROCESSING';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Shipping',
+                        value: 'SHIPPING',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'SHIPPING';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Delivered',
+                        value: 'DELIVERED',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'DELIVERED';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Completed',
+                        value: 'COMPLETED',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'COMPLETED';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Cancelled',
+                        value: 'CANCELLED',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'CANCELLED';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Refunding',
+                        value: 'REFUNDING',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'REFUNDING';
+                          });
+                        },
+                      ),
+                      _buildStatusChoice(
+                        label: 'Refunded',
+                        value: 'REFUNDED',
+                        selectedValue: tempStatus,
+                        onTap: () {
+                          setModalState(() {
+                            tempStatus = 'REFUNDED';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Date',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDateButton(
+                          label: tempFromDate == null
+                              ? 'From date'
+                              : DateFormat('dd/MM/yyyy').format(tempFromDate!),
+                          onTap: () async {
+                            final picked = await _pickDate(tempFromDate);
+
+                            if (picked != null) {
+                              setModalState(() {
+                                tempFromDate = picked;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildDateButton(
+                          label: tempToDate == null
+                              ? 'To date'
+                              : DateFormat('dd/MM/yyyy').format(tempToDate!),
+                          onTap: () async {
+                            final picked = await _pickDate(tempToDate);
+
+                            if (picked != null) {
+                              setModalState(() {
+                                tempToDate = picked;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (tempFromDate != null || tempToDate != null) ...[
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () {
+                        setModalState(() {
+                          tempFromDate = null;
+                          tempToDate = null;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          'Clear date filter',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _resetFilters();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(
+                              color: Colors.black.withOpacity(0.16),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'RESET',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (tempFromDate != null &&
+                                tempToDate != null &&
+                                tempFromDate!.isAfter(tempToDate!)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'From date cannot be later than to date.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setState(() {
+                              _selectedStatus = tempStatus;
+                              _fromDate = tempFromDate;
+                              _toDate = tempToDate;
+                            });
+
+                            Navigator.pop(context);
+                            _loadOrders(showFullLoading: true);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'APPLY',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusChoice({
+    required String label,
+    required String? value,
+    required String? selectedValue,
+    required VoidCallback onTap,
+  }) {
+    final selected = value == selectedValue;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? Colors.black : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? Colors.black : Colors.black.withOpacity(0.06),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black54,
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateButton({
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Colors.black.withOpacity(0.06),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 16,
+              color: Colors.black54,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -373,6 +1156,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   Widget _buildOrderList({
     required List<OrderModel> orders,
     required bool isPurchase,
+    required ScrollController scrollController,
+    required bool isLoadingMore,
+    required bool hasMore,
   }) {
     if (orders.isEmpty) {
       return RefreshIndicator(
@@ -380,9 +1166,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         color: Colors.black,
         backgroundColor: Colors.white,
         child: ListView(
+          controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.22),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.18),
             Icon(
               isPurchase
                   ? Icons.shopping_bag_outlined
@@ -393,8 +1180,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             const SizedBox(height: 16),
             Text(
               isPurchase
-                  ? 'NO PURCHASE ORDERS YET'
-                  : 'NO SALES ORDERS YET',
+                  ? 'NO PURCHASE ORDERS FOUND'
+                  : 'NO SALES ORDERS FOUND',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.black26,
@@ -404,12 +1191,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              isPurchase
-                  ? 'Your bought items will appear here.'
-                  : 'Your sold items will appear here.',
+            const Text(
+              'Try changing your filters or search keyword.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.black38,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -425,11 +1210,44 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       color: Colors.black,
       backgroundColor: Colors.white,
       child: ListView.separated(
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        itemCount: orders.length,
+        itemCount: orders.length + 1,
         separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
+          if (index >= orders.length) {
+            if (isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.black,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            }
+
+            if (!hasMore) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: Text(
+                    'No more orders',
+                    style: TextStyle(
+                      color: Colors.black.withOpacity(0.35),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return const SizedBox.shrink();
+          }
+
           final order = orders[index];
 
           return _buildOrderCard(

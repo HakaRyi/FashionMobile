@@ -22,7 +22,6 @@ class PublishItemForSaleScreen extends StatefulWidget {
 class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _listedPriceController = TextEditingController();
   final List<_VariantFormController> _variantControllers = [];
 
   String _selectedCondition = 'Used - Good';
@@ -34,13 +33,31 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     'Used - Fair',
   ];
 
+  final List<String> _sizeOptions = const [
+    'Free Size',
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+    'XXXL',
+    '35',
+    '36',
+    '37',
+    '38',
+    '39',
+    '40',
+    '41',
+    '42',
+    '43',
+    '44',
+    '45',
+  ];
+
   @override
   void initState() {
     super.initState();
-
-    if (widget.item.listedPrice != null && widget.item.listedPrice! > 0) {
-      _listedPriceController.text = widget.item.listedPrice!.toStringAsFixed(0);
-    }
 
     if (widget.item.condition != null &&
         widget.item.condition!.trim().isNotEmpty &&
@@ -48,13 +65,11 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
       _selectedCondition = widget.item.condition!;
     }
 
-    _addVariant();
+    _addInitialVariant();
   }
 
   @override
   void dispose() {
-    _listedPriceController.dispose();
-
     for (final controller in _variantControllers) {
       controller.dispose();
     }
@@ -62,12 +77,19 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     super.dispose();
   }
 
-  void _addVariant() {
-    final int index = _variantControllers.length + 1;
-
+  void _addInitialVariant() {
     final controller = _VariantFormController(
-      sku: 'ITEM-${widget.item.itemId}-$index',
-      sizeCode: widget.item.size ?? '',
+      sizeCode: _normalizeInitialSize(widget.item.size),
+      color: widget.item.mainColor ?? '',
+      stockQuantity: '1',
+    );
+
+    _variantControllers.add(controller);
+  }
+
+  void _addVariant() {
+    final controller = _VariantFormController(
+      sizeCode: _normalizeInitialSize(widget.item.size),
       color: widget.item.mainColor ?? '',
       stockQuantity: '1',
     );
@@ -87,6 +109,20 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     removed.dispose();
 
     setState(() {});
+  }
+
+  String _normalizeInitialSize(String? size) {
+    final value = size?.trim();
+
+    if (value == null || value.isEmpty) {
+      return 'M';
+    }
+
+    if (_sizeOptions.contains(value)) {
+      return value;
+    }
+
+    return 'M';
   }
 
   double? _parsePrice(String value) {
@@ -111,6 +147,56 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
     return value != null && value.trim().isNotEmpty;
   }
 
+  double _getLowestVariantPrice(List<Map<String, dynamic>> variantsPayload) {
+    final prices = variantsPayload
+        .map((variant) => variant['price'])
+        .whereType<num>()
+        .map((price) => price.toDouble())
+        .where((price) => price > 0)
+        .toList();
+
+    if (prices.isEmpty) {
+      return 0;
+    }
+
+    prices.sort();
+
+    return prices.first;
+  }
+
+  bool _hasAvailableVariant(List<Map<String, dynamic>> variantsPayload) {
+    return variantsPayload.any((variant) {
+      final stock = variant['stockQuantity'];
+      return stock is int && stock > 0;
+    });
+  }
+
+  bool _hasDuplicateVariant(List<Map<String, dynamic>> variantsPayload) {
+    final Set<String> variantKeys = {};
+
+    for (final variant in variantsPayload) {
+      final size = (variant['sizeCode'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+
+      final color = (variant['color'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+
+      final key = '$size|$color';
+
+      if (variantKeys.contains(key)) {
+        return true;
+      }
+
+      variantKeys.add(key);
+    }
+
+    return false;
+  }
+
   Future<void> _publishItem() async {
     FocusScope.of(context).unfocus();
 
@@ -118,39 +204,33 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
       return;
     }
 
-    final double? listedPrice = _parsePrice(_listedPriceController.text);
-
-    if (listedPrice == null || listedPrice <= 0) {
-      AppToast.show(context, 'Listed price must be greater than 0.');
-      return;
-    }
-
     final List<Map<String, dynamic>> variantsPayload = [];
 
     for (final controller in _variantControllers) {
-      final String sku = controller.skuController.text.trim();
-      final String sizeCode = controller.sizeController.text.trim();
+      final String sizeCode = controller.selectedSize.trim();
       final String color = controller.colorController.text.trim();
       final double? price = _parsePrice(controller.priceController.text);
       final int? stockQuantity = _parseStock(controller.stockController.text);
 
-      if (sku.isEmpty) {
-        AppToast.show(context, 'SKU is required.');
-        return;
-      }
-
       if (price == null || price <= 0) {
-        AppToast.show(context, 'Variant price must be greater than 0.');
+        AppToast.show(
+          context,
+          'Variant price must be greater than 0.',
+          isError: true,
+        );
         return;
       }
 
       if (stockQuantity == null || stockQuantity < 0) {
-        AppToast.show(context, 'Stock quantity cannot be negative.');
+        AppToast.show(
+          context,
+          'Stock quantity cannot be negative.',
+          isError: true,
+        );
         return;
       }
 
       variantsPayload.add({
-        'sku': sku,
         'sizeCode': sizeCode.isEmpty ? null : sizeCode,
         'color': color.isEmpty ? null : color,
         'price': price,
@@ -158,12 +238,41 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
       });
     }
 
-    final List<String> skuList = variantsPayload
-        .map((variant) => variant['sku'].toString().trim().toLowerCase())
-        .toList();
+    if (variantsPayload.isEmpty) {
+      AppToast.show(
+        context,
+        'At least one variant is required.',
+        isError: true,
+      );
+      return;
+    }
 
-    if (skuList.length != skuList.toSet().length) {
-      AppToast.show(context, 'Duplicate SKU is not allowed.');
+    if (!_hasAvailableVariant(variantsPayload)) {
+      AppToast.show(
+        context,
+        'At least one variant must have stock greater than 0.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (_hasDuplicateVariant(variantsPayload)) {
+      AppToast.show(
+        context,
+        'Duplicate variant size and color.',
+        isError: true,
+      );
+      return;
+    }
+
+    final double listedPrice = _getLowestVariantPrice(variantsPayload);
+
+    if (listedPrice <= 0) {
+      AppToast.show(
+        context,
+        'Listed price is invalid.',
+        isError: true,
+      );
       return;
     }
 
@@ -389,27 +498,6 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
             Icons.storefront_outlined,
           ),
           const SizedBox(height: 14),
-          _buildTextField(
-            controller: _listedPriceController,
-            label: 'Listed price',
-            hint: 'Example: 150000',
-            icon: Icons.sell_outlined,
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              final price = _parsePrice(value ?? '');
-
-              if (price == null) {
-                return 'Please enter a valid price.';
-              }
-
-              if (price <= 0) {
-                return 'Listed price must be greater than 0.';
-              }
-
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _selectedCondition,
             dropdownColor: Colors.white,
@@ -437,7 +525,7 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
               });
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           const Text(
             'This item will be visible in the public marketplace after publishing.',
             style: TextStyle(
@@ -509,28 +597,11 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          _buildTextField(
-            controller: controller.skuController,
-            label: 'SKU',
-            hint: 'Example: ITEM-1-M',
-            icon: Icons.qr_code_2_outlined,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'SKU is required.';
-              }
-
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _buildTextField(
-                  controller: controller.sizeController,
-                  label: 'Size',
-                  hint: 'M',
-                  icon: Icons.straighten_outlined,
+                child: _buildSizeDropdown(
+                  controller: controller,
                 ),
               ),
               const SizedBox(width: 10),
@@ -553,7 +624,9 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
                   label: 'Price',
                   hint: '150000',
                   icon: Icons.payments_outlined,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   validator: (value) {
                     final price = _parsePrice(value ?? '');
 
@@ -629,6 +702,45 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSizeDropdown({
+    required _VariantFormController controller,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: controller.selectedSize,
+      dropdownColor: Colors.white,
+      decoration: _inputDecoration(
+        label: 'Size',
+        icon: Icons.straighten_outlined,
+      ),
+      style: const TextStyle(
+        color: Colors.black,
+        fontWeight: FontWeight.w600,
+      ),
+      items: _sizeOptions.map((size) {
+        return DropdownMenuItem<String>(
+          value: size,
+          child: Text(size),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value == null) {
+          return;
+        }
+
+        setState(() {
+          controller.selectedSize = value;
+        });
+      },
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Please select size.';
+        }
+
+        return null;
+      },
     );
   }
 
@@ -770,26 +882,21 @@ class _PublishItemForSaleScreenState extends State<PublishItemForSaleScreen> {
 }
 
 class _VariantFormController {
-  final TextEditingController skuController;
-  final TextEditingController sizeController;
+  String selectedSize;
   final TextEditingController colorController;
   final TextEditingController priceController;
   final TextEditingController stockController;
 
   _VariantFormController({
-    required String sku,
     required String sizeCode,
     required String color,
     required String stockQuantity,
-  })  : skuController = TextEditingController(text: sku),
-        sizeController = TextEditingController(text: sizeCode),
+  })  : selectedSize = sizeCode,
         colorController = TextEditingController(text: color),
         priceController = TextEditingController(),
         stockController = TextEditingController(text: stockQuantity);
 
   void dispose() {
-    skuController.dispose();
-    sizeController.dispose();
     colorController.dispose();
     priceController.dispose();
     stockController.dispose();

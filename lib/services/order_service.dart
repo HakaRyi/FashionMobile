@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../core/api_exception.dart';
 import '../models/order_model.dart';
+import '../models/paged_order_result.dart';
 import 'api_client.dart';
 
 class OrderService {
@@ -138,23 +139,37 @@ class OrderService {
     );
   }
 
-  Future<List<OrderModel>> getSalesOrders() async {
-    final url = Uri.parse(
-      ApiConstants.baseUrl + ApiConstants.getMySales,
+  Future<PagedOrderResult> getSalesOrders({
+    int page = 1,
+    int pageSize = 10,
+    String? status,
+    DateTime? fromDate,
+    DateTime? toDate,
+    String? buyerName,
+    String? orderCode,
+  }) async {
+    final endpoint = ApiConstants.getMySalesFiltered(
+      page: page,
+      pageSize: pageSize,
+      status: status,
+      fromDate: fromDate,
+      toDate: toDate,
+      buyerName: buyerName,
+      orderCode: orderCode,
     );
+
+    final url = Uri.parse(ApiConstants.baseUrl + endpoint);
 
     final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
       final data = _decodeJson(response.body);
 
-      if (data is! List) {
+      if (data is! Map<String, dynamic>) {
         throw ApiException('Invalid sales order data.');
       }
 
-      return data
-          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
-          .toList();
+      return PagedOrderResult.fromJson(data);
     }
 
     throw _buildApiException(
@@ -164,23 +179,37 @@ class OrderService {
     );
   }
 
-  Future<List<OrderModel>> getPurchasesOrders() async {
-    final url = Uri.parse(
-      ApiConstants.baseUrl + ApiConstants.getMyPurchases,
+  Future<PagedOrderResult> getPurchasesOrders({
+    int page = 1,
+    int pageSize = 10,
+    String? status,
+    DateTime? fromDate,
+    DateTime? toDate,
+    String? sellerName,
+    String? orderCode,
+  }) async {
+    final endpoint = ApiConstants.getMyPurchasesFiltered(
+      page: page,
+      pageSize: pageSize,
+      status: status,
+      fromDate: fromDate,
+      toDate: toDate,
+      sellerName: sellerName,
+      orderCode: orderCode,
     );
+
+    final url = Uri.parse(ApiConstants.baseUrl + endpoint);
 
     final response = await ApiClient.get(url);
 
     if (response.statusCode == 200) {
       final data = _decodeJson(response.body);
 
-      if (data is! List) {
+      if (data is! Map<String, dynamic>) {
         throw ApiException('Invalid purchase order data.');
       }
 
-      return data
-          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
-          .toList();
+      return PagedOrderResult.fromJson(data);
     }
 
     throw _buildApiException(

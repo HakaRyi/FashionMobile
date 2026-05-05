@@ -867,7 +867,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             _confirmAction(
               title: 'Confirm received',
               message:
-              'Have you received the item successfully? This will complete the order and release payment to the seller.',
+              'Have you received the item successfully?',
               action: () => _orderService.updateOrderStatus(
                 order.orderId,
                 'COMPLETED',

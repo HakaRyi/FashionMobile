@@ -33,6 +33,10 @@ class ItemService {
     return headers;
   }
 
+  bool _isSuccessStatus(int statusCode) {
+    return statusCode >= 200 && statusCode < 300;
+  }
+
   Exception _buildExceptionFromResponse(http.Response response) {
     try {
       final body = jsonDecode(response.body);
@@ -82,7 +86,7 @@ class ItemService {
         headers: await _buildHeaders(withAuth: true),
       );
 
-      if (response.statusCode == 200) {
+      if (_isSuccessStatus(response.statusCode)) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
 
         if (decodedData['data'] != null &&
@@ -108,7 +112,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final Map<String, dynamic> decodedData = jsonDecode(response.body);
       final list = decodedData['data'] as List<dynamic>? ?? [];
 
@@ -132,7 +136,7 @@ class ItemService {
       headers: await _buildHeaders(),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
@@ -151,7 +155,7 @@ class ItemService {
       headers: await _buildHeaders(),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final Map<String, dynamic> body = jsonDecode(response.body);
 
       if (body['data'] == null || body['data'] is! Map<String, dynamic>) {
@@ -178,7 +182,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode != 200) {
+    if (!_isSuccessStatus(response.statusCode)) {
       throw _buildExceptionFromResponse(response);
     }
   }
@@ -196,7 +200,7 @@ class ItemService {
       body: jsonEncode(data),
     );
 
-    if (response.statusCode != 200) {
+    if (!_isSuccessStatus(response.statusCode)) {
       throw _buildExceptionFromResponse(response);
     }
   }
@@ -237,7 +241,7 @@ class ItemService {
     debugPrint("Smart match status: ${response.statusCode}");
     debugPrint("Smart match body: ${response.body}");
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final decodedData = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (decodedData is Map<String, dynamic> &&
@@ -264,7 +268,7 @@ class ItemService {
       },
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body);
       return body['groupId'] is int
           ? body['groupId'] as int
@@ -286,7 +290,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode != 200) {
+    if (!_isSuccessStatus(response.statusCode)) {
       throw _buildExceptionFromResponse(response);
     }
   }
@@ -303,7 +307,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode != 200) {
+    if (!_isSuccessStatus(response.statusCode)) {
       throw _buildExceptionFromResponse(response);
     }
   }
@@ -318,7 +322,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body);
 
       if (body is Map<String, dynamic>) {
@@ -370,7 +374,7 @@ class ItemService {
       }),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       return ItemCommerceModel.fromJson(body['data'] as Map<String, dynamic>);
     }
@@ -390,7 +394,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       return ItemCommerceModel.fromJson(body['data'] as Map<String, dynamic>);
     }
@@ -410,7 +414,7 @@ class ItemService {
       headers: await _buildHeaders(withAuth: true),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final list = body['data'] as List<dynamic>? ?? [];
 
@@ -438,7 +442,7 @@ class ItemService {
       body: jsonEncode(data),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       return ItemVariantModel.fromJson(body['data'] as Map<String, dynamic>);
     }
@@ -462,7 +466,7 @@ class ItemService {
       body: jsonEncode(data),
     );
 
-    if (response.statusCode == 200) {
+    if (_isSuccessStatus(response.statusCode)) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       return ItemVariantModel.fromJson(body['data'] as Map<String, dynamic>);
     }
@@ -480,6 +484,80 @@ class ItemService {
     final response = await http.delete(
       url,
       headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<void> saveCollection(String title, String description, List<int> itemIds) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode({
+        "title": title,
+        "description": description,
+        "itemIds": itemIds,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<List<dynamic>> getCollections() async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections");
+
+    final response = await http.get(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      return body as List<dynamic>;
+    }
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<void> updateCollection(int id, String newTitle, String newDesc, List<int> newItemIds) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections/$id/items");
+
+    final response = await http.put(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode({
+        "newTitle": newTitle,
+        "newDescription": newDesc,
+        "newItemIds": newItemIds,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<void> deleteCollection(int collectionId) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections/$collectionId");
+
+    final response = await http.delete(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<void> addItemsToCollection(int collectionId, List<int> itemIds) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections/$collectionId/items");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode(itemIds),
     );
 
     if (response.statusCode != 200) {
