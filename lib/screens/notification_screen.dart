@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../constants/app_colors.dart';
 import '../utils/notification_manager.dart';
 import '../widgets/empty_notification_state.dart';
 import '../widgets/real_notification_item.dart';
 
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({super.key});
+  const NotificationScreen({
+    super.key,
+  });
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -15,8 +18,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    notificationManager.initialize();
-    notificationManager.fetchNotificationHistory();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    await notificationManager.initialize();
+    await notificationManager.fetchNotificationHistory();
   }
 
   @override
@@ -28,12 +35,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Thông báo",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+          'Notifications',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
       body: ListenableBuilder(
@@ -41,24 +56,44 @@ class _NotificationScreenState extends State<NotificationScreen> {
         builder: (context, child) {
           if (notificationManager.isLoading) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+              child: CircularProgressIndicator(
+                color: Colors.white,
+              ),
             );
           }
 
           final notifications = notificationManager.notifications;
 
           if (notifications.isEmpty) {
-            return const EmptyNotificationState();
+            return RefreshIndicator(
+              onRefresh: notificationManager.fetchNotificationHistory,
+              child: const SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: 500,
+                  child: EmptyNotificationState(),
+                ),
+              ),
+            );
           }
 
-          return ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 20, top: 10),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final item = notifications[index];
-              return RealNotificationItem(item: item);
-            },
+          return RefreshIndicator(
+            onRefresh: notificationManager.fetchNotificationHistory,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(
+                bottom: 20,
+                top: 10,
+              ),
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final item = notifications[index];
+
+                return RealNotificationItem(
+                  item: item,
+                );
+              },
+            ),
           );
         },
       ),
