@@ -180,7 +180,35 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
         currentItemIds.add(id);
       }
     }
+    if (currentItemIds.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("Empty Collection", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          content: const Text("This is the last item. Do you want to delete this collection entirely?", style: TextStyle(color: Colors.black)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Cancel", style: TextStyle(color: Colors.black54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+              onPressed: () async {
+                Navigator.pop(ctx);
 
+                final title = _localCollectionData['title'] ?? '';
+                final desc = _localCollectionData['description'] ?? '';
+                _updateCollectionToApi(title, desc, currentItemIds);
+              },
+              child: const Text("Delete All", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     final title = _localCollectionData['title'] ?? '';
     final desc = _localCollectionData['description'] ?? '';
     _updateCollectionToApi(title, desc, currentItemIds);

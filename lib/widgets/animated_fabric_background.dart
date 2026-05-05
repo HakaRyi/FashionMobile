@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class AnimatedFabricBackground extends StatefulWidget {
-  // Biến child này sẽ chứa nội dung của các trang khác truyền vào
   final Widget child;
 
   const AnimatedFabricBackground({super.key, required this.child});
@@ -32,27 +31,31 @@ class _AnimatedFabricBackgroundState extends State<AnimatedFabricBackground> wit
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // LỚP 1: Vẽ nền động lượn sóng
-        Positioned.fill(
-          child: AnimatedBuilder(
-            animation: _fabricController,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: FabricPainter(_fabricController.value),
-              );
-            },
+    // THÊM SizedBox.expand Ở ĐÂY ĐỂ ÉP BACKGROUND LUÔN FULL MÀN HÌNH
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          // LỚP 1: Vẽ nền động lượn sóng
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _fabricController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: FabricPainter(_fabricController.value),
+                );
+              },
+            ),
           ),
-        ),
-        // LỚP 2: Nội dung chính của trang nằm đè lên trên
-        widget.child,
-      ],
+          // LỚP 2: Nội dung chính của trang nằm đè lên trên
+          // (Dùng SizedBox.expand ở ngoài giúp lớp 2 thoải mái cuộn mà không làm co nền)
+          widget.child,
+        ],
+      ),
     );
   }
 }
 
-// Lớp vẽ vẽ sóng đem luôn vào file này để giấu đi cho gọn
+// Lớp vẽ sóng giữ nguyên không cần thay đổi gì
 class FabricPainter extends CustomPainter {
   final double animationValue;
 

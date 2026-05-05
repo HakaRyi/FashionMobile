@@ -113,11 +113,6 @@ class _AIResultScreenState extends State<AIResultScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_add_outlined, color: Colors.black, size: 22),
-            tooltip: "Save as Collection",
-            onPressed: _showSaveCollectionDialog,
-          ),
           TextButton(
             onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
             child: const Text("DONE", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12)),
@@ -126,6 +121,14 @@ class _AIResultScreenState extends State<AIResultScreen> {
         ],
       ),
       extendBodyBehindAppBar: true,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showSaveCollectionDialog,
+        backgroundColor: Colors.black,
+        elevation: 4,
+        icon: const Icon(Icons.bookmark_add, color: Colors.white, size: 20),
+        label: const Text("SAVE COLLECTION",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+      ),
       body: AnimatedFabricBackground(
           child: SafeArea(
             child: FutureBuilder<List<dynamic>>(
@@ -313,7 +316,7 @@ class _AIResultScreenState extends State<AIResultScreen> {
   void _showSaveCollectionDialog() {
     if (_currentGroupedData == null || _currentGroupedData!.isEmpty) return;
 
-    List<int> selectedItemIds = [];
+    List<int> selectedItemIds = [_baseItemId];
 
     // Lấy ID của các item đang nằm chính giữa ở mỗi PageView
     _currentGroupedData!.forEach((category, items) {
@@ -321,17 +324,13 @@ class _AIResultScreenState extends State<AIResultScreen> {
 
       if (_controllers.containsKey(category) && _controllers[category]!.hasClients) {
         final controller = _controllers[category]!;
-        // Lấy trang hiện tại (làm tròn để biết index chính xác)
         int currentPage = controller.page?.round() ?? controller.initialPage;
-        // Tính toán index thực tế trong mảng (vì đã dùng thủ thuật vô hạn % items.length)
         int actualIndex = currentPage % items.length;
-
         int itemId = items[actualIndex]['itemId'] ?? items[actualIndex]['id'] ?? 0;
-        if (itemId != 0) selectedItemIds.add(itemId);
+        if (itemId != 0 && !selectedItemIds.contains(itemId)) selectedItemIds.add(itemId);
       } else {
-        // Nếu chỉ có 1 item (không scroll)
         int itemId = items[0]['itemId'] ?? items[0]['id'] ?? 0;
-        if (itemId != 0) selectedItemIds.add(itemId);
+        if (itemId != 0 && !selectedItemIds.contains(itemId)) selectedItemIds.add(itemId);
       }
     });
 

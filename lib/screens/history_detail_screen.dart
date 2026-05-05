@@ -10,12 +10,13 @@ class HistoryDetailScreen extends StatefulWidget {
   final int historyId;
   final String title;
   final String? refImage;
-
+  final int? referenceItemId;
   const HistoryDetailScreen({
     super.key,
     required this.historyId,
     required this.title,
     this.refImage,
+    this.referenceItemId,
   });
 
   @override
@@ -78,16 +79,17 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_add_outlined, color: Colors.black, size: 22),
-            tooltip: "Save as Collection",
-            onPressed: _showSaveCollectionDialog,
-          ),
-          const SizedBox(width: 8),
-        ],
+
       ),
       extendBodyBehindAppBar: true,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showSaveCollectionDialog,
+        backgroundColor: Colors.black,
+        elevation: 4,
+        icon: const Icon(Icons.bookmark_add, color: Colors.white, size: 20),
+        label: const Text("SAVE OUTFIT",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+      ),
       body:AnimatedFabricBackground(
           child: SafeArea(
             child: FutureBuilder<List<dynamic>>(
@@ -288,26 +290,28 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen> {
   // --- BỔ SUNG: LOGIC LƯU COLLECTION ---
   void _showSaveCollectionDialog() {
     if (_currentGroupedData == null || _currentGroupedData!.isEmpty) return;
-
+    int baseId = widget.referenceItemId ?? 0;
     List<int> selectedItemIds = [];
-
-    // Lấy ID của các item đang nằm chính giữa ở mỗi PageView
+    if (baseId != 0) {
+      selectedItemIds.add(baseId);
+    }
     _currentGroupedData!.forEach((category, items) {
       if (items.isEmpty) return;
 
       if (_controllers.containsKey(category) && _controllers[category]!.hasClients) {
         final controller = _controllers[category]!;
-        // Lấy trang hiện tại (làm tròn để biết index chính xác)
         int currentPage = controller.page?.round() ?? controller.initialPage;
-        // Tính toán index thực tế trong mảng (vì đã dùng thủ thuật vô hạn % items.length)
         int actualIndex = currentPage % items.length;
-
         int itemId = items[actualIndex]['itemId'] ?? items[actualIndex]['id'] ?? 0;
-        if (itemId != 0) selectedItemIds.add(itemId);
+        if (itemId != 0 && !selectedItemIds.contains(itemId)) {
+          selectedItemIds.add(itemId);
+        }
       } else {
         // Nếu chỉ có 1 item (không scroll)
         int itemId = items[0]['itemId'] ?? items[0]['id'] ?? 0;
-        if (itemId != 0) selectedItemIds.add(itemId);
+        if (itemId != 0 && !selectedItemIds.contains(itemId)) {
+          selectedItemIds.add(itemId);
+        }
       }
     });
 

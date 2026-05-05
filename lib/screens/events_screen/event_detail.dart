@@ -548,30 +548,65 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withOpacity(0.95),
               border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Dòng cảnh báo khi không đủ tiền
-                if (_event!.entryFee > 0 && !hasEnoughBalance && !joined && !isPastDeadline && !_isLoadingBalance)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                // --- THANH HIỂN THỊ SỐ DƯ (NẰM TRÊN CÙNG BOTTOM BAR) ---
+                if (_event!.entryFee > 0 && !isPastDeadline && !joined && !_isLoadingBalance)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: hasEnoughBalance ? const Color(0xFFF5F5F5) : const Color(0xFFFFF0F0),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: hasEnoughBalance ? Colors.transparent : Colors.redAccent.withOpacity(0.3),
+                      ),
+                    ),
                     child: Row(
-                      children: const [
-                        Icon(Icons.error_outline, color: Colors.redAccent, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          "Insufficient balance. Please top up.",
-                          style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w700),
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet,
+                              size: 14,
+                              color: hasEnoughBalance ? Colors.black54 : Colors.redAccent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Balance: ${_currencyFormatter.format(_currentBalance)} đ",
+                              style: TextStyle(
+                                color: hasEnoughBalance ? Colors.black87 : Colors.redAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
                         ),
+                        // Hiện cảnh báo thiếu tiền ở góc phải của thanh này
+                        if (!hasEnoughBalance)
+                          Row(
+                            children: const [
+                              Icon(Icons.error_outline, color: Colors.redAccent, size: 14),
+                              SizedBox(width: 4),
+                              Text(
+                                "Not enough",
+                                style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w800),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),
+
+                // --- KHU VỰC TRẠNG THÁI VÀ NÚT BẤM ---
                 Row(
                   children: [
                     Expanded(
