@@ -19,6 +19,8 @@ class NotificationManager extends ChangeNotifier {
     }).length;
   }
 
+  bool get hasUnreadNotification => unreadCount > 0;
+
   Future<void> initialize() async {
     if (_isInitialized) {
       return;
@@ -45,12 +47,57 @@ class NotificationManager extends ChangeNotifier {
     }
   }
 
+  Future<void> markAsRead(Map<String, dynamic> item) async {
+    final notificationId = _readNotificationId(item);
+
+    if (notificationId == null) {
+      return;
+    }
+
+    final currentStatus = _readValue(item, 'status')?.toLowerCase();
+
+    if (currentStatus != 'unread') {
+      return;
+    }
+
+    final success = await _service.markAsRead(notificationId);
+
+    if (!success) {
+      return;
+    }
+
+    _updateLocalNotificationStatus(notificationId, 'Read');
+
+    notifyListeners();
+  }
+
+  Future<void> markAllAsRead() async {
+    if (unreadCount == 0) {
+      return;
+    }
+
+    final success = await _service.markAllAsRead();
+
+    if (!success) {
+      return;
+    }
+
+    for (final item in notifications) {
+      item['status'] = 'Read';
+      item['Status'] = 'Read';
+    }
+
+    notifyListeners();
+  }
+
   void _onNewNotification(Map<String, dynamic> data) {
     debugPrint('SignalR notification data: $data');
 
-    final newId = _readValue(data, 'id') ??
-        _readValue(data, 'notificationId') ??
-        _readValue(data, 'NotificationId');
+    final normalizedData = _normalizeNotificationMap(data);
+
+    final newId = _readValue(normalizedData, 'id') ??
+        _readValue(normalizedData, 'notificationId') ??
+        _readValue(normalizedData, 'NotificationId');
 
     if (newId != null && newId.isNotEmpty) {
       final exists = notifications.any((item) {
@@ -66,7 +113,12 @@ class NotificationManager extends ChangeNotifier {
       }
     }
 
-    notifications.insert(0, data);
+    normalizedData['status'] =
+        _readValue(normalizedData, 'status') ?? 'Unread';
+    normalizedData['Status'] = normalizedData['status'];
+
+    notifications.insert(0, normalizedData);
+
     notifyListeners();
   }
 
@@ -79,6 +131,49 @@ class NotificationManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  int? _readNotificationId(Map<String, dynamic> item) {
+    final idText = _readValue(item, 'id') ??
+        _readValue(item, 'notificationId') ??
+        _readValue(item, 'NotificationId');
+
+    if (idText == null || idText.trim().isEmpty) {
+      return null;
+    }
+
+    return int.tryParse(idText);
+  }
+
+  void _updateLocalNotificationStatus(int notificationId, String status) {
+    for (final item in notifications) {
+      final currentId = _readNotificationId(item);
+
+      if (currentId == notificationId) {
+        item['status'] = status;
+        item['Status'] = status;
+        break;
+      }
+    }
+  }
+
+  Map<String, dynamic> _normalizeNotificationMap(Map<String, dynamic> data) {
+    return {
+      ...data,
+      'id': data['id'] ??
+          data['Id'] ??
+          data['notificationId'] ??
+          data['NotificationId'],
+      'title': data['title'] ?? data['Title'],
+      'content': data['content'] ?? data['Content'],
+      'type': data['type'] ?? data['Type'],
+      'status': data['status'] ?? data['Status'],
+      'createdAt': data['createdAt'] ?? data['CreatedAt'],
+      'relatedId': data['relatedId'] ?? data['RelatedId'],
+      'imageUrl': data['imageUrl'] ?? data['ImageUrl'],
+      'senderName': data['senderName'] ?? data['SenderName'],
+      'senderAvatar': data['senderAvatar'] ?? data['SenderAvatar'],
+    };
+  }
+
   String? _readValue(Map<String, dynamic> item, String key) {
     final lowerCamel = item[key];
     final upperCamel = item[_capitalizeFirst(key)];
@@ -89,7 +184,13 @@ class NotificationManager extends ChangeNotifier {
       return null;
     }
 
-    return value.toString();
+    final text = value.toString();
+
+    if (text.trim().isEmpty) {
+      return null;
+    }
+
+    return text;
   }
 
   String _capitalizeFirst(String value) {

@@ -26,76 +26,162 @@ class _NotificationScreenState extends State<NotificationScreen> {
     await notificationManager.fetchNotificationHistory();
   }
 
+  Future<void> _handleRefresh() async {
+    await notificationManager.fetchNotificationHistory();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background.withOpacity(0.95),
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+      appBar: _buildAppBar(),
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: notificationManager,
+          builder: (context, child) {
+            if (notificationManager.isLoading) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.black,
+                  strokeWidth: 2.4,
+                ),
+              );
+            }
+
+            final notifications = notificationManager.notifications;
+
+            if (notifications.isEmpty) {
+              return RefreshIndicator(
+                onRefresh: _handleRefresh,
+                color: Colors.black,
+                backgroundColor: Colors.white,
+                child: const SingleChildScrollView(
+                  physics: AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: 540,
+                    child: EmptyNotificationState(),
+                  ),
+                ),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: _handleRefresh,
+              color: Colors.black,
+              backgroundColor: Colors.white,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildTopSection(),
+                  ),
+                  SliverList.separated(
+                    itemCount: notifications.length,
+                    separatorBuilder: (context, index) {
+                      return const Padding(
+                        padding: EdgeInsets.only(left: 82),
+                        child: Divider(
+                          height: 1,
+                          thickness: 0.6,
+                          color: Color(0xFFEAEAEA),
+                        ),
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      final item = notifications[index];
+
+                      return RealNotificationItem(
+                        item: item,
+                      );
+                    },
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 24),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
-      body: ListenableBuilder(
-        listenable: notificationManager,
-        builder: (context, child) {
-          if (notificationManager.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      leadingWidth: 52,
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: Colors.black,
+          size: 20,
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: const Text(
+        'Notifications',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 24,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.3,
+        ),
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'Refresh',
+          onPressed: _handleRefresh,
+          icon: const Icon(
+            Icons.refresh_rounded,
+            color: Colors.black,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 6),
+      ],
+    );
+  }
+
+  Widget _buildTopSection() {
+    final unreadCount = notificationManager.unreadCount;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Row(
+        children: [
+          Text(
+            unreadCount > 0 ? 'New' : 'Recent',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (unreadCount > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1877F2),
+                borderRadius: BorderRadius.circular(999),
               ),
-            );
-          }
-
-          final notifications = notificationManager.notifications;
-
-          if (notifications.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: notificationManager.fetchNotificationHistory,
-              child: const SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: 500,
-                  child: EmptyNotificationState(),
+              child: Text(
+                unreadCount > 99 ? '99+' : unreadCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: notificationManager.fetchNotificationHistory,
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(
-                bottom: 20,
-                top: 10,
-              ),
-              itemCount: notifications.length,
-              itemBuilder: (context, index) {
-                final item = notifications[index];
-
-                return RealNotificationItem(
-                  item: item,
-                );
-              },
             ),
-          );
-        },
+          ],
+        ],
       ),
     );
   }

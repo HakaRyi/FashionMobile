@@ -142,7 +142,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       return 'N/A';
     }
 
-    return DateFormat('dd/MM/yyyy HH:mm').format(date.toLocal());
+    final utcDate = date.isUtc
+        ? date
+        : DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+      date.hour,
+      date.minute,
+      date.second,
+      date.millisecond,
+      date.microsecond,
+    );
+
+    final vietnamTime = utcDate.add(const Duration(hours: 7));
+
+    return DateFormat('dd/MM/yyyy HH:mm').format(vietnamTime);
   }
 
   String _displayStatus(String status) {

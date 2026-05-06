@@ -87,6 +87,7 @@ class NotificationService {
         return;
       }
 
+      markPayloadAsRead(payload);
       NotificationNavigation.open(payload);
     } catch (e) {
       debugPrint('Cannot open notification payload: $e');
@@ -177,7 +178,7 @@ class NotificationService {
         'title': title,
         'content': body,
         'relatedId': modelId,
-        'status': status,
+        'status': 'Unread',
       };
 
       _showLocalNotification(
@@ -205,7 +206,6 @@ class NotificationService {
       }
 
       final notificationData = Map<String, dynamic>.from(rawData);
-
       final normalizedData = _normalizeNotificationMap(notificationData);
 
       final title = _readString(normalizedData['title']) ?? 'New notification';
@@ -268,34 +268,47 @@ class NotificationService {
           child: Material(
             color: Colors.transparent,
             child: GestureDetector(
-              onTap: () {
+              onTap: () async {
                 if (entry.mounted) {
                   entry.remove();
                 }
 
+                await markPayloadAsRead(data);
+
                 NotificationNavigation.open(data);
               },
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: Colors.pinkAccent.withOpacity(0.45),
+                    color: const Color(0xFFE5E5E5),
+                    width: 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
+                      color: Colors.black.withOpacity(0.14),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.notifications_active,
-                      color: Colors.pinkAccent,
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF1877F2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.notifications_rounded,
+                        color: Colors.white,
+                        size: 23,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -306,17 +319,21 @@ class NotificationService {
                           Text(
                             data['title']?.toString() ?? 'New notification',
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w800,
                               fontSize: 15,
+                              height: 1.25,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             data['content']?.toString() ?? '',
                             style: const TextStyle(
-                              color: Colors.white70,
+                              color: Color(0xFF333333),
                               fontSize: 13,
+                              height: 1.35,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -324,16 +341,21 @@ class NotificationService {
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.white54,
-                      ),
-                      onPressed: () {
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
                         if (entry.mounted) {
                           entry.remove();
                         }
                       },
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFF666666),
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -405,7 +427,9 @@ class NotificationService {
 
   Future<List<Map<String, dynamic>>> getMyNotifications() async {
     try {
-      final url = Uri.parse('${ApiConstants.baseUrl}/notifications/me');
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.getMyNotifications}',
+      );
 
       final response = await ApiClient.get(url);
 
@@ -447,6 +471,54 @@ class NotificationService {
       debugPrint('Cannot fetch notification history: $e');
       return [];
     }
+  }
+
+  Future<bool> markAsRead(int notificationId) async {
+    try {
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.markNotificationAsRead(notificationId)}',
+      );
+
+      final response = await ApiClient.put(url);
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      debugPrint('Cannot mark notification as read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> markAllAsRead() async {
+    try {
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.markAllNotificationsAsRead}',
+      );
+
+      final response = await ApiClient.put(url);
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      debugPrint('Cannot mark all notifications as read: $e');
+      return false;
+    }
+  }
+
+  Future<void> markPayloadAsRead(Map<String, dynamic> payload) async {
+    final notificationId = _readInt(
+      payload['id'] ??
+          payload['Id'] ??
+          payload['notificationId'] ??
+          payload['NotificationId'],
+    );
+
+    if (notificationId == null) {
+      return;
+    }
+
+    await markAsRead(notificationId);
+
+    payload['status'] = 'Read';
+    payload['Status'] = 'Read';
   }
 
   Future<void> showChatNotification({
