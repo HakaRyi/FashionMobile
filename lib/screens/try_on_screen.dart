@@ -954,12 +954,12 @@ class StageMagicPainter extends CustomPainter {
 
     final Paint dustPaint = Paint()..style = PaintingStyle.fill;
 
-    for (int i = 0; i < 40; i++) {
+    for (int i = 0; i < 60; i++) {
       double speed = 0.5 + random.nextDouble() * 1.5;
       double yProgress = (animationValue * speed + random.nextDouble()) % 1.0;
 
       double angle = random.nextDouble() * 2 * math.pi;
-      double radius = 40 + (size.width / 2 - 40) * math.pow(yProgress, 1.2);
+      double radius = 60 + (size.width / 2 - 60) * math.pow(yProgress, 1.2);
 
       double dropX = wandX + radius * math.cos(angle);
       double dropY = wandY + radius * math.sin(angle);
