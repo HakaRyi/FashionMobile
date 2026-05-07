@@ -30,9 +30,12 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   static const int maxImages = 5;
+  static const int maxTitleLength = 100;
+  static const int maxContentLength = 2000;
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+
   final ImagePicker _picker = ImagePicker();
   final AccountService _accountService = AccountService();
 
@@ -64,6 +67,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _fetchProfileData();
   }
 
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
   void _initEditData() {
     if (!_isEditMode) {
       return;
@@ -82,8 +92,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     ]);
 
     _isPublic = post['isPublic'] == true ||
+        post['IsPublic'] == true ||
         post['visibility'] == 'Visible' ||
-        post['Visibility'] == 'Visible';
+        post['Visibility'] == 'Visible' ||
+        post['visibility'] == 'Public' ||
+        post['Visibility'] == 'Public';
 
     final imageValues = post['imageUrls'] ??
         post['ImageUrls'] ??
@@ -120,7 +133,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final value = data[key];
 
       if (value is String) {
-        return value;
+        return value.trim();
       }
     }
 
@@ -135,26 +148,31 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         return;
       }
 
-      if (profile != null) {
-        setState(() {
-          _username = profile['username'] ??
-              profile['userName'] ??
-              profile['Username'] ??
-              'User';
-
-          _avatarUrl = profile['avatar'] ??
-              profile['Avatar'] ??
-              profile['avatarUrl'] ??
-              profile['AvatarUrl'] ??
-              '';
-
-          _isLoadingProfile = false;
-        });
-      } else {
+      if (profile == null) {
         setState(() {
           _isLoadingProfile = false;
         });
+        return;
       }
+
+      setState(() {
+        _username = _readProfileString(profile, [
+          'username',
+          'userName',
+          'Username',
+          'fullName',
+          'FullName',
+        ], fallback: 'User');
+
+        _avatarUrl = _readProfileString(profile, [
+          'avatar',
+          'Avatar',
+          'avatarUrl',
+          'AvatarUrl',
+        ]);
+
+        _isLoadingProfile = false;
+      });
     } catch (e) {
       debugPrint('Error fetching profile in CreatePost: $e');
 
@@ -168,17 +186,29 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
-    super.dispose();
+  String _readProfileString(
+      Map<String, dynamic> data,
+      List<String> keys, {
+        String fallback = '',
+      }) {
+    for (final key in keys) {
+      final value = data[key];
+
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    return fallback;
   }
 
   Future<void> _pickImage() async {
+    if (_isSubmitting) {
+      return;
+    }
+
     try {
-      final int currentCount = _selectedImages.length;
-      final int remainingSlots = maxImages - currentCount;
+      final int remainingSlots = maxImages - _selectedImages.length;
 
       if (remainingSlots <= 0) {
         _showError('You can upload up to $maxImages images only.');
@@ -198,7 +228,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
       for (final file in filesToAdd) {
         final bytes = await file.readAsBytes();
-        newBytes.add(bytes);
+
+        if (bytes.isNotEmpty) {
+          newBytes.add(bytes);
+        }
+      }
+
+      if (newBytes.isEmpty) {
+        _showError('Selected image is invalid.');
+        return;
       }
 
       if (!mounted) {
@@ -231,18 +269,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
 
-    if (title.isEmpty && content.isEmpty && _selectedImages.isEmpty) {
-      _showError('Post cannot be empty.');
-      return;
-    }
+    final validationMessage = _validatePostInput(
+      title: title,
+      content: content,
+    );
 
-    if (!_isEditMode && _selectedImages.isEmpty) {
-      _showError('Please select at least 1 image to create a post.');
-      return;
-    }
-
-    if (_selectedImages.length > maxImages) {
-      _showError('Maximum $maxImages images allowed.');
+    if (validationMessage != null) {
+      _showError(validationMessage);
       return;
     }
 
@@ -252,44 +285,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     try {
       if (_isEditMode) {
-        final int postId = _getEditPostId();
-
-        if (postId <= 0) {
-          throw Exception('Invalid post id.');
-        }
-
-        await postManager.updatePost(
-          postId: postId,
+        await _updatePost(
           title: title,
           content: content,
-          imageBytesList: _selectedImages.isNotEmpty ? _selectedImages : null,
-        );
-
-        if (!mounted) {
-          return;
-        }
-
-        AppToast.showSuccess(
-          context,
-          'Post updated successfully.',
         );
       } else {
-        await postManager.uploadPost(
-          _selectedImages,
-          content,
-          title: title.isEmpty ? null : title,
-          eventId: widget.eventId,
-        );
-
-        if (!mounted) {
-          return;
-        }
-
-        AppToast.showSuccess(
-          context,
-          widget.eventId != null
-              ? 'Event post created successfully.'
-              : 'Post created successfully.',
+        await _createPost(
+          title: title,
+          content: content,
         );
       }
 
@@ -321,6 +324,94 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         });
       }
     }
+  }
+
+  String? _validatePostInput({
+    required String title,
+    required String content,
+  }) {
+    if (title.length > maxTitleLength) {
+      return 'Title cannot exceed $maxTitleLength characters.';
+    }
+
+    if (content.length > maxContentLength) {
+      return 'Content cannot exceed $maxContentLength characters.';
+    }
+
+    if (_selectedImages.length > maxImages) {
+      return 'Maximum $maxImages images allowed.';
+    }
+
+    if (!_isEditMode) {
+      if (title.isEmpty && content.isEmpty && _selectedImages.isEmpty) {
+        return 'Post cannot be empty.';
+      }
+
+      if (_selectedImages.isEmpty) {
+        return 'Please select at least 1 image to create a post.';
+      }
+
+      return null;
+    }
+
+    final bool hasExistingImages = _existingImageUrls.isNotEmpty;
+    final bool hasNewImages = _selectedImages.isNotEmpty;
+
+    if (title.isEmpty && content.isEmpty && !hasExistingImages && !hasNewImages) {
+      return 'Post cannot be empty.';
+    }
+
+    return null;
+  }
+
+  Future<void> _createPost({
+    required String title,
+    required String content,
+  }) async {
+    await postManager.uploadPost(
+      _selectedImages,
+      content,
+      title: title.isEmpty ? null : title,
+      eventId: widget.eventId,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    AppToast.showSuccess(
+      context,
+      widget.eventId != null
+          ? 'Event post created successfully.'
+          : 'Post created successfully.',
+    );
+  }
+
+  Future<void> _updatePost({
+    required String title,
+    required String content,
+  }) async {
+    final int postId = _getEditPostId();
+
+    if (postId <= 0) {
+      throw Exception('Invalid post id.');
+    }
+
+    await postManager.updatePost(
+      postId: postId,
+      title: title,
+      content: content,
+      imageBytesList: _selectedImages.isNotEmpty ? _selectedImages : null,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    AppToast.showSuccess(
+      context,
+      'Post updated successfully.',
+    );
   }
 
   int _getEditPostId() {
@@ -358,6 +449,30 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
 
     AppToast.showError(context, message);
+  }
+
+  void _removeSelectedImage(int index) {
+    if (_isSubmitting) {
+      return;
+    }
+
+    if (index < 0 || index >= _selectedImages.length) {
+      return;
+    }
+
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
+  void _toggleVisibility() {
+    if (_isSubmitting) {
+      return;
+    }
+
+    setState(() {
+      _isPublic = !_isPublic;
+    });
   }
 
   @override
@@ -414,6 +529,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ),
                   ),
                   _buildInputArea(),
+                  _buildTextCounterArea(),
                   if (_isEditMode) _buildEditImageHint(),
                   _buildImageGrid(),
                 ],
@@ -431,46 +547,200 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  Widget _buildUserInfo() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColors.surface,
+            backgroundImage: _avatarUrl.isNotEmpty
+                ? NetworkImage(_avatarUrl)
+                : const AssetImage('assets/images/default_avatar.png')
+            as ImageProvider,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _isLoadingProfile
+                ? const Text(
+              'Loading...',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            )
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _username,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _isEditMode
+                      ? 'Update your post'
+                      : "What's on your mind?",
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEventTag() {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 8,
       ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.textPink.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.textPink.withOpacity(0.3),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.textPink.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.textPink.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.event_available,
+                color: AppColors.textPink,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'JOINING EVENT: ${widget.eventName ?? ''}',
+                  style: const TextStyle(
+                    color: AppColors.textPink,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.event_available,
-              color: AppColors.textPink,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'JOINING EVENT: ${widget.eventName ?? ''}',
-                style: const TextStyle(
-                  color: AppColors.textPink,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+      ),
+    );
+  }
+
+  Widget _buildTitleArea() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8,
+      ),
+      child: TextField(
+        controller: _titleController,
+        enabled: !_isSubmitting,
+        maxLength: maxTitleLength,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
+        decoration: const InputDecoration(
+          hintText: 'Post title (optional)',
+          hintStyle: TextStyle(
+            color: Colors.black26,
+            fontSize: 20,
+          ),
+          border: InputBorder.none,
+          counterText: '',
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: _contentController,
+        enabled: !_isSubmitting,
+        autofocus: !_isEditMode,
+        maxLines: null,
+        maxLength: maxContentLength,
+        keyboardType: TextInputType.multiline,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          height: 1.5,
+        ),
+        decoration: const InputDecoration(
+          hintText: 'Share your style...',
+          hintStyle: TextStyle(
+            color: Colors.black38,
+            fontSize: 18,
+          ),
+          border: InputBorder.none,
+          counterText: '',
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextCounterArea() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          _titleController,
+          _contentController,
+        ]),
+        builder: (context, _) {
+          final titleLength = _titleController.text.trim().length;
+          final contentLength = _contentController.text.trim().length;
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                '$titleLength/$maxTitleLength title',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '$contentLength/$maxContentLength content',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -544,17 +814,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 _selectedImages[index],
                 fit: BoxFit.cover,
               ),
-              onDelete: () {
-                setState(() {
-                  _selectedImages.removeAt(index);
-                });
-              },
+              onDelete: () => _removeSelectedImage(index),
             );
           }
 
-          return _buildExistingImageItem(
-            _existingImageUrls[index],
-          );
+          return _buildExistingImageItem(_existingImageUrls[index]);
         },
       ),
     );
@@ -643,114 +907,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  Widget _buildUserInfo() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.surface,
-            backgroundImage: _avatarUrl.isNotEmpty
-                ? NetworkImage(_avatarUrl)
-                : const AssetImage('assets/images/default_avatar.png')
-            as ImageProvider,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _isLoadingProfile
-                ? const Text(
-              'Loading...',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            )
-                : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _username,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _isEditMode ? 'Update your post' : "What's on your mind?",
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTitleArea() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
-      child: TextField(
-        controller: _titleController,
-        enabled: !_isSubmitting,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        decoration: const InputDecoration(
-          hintText: 'Post title (optional)',
-          hintStyle: TextStyle(
-            color: Colors.black26,
-            fontSize: 20,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: TextField(
-        controller: _contentController,
-        enabled: !_isSubmitting,
-        autofocus: !_isEditMode,
-        maxLines: null,
-        keyboardType: TextInputType.multiline,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          height: 1.5,
-        ),
-        decoration: const InputDecoration(
-          hintText: 'Share your style...',
-          hintStyle: TextStyle(
-            color: Colors.black38,
-            fontSize: 18,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ),
-    );
-  }
-
   Widget _buildAttachmentArea() {
     return Container(
       width: double.infinity,
@@ -758,16 +914,48 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         horizontal: 16,
         vertical: 12,
       ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        children: [
-          _attachmentButton(
-            Icons.photo_library_outlined,
-            _isEditMode ? 'Replace Photos' : 'Photos',
-            _isSubmitting ? null : _pickImage,
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: [
+            _attachmentButton(
+              Icons.photo_library_outlined,
+              _isEditMode ? 'Replace Photos' : 'Photos',
+              _isSubmitting ? null : _pickImage,
+            ),
+            const SizedBox(width: 8),
+            _buildImageCountBadge(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageCountBadge() {
+    final int count = _selectedImages.isNotEmpty
+        ? _selectedImages.length
+        : _existingImageUrls.length;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+        ),
+      ),
+      child: Text(
+        '$count/$maxImages images',
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
       ),
     );
   }
@@ -783,6 +971,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       child: Opacity(
         opacity: onTap == null ? 0.45 : 1,
         child: Container(
+          constraints: const BoxConstraints(
+            maxWidth: 180,
+          ),
           padding: const EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 8,
@@ -803,14 +994,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 size: 20,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -828,50 +1021,51 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       ),
       color: AppColors.background,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          InkWell(
-            onTap: _isSubmitting
-                ? null
-                : () {
-              setState(() {
-                _isPublic = !_isPublic;
-              });
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isPublic ? Icons.public : Icons.lock_outline,
-                    color: AppColors.textSecondary,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _isPublic ? 'Public' : 'Private',
-                    style: const TextStyle(
+          Flexible(
+            child: InkWell(
+              onTap: _isSubmitting ? null : _toggleVisibility,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isPublic ? Icons.public : Icons.lock_outline,
                       color: AppColors.textSecondary,
-                      fontSize: 13,
+                      size: 16,
                     ),
-                  ),
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: AppColors.textSecondary,
-                    size: 16,
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _isPublic ? 'Public' : 'Private',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColors.textSecondary,
+                      size: 16,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 12),
           ElevatedButton(
             onPressed: _isSubmitting ? null : _handlePost,
             style: ElevatedButton.styleFrom(
