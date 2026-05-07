@@ -1,3 +1,4 @@
+// lib/managers/post_manager.dart
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -10,6 +11,7 @@ import '../models/post_reaction_result.dart';
 import '../models/shareable_user_model.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
+import '../utils/app_toast.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 GlobalKey<ScaffoldMessengerState>();
@@ -22,8 +24,8 @@ class PostManager extends ChangeNotifier {
 
   final List<PostFeedModel> _posts = [];
   final Set<int> _postIds = {};
-  final List<ShareableUserModel> _shareableUsers = [];
 
+  final List<ShareableUserModel> _shareableUsers = [];
   List<ShareableUserModel> get shareableUsers =>
       List.unmodifiable(_shareableUsers);
 
@@ -54,10 +56,19 @@ class PostManager extends ChangeNotifier {
   double uploadProgress = 0;
   String statusMessage = '';
 
+  bool isUpdatingPost = false;
+  bool isDeletingPost = false;
+
   Timer? _progressTimer;
 
   final Set<int> _likingPosts = {};
   final Set<int> _savingPosts = {};
+  final Set<int> _updatingPosts = {};
+  final Set<int> _deletingPosts = {};
+
+  bool isPostUpdating(int postId) => _updatingPosts.contains(postId);
+
+  bool isPostDeleting(int postId) => _deletingPosts.contains(postId);
 
   int getShareCount(int postId) {
     final post = _findPostAnywhere(postId);
@@ -125,13 +136,17 @@ class PostManager extends ChangeNotifier {
       case PostStatusValues.draft:
         return 'Draft';
       case PostStatusValues.verifying:
-        return 'Reviewing';
+        return 'Processing';
       case PostStatusValues.pendingAdmin:
-        return 'Pending Admin Review';
+        return 'Processing';
       case PostStatusValues.published:
         return 'Published';
       case PostStatusValues.rejected:
         return 'Rejected';
+      case PostStatusValues.deleted:
+        return 'Deleted';
+      case PostStatusValues.banned:
+        return 'Banned';
       default:
         return status ?? 'Unknown';
     }
@@ -143,8 +158,10 @@ class PostManager extends ChangeNotifier {
         return Colors.green;
       case PostStatusValues.verifying:
       case PostStatusValues.pendingAdmin:
-        return Colors.orange;
+        return Colors.blueGrey;
       case PostStatusValues.rejected:
+      case PostStatusValues.deleted:
+      case PostStatusValues.banned:
         return Colors.red;
       default:
         return Colors.grey;
@@ -205,6 +222,18 @@ class PostManager extends ChangeNotifier {
     }
   }
 
+  Future<void> loadMoreSavedPosts({int pageSize = 10}) async {
+    if (isLoadingSaved || isLoadingMoreSaved || !hasMoreSaved) {
+      return;
+    }
+
+    await fetchSavedPosts(
+      refresh: false,
+      page: _savedPage + 1,
+      pageSize: pageSize,
+    );
+  }
+
   Future<void> sharePostToChat({
     required PostFeedModel post,
     required List<int> receiverAccountIds,
@@ -214,10 +243,8 @@ class PostManager extends ChangeNotifier {
       return;
     }
 
-    final validReceiverIds = receiverAccountIds
-        .where((id) => id > 0)
-        .toSet()
-        .toList();
+    final validReceiverIds =
+    receiverAccountIds.where((id) => id > 0).toSet().toList();
 
     if (validReceiverIds.isEmpty) {
       throw Exception('Please select at least one receiver.');
@@ -246,18 +273,6 @@ class PostManager extends ChangeNotifier {
     } finally {
       _sharingPostsToChat.remove(post.postId);
     }
-  }
-
-  Future<void> loadMoreSavedPosts({int pageSize = 10}) async {
-    if (isLoadingSaved || isLoadingMoreSaved || !hasMoreSaved) {
-      return;
-    }
-
-    await fetchSavedPosts(
-      refresh: false,
-      page: _savedPage + 1,
-      pageSize: pageSize,
-    );
   }
 
   Future<void> refreshPostById(int postId) async {
@@ -442,12 +457,24 @@ class PostManager extends ChangeNotifier {
   }
 
   Future<void> deleteMyPost(int postId) async {
+    if (_deletingPosts.contains(postId)) {
+      return;
+    }
+
+    _deletingPosts.add(postId);
+    isDeletingPost = true;
+    notifyListeners();
+
     try {
       await _postService.deletePost(postId);
       removePost(postId);
     } catch (e) {
       debugPrint('Delete post error: $e');
       rethrow;
+    } finally {
+      _deletingPosts.remove(postId);
+      isDeletingPost = _deletingPosts.isNotEmpty;
+      notifyListeners();
     }
   }
 
@@ -497,7 +524,7 @@ class PostManager extends ChangeNotifier {
 
       uploadProgress = 1;
       statusMessage =
-      success ? 'Submitted! Waiting for review...' : 'Post upload failed.';
+      success ? 'Post uploaded successfully.' : 'Post upload failed.';
       notifyListeners();
 
       await Future.delayed(const Duration(milliseconds: 600));
@@ -521,28 +548,37 @@ class PostManager extends ChangeNotifier {
     required int postId,
     String? title,
     String? content,
+    List<Uint8List>? imageBytesList,
   }) async {
-    await _postService.updatePost(
-      postId: postId,
-      title: title,
-      content: content,
-    );
-
-    await fetchMyPosts();
-
-    final myPost = getMyPostOrNull(postId);
-    if (myPost != null) {
-      final existing = _findPostAnywhere(postId);
-      if (existing != null) {
-        final updated = existing.copyWith(
-          title: title ?? existing.title,
-          content: content ?? existing.content,
-        );
-        _updatePostEverywhere(updated);
-      }
+    if (_updatingPosts.contains(postId)) {
+      return;
     }
 
+    _updatingPosts.add(postId);
+    isUpdatingPost = true;
     notifyListeners();
+
+    try {
+      final updatedPost = await _postService.updatePost(
+        postId: postId,
+        title: title,
+        content: content,
+        imageBytesList: imageBytesList,
+      );
+
+      _updatePostEverywhere(updatedPost);
+
+      await fetchMyPosts();
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Update post error: $e');
+      rethrow;
+    } finally {
+      _updatingPosts.remove(postId);
+      isUpdatingPost = _updatingPosts.isNotEmpty;
+      notifyListeners();
+    }
   }
 
   void increaseCommentCount(int postId) {
@@ -661,8 +697,7 @@ class PostManager extends ChangeNotifier {
       _posts[feedIndex] = updated;
     }
 
-    final savedIndex =
-    _savedPosts.indexWhere((p) => p.postId == updated.postId);
+    final savedIndex = _savedPosts.indexWhere((p) => p.postId == updated.postId);
     if (savedIndex != -1) {
       _savedPosts[savedIndex] = updated;
     }
@@ -698,17 +733,23 @@ class PostManager extends ChangeNotifier {
   }
 
   void _showUploadResult(bool success) {
-    rootScaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Submitted! Your post is waiting for review.'
-              : 'Post upload failed.',
-        ),
-        backgroundColor: success ? Colors.green : Colors.redAccent,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    final context = rootScaffoldMessengerKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    if (success) {
+      AppToast.showSuccess(
+        context,
+        'Post uploaded successfully.',
+      );
+    } else {
+      AppToast.showError(
+        context,
+        'Post upload failed.',
+      );
+    }
   }
 
   Future<void> fetchFeed({

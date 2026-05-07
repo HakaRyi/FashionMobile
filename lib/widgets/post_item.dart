@@ -13,6 +13,7 @@ import '../screens/create_post_screens.dart';
 import '../screens/navbar_screens/profile_screen.dart';
 import '../screens/other_profile_screen.dart';
 import '../screens/public_wardrobe_screen.dart';
+import '../utils/app_toast.dart';
 import 'comments/comment_sheet.dart';
 import 'share_post_users_sheet.dart';
 import 'report_post_sheet.dart';
@@ -52,12 +53,15 @@ class _PostItemState extends State<PostItem> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
-      ),
-    );
+    AppToast.showError(context, message);
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    AppToast.showSuccess(context, message);
   }
 
   @override
@@ -76,21 +80,38 @@ class _PostItemState extends State<PostItem> {
   }
 
   bool _canEditPost(String? status) {
-    final s = status?.toLowerCase();
+    final s = status?.trim().toLowerCase();
 
-    return s != PostStatusValues.rejected.toLowerCase() &&
+    if (s == null || s.isEmpty) {
+      return true;
+    }
+
+    return s != PostStatusValues.verifying.toLowerCase() &&
+        s != PostStatusValues.pendingAdmin.toLowerCase() &&
+        s != PostStatusValues.deleted.toLowerCase() &&
+        s != PostStatusValues.banned.toLowerCase() &&
         s != 'airejected' &&
         s != 'blockedbyadmin';
+  }
+
+  bool _canDeletePost(String? status) {
+    final s = status?.trim().toLowerCase();
+
+    if (s == null || s.isEmpty) {
+      return true;
+    }
+
+    return s != PostStatusValues.deleted.toLowerCase() &&
+        s != PostStatusValues.banned.toLowerCase();
   }
 
   void _openUserPublicWardrobe() {
     final currentPost = postManager.getPostAnywhereOrNull(postId) ?? widget.post;
 
     if (currentPost.accountId <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User information not found.'),
-        ),
+      AppToast.showError(
+        context,
+        'User information not found.',
       );
       return;
     }
@@ -153,8 +174,9 @@ class _PostItemState extends State<PostItem> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+    AppToast.showSuccess(
+      context,
+      message,
     );
   }
 
@@ -172,10 +194,9 @@ class _PostItemState extends State<PostItem> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('You have shared the post in the chat.'),
-      ),
+    AppToast.showSuccess(
+      context,
+      'Post shared to chat successfully.',
     );
   }
 
@@ -227,9 +248,8 @@ class _PostItemState extends State<PostItem> {
 
         final shareCount = post.shareCount;
         final postUserId = post.accountId;
-        final userName = post.userName.trim().isNotEmpty
-            ? post.userName
-            : 'User';
+        final userName = post.userName.trim().isNotEmpty ? post.userName : 'User';
+
         final avatarUrl =
         (post.avatarUrl != null && post.avatarUrl!.trim().isNotEmpty)
             ? post.avatarUrl!
@@ -403,9 +423,7 @@ class _PostItemState extends State<PostItem> {
                             color: Colors.black,
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
-                            decoration: canOpenProfile
-                                ? TextDecoration.underline
-                                : null,
+                            decoration: canOpenProfile ? TextDecoration.underline : null,
                             decorationColor: Colors.black26,
                           ),
                         ),
@@ -428,20 +446,16 @@ class _PostItemState extends State<PostItem> {
                                 label: 'Expert',
                                 icon: Icons.workspace_premium_rounded,
                                 textColor: const Color(0xFF7C3AED),
-                                bgColor: const Color(0xFF7C3AED)
-                                    .withOpacity(0.10),
-                                borderColor: const Color(0xFF7C3AED)
-                                    .withOpacity(0.22),
+                                bgColor: const Color(0xFF7C3AED).withOpacity(0.10),
+                                borderColor: const Color(0xFF7C3AED).withOpacity(0.22),
                               ),
                             if (isLikedByExpert)
                               _buildInfoBadge(
                                 label: 'Expert liked',
                                 icon: Icons.favorite_rounded,
                                 textColor: const Color(0xFFEA580C),
-                                bgColor: const Color(0xFFEA580C)
-                                    .withOpacity(0.10),
-                                borderColor: const Color(0xFFEA580C)
-                                    .withOpacity(0.22),
+                                bgColor: const Color(0xFFEA580C).withOpacity(0.10),
+                                borderColor: const Color(0xFFEA580C).withOpacity(0.22),
                               ),
                           ],
                         ),
@@ -490,8 +504,7 @@ class _PostItemState extends State<PostItem> {
                 height: 1.3,
               ),
             ),
-          if (title.isNotEmpty && content.isNotEmpty)
-            const SizedBox(height: 6),
+          if (title.isNotEmpty && content.isNotEmpty) const SizedBox(height: 6),
           if (content.isNotEmpty)
             Text(
               content,
@@ -728,7 +741,7 @@ class _PostItemState extends State<PostItem> {
                   }
                 },
                 icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
-                color: isSaved ? Colors.black : Colors.black,
+                color: Colors.black,
               ),
             ],
           ),
@@ -833,9 +846,7 @@ class _PostItemState extends State<PostItem> {
       return '';
     }
 
-    final utcDate = date.isUtc
-        ? date
-        : DateTime.parse('${date.toIso8601String()}Z');
+    final utcDate = date.isUtc ? date : DateTime.parse('${date.toIso8601String()}Z');
     final localDate = utcDate.toLocal();
     final now = DateTime.now();
     final diff = now.difference(localDate);
@@ -864,94 +875,108 @@ class _PostItemState extends State<PostItem> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.only(bottom: 20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+        return ListenableBuilder(
+          listenable: postManager,
+          builder: (context, _) {
+            final bool isDeleting = postManager.isPostDeleting(postId);
+
+            return Container(
+              padding: const EdgeInsets.only(bottom: 20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(24),
                 ),
               ),
-              if (widget.isMyPost) ...[
-                if (_canEditPost(status))
-                  _buildOptionTile(
-                    icon: Icons.edit_outlined,
-                    title: 'Edit Post',
-                    subtitle: 'Update the content or images of this post',
-                    iconColor: Colors.black,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CreatePostScreen(
-                            postToEdit: {
-                              'postId': widget.post.postId,
-                              'title': widget.post.title,
-                              'content': widget.post.content,
-                              'imageUrls': widget.post.images,
-                              'status': widget.post.status,
-                              'visibility': widget.post.visibility,
-                            },
-                          ),
-                        ),
-                      ).then((_) {
-                        widget.onRefresh?.call();
-                      });
-                    },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
                   ),
-                _buildOptionTile(
-                  icon: Icons.delete_outline,
-                  title: 'Delete Post',
-                  subtitle: 'Remove this post permanently',
-                  iconColor: Colors.redAccent,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showDeleteConfirmDialog(context);
-                  },
-                ),
-              ] else ...[
-                _buildOptionTile(
-                  icon: Icons.report_gmailerrorred_rounded,
-                  title: 'Report Post',
-                  subtitle: 'I am concerned about this post',
-                  iconColor: Colors.redAccent,
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _openReportSheet();
-                  },
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(
-                    color: Color(0xFFF1F1F1),
-                    height: 1,
-                  ),
-                ),
-                _buildOptionTile(
-                  icon: Icons.visibility_off_outlined,
-                  title: 'Not interested',
-                  subtitle: 'Show fewer posts like this',
-                  iconColor: Colors.black,
-                  onTap: () => Navigator.pop(ctx),
-                ),
-              ],
-            ],
-          ),
+                  if (widget.isMyPost) ...[
+                    if (_canEditPost(status))
+                      _buildOptionTile(
+                        icon: Icons.edit_outlined,
+                        title: 'Edit Post',
+                        subtitle: 'Update the content or images of this post',
+                        iconColor: Colors.black,
+                        onTap: isDeleting
+                            ? null
+                            : () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CreatePostScreen(
+                                postToEdit: {
+                                  'postId': widget.post.postId,
+                                  'title': widget.post.title,
+                                  'content': widget.post.content,
+                                  'imageUrls': widget.post.images,
+                                  'status': widget.post.status,
+                                  'visibility': widget.post.visibility,
+                                },
+                              ),
+                            ),
+                          ).then((_) {
+                            widget.onRefresh?.call();
+                          });
+                        },
+                      ),
+                    if (_canDeletePost(status))
+                      _buildOptionTile(
+                        icon: Icons.delete_outline,
+                        title: 'Delete Post',
+                        subtitle: isDeleting
+                            ? 'Deleting this post...'
+                            : 'Hide this post from feed and profile',
+                        iconColor: Colors.redAccent,
+                        onTap: isDeleting
+                            ? null
+                            : () {
+                          Navigator.pop(ctx);
+                          _showDeleteConfirmDialog(context);
+                        },
+                      ),
+                  ] else ...[
+                    _buildOptionTile(
+                      icon: Icons.report_gmailerrorred_rounded,
+                      title: 'Report Post',
+                      subtitle: 'I am concerned about this post',
+                      iconColor: Colors.redAccent,
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await _openReportSheet();
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(
+                        color: Color(0xFFF1F1F1),
+                        height: 1,
+                      ),
+                    ),
+                    _buildOptionTile(
+                      icon: Icons.visibility_off_outlined,
+                      title: 'Not interested',
+                      subtitle: 'Show fewer posts like this',
+                      iconColor: Colors.black,
+                      onTap: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -962,47 +987,52 @@ class _PostItemState extends State<PostItem> {
     required String title,
     required String subtitle,
     required Color iconColor,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 4,
-      ),
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.08),
-          shape: BoxShape.circle,
+    final bool isDisabled = onTap == null;
+
+    return Opacity(
+      opacity: isDisabled ? 0.45 : 1,
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 4,
         ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 22,
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: 22,
+          ),
         ),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: iconColor == Colors.redAccent ? Colors.redAccent : Colors.black,
-          fontWeight: FontWeight.w900,
-          fontSize: 15,
+        title: Text(
+          title,
+          style: TextStyle(
+            color: iconColor == Colors.redAccent ? Colors.redAccent : Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+          ),
         ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(
-          color: Colors.black45,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: Colors.black45,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      ),
-      trailing: const Icon(
-        Icons.arrow_forward_ios_rounded,
-        color: Colors.black12,
-        size: 14,
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          color: Colors.black12,
+          size: 14,
+        ),
       ),
     );
   }
@@ -1010,70 +1040,129 @@ class _PostItemState extends State<PostItem> {
   void _showDeleteConfirmDialog(BuildContext parentContext) {
     showDialog(
       context: parentContext,
+      barrierDismissible: !postManager.isPostDeleting(postId),
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            'Delete post?',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          content: const Text(
-            'Are you sure you want to delete this post? This action cannot be undone.',
-            style: TextStyle(
-              color: Colors.black54,
-              height: 1.4,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'CANCEL',
+        return ListenableBuilder(
+          listenable: postManager,
+          builder: (context, _) {
+            final bool isDeleting = postManager.isPostDeleting(postId);
+
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: const Text(
+                'Delete post?',
                 style: TextStyle(
-                  color: Colors.black38,
+                  color: Colors.black,
                   fontWeight: FontWeight.w900,
-                  fontSize: 12,
                 ),
               ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-
-                try {
-                  await postManager.deleteMyPost(postId);
-                  widget.onRefresh?.call();
-                } catch (e) {
-                  if (!mounted) {
-                    return;
-                  }
-
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to delete post: $e'),
-                      backgroundColor: Colors.redAccent,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This post will be removed from your profile and public feed.',
+                    style: TextStyle(
+                      color: Colors.black54,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
                     ),
-                  );
-                }
-              },
-              child: const Text(
-                'DELETE',
-                style: TextStyle(
-                  color: Colors.redAccent,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'You will not see it in your post list after deletion.',
+                    style: TextStyle(
+                      color: Colors.black38,
+                      height: 1.4,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (isDeleting) ...[
+                    const SizedBox(height: 18),
+                    const Row(
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Deleting post...',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+                  child: const Text(
+                    'CANCEL',
+                    style: TextStyle(
+                      color: Colors.black38,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                    try {
+                      await postManager.deleteMyPost(postId);
+
+                      if (!ctx.mounted) {
+                        return;
+                      }
+
+                      Navigator.pop(ctx);
+
+                      if (!mounted) {
+                        return;
+                      }
+
+                      widget.onRefresh?.call();
+
+                      _showMessage('Post deleted successfully.');
+                    } catch (e) {
+                      if (!mounted) {
+                        return;
+                      }
+
+                      AppToast.showError(
+                        parentContext,
+                        'Failed to delete post: $e',
+                      );
+                    }
+                  },
+                  child: Text(
+                    isDeleting ? 'DELETING...' : 'DELETE',
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
