@@ -10,6 +10,7 @@ import '../models/item_variant_model.dart';
 import '../models/public_item_detail_model.dart';
 import '../models/public_wardrobe_item_model.dart';
 import '../models/wardrobe_item_model.dart';
+import 'auth_service.dart';
 
 class ItemService {
   Future<String?> _getToken() async {
@@ -81,11 +82,20 @@ class ItemService {
     );
 
     try {
-      final response = await http.get(
+      var response = await http.get(
         uri,
         headers: await _buildHeaders(withAuth: true),
       );
-
+      if (response.statusCode == 401) {
+        final authService = AuthService();
+        bool refreshed = await authService.refreshToken();
+        if (refreshed) {
+          response = await http.get(
+            uri,
+            headers: await _buildHeaders(withAuth: true),
+          );
+        }
+      }
       if (_isSuccessStatus(response.statusCode)) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
 
@@ -487,6 +497,80 @@ class ItemService {
     );
 
     if (!_isSuccessStatus(response.statusCode)) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<void> saveCollection(String title, String description, List<int> itemIds) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode({
+        "title": title,
+        "description": description,
+        "itemIds": itemIds,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<List<dynamic>> getCollections() async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections");
+
+    final response = await http.get(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      return body as List<dynamic>;
+    }
+    throw _buildExceptionFromResponse(response);
+  }
+
+  Future<void> updateCollection(int id, String newTitle, String newDesc, List<int> newItemIds) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections/$id/items");
+
+    final response = await http.put(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode({
+        "newTitle": newTitle,
+        "newDescription": newDesc,
+        "newItemIds": newItemIds,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<void> deleteCollection(int collectionId) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections/$collectionId");
+
+    final response = await http.delete(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw _buildExceptionFromResponse(response);
+    }
+  }
+  Future<void> addItemsToCollection(int collectionId, List<int> itemIds) async {
+    final url = Uri.parse("${ApiConstants.baseUrl}/collections/$collectionId/items");
+
+    final response = await http.post(
+      url,
+      headers: await _buildHeaders(withAuth: true),
+      body: jsonEncode(itemIds),
+    );
+
+    if (response.statusCode != 200) {
       throw _buildExceptionFromResponse(response);
     }
   }

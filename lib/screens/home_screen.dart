@@ -48,18 +48,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeHome() async {
-    await postManager.fetchInitialFeed();
+    try {
+      await postManager.fetchInitialFeed();
 
-    if (widget.focusPostId != null) {
-      await _focusSharedPost(widget.focusPostId!);
-    }
-
-    await Future.delayed(const Duration(milliseconds: 150));
-
-    if (mounted) {
-      setState(() {
-        _isVisible = true;
-      });
+      if (widget.focusPostId != null) {
+        await _focusSharedPost(widget.focusPostId!);
+      }
+    } catch (e) {
+      debugPrint('Lỗi load feed: $e');
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (mounted) {
+        setState(() {
+          _isVisible = true;
+        });
+      }
     }
   }
 
@@ -231,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const Divider(
                                   color: AppColors.divider,
                                   height: 12,
-                                  thickness: 6, // Vạch phân cách tinh tế hơn
+                                  thickness: 6,
                                 ),
                             ],
                           );

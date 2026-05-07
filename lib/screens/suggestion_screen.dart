@@ -89,6 +89,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
               historyId: history.id,
               title: history.referenceItemName ?? "Outfit Suggestion",
               refImage: history.referenceItemImage,
+              referenceItemId: history.referenceItemId
             ),
           ),
         );
