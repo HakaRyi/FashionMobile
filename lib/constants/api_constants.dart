@@ -209,4 +209,14 @@ class ApiConstants {
 
     return Uri(path: getMyPurchases, queryParameters: query).toString();
   }
+
+  static const String notificationBase = "/notifications";
+
+  static const String getMyNotifications = "$notificationBase/me";
+
+  static String markNotificationAsRead(int notificationId) =>
+      "$notificationBase/$notificationId/read";
+
+  static const String markAllNotificationsAsRead =
+      "$notificationBase/read-all";
 }

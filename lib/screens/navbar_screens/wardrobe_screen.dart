@@ -430,17 +430,24 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                 onRefresh: _handleRefresh,
                 color: Colors.black,
                 backgroundColor: Colors.white,
-                child: filteredItems.isEmpty && !_isLoading
-                    ? _buildEmptyState()
-                    : CustomScrollView(
+                child: CustomScrollView(
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  slivers: slivers,
+                  slivers: [
+                    if (filteredItems.isEmpty && !_isLoading)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _buildEmptyState(),
+                      )
+                    else
+                      ...slivers,
+                  ],
                 ),
               ),
             ),
+
           ],
         ),
       ),

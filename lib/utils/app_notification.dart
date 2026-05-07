@@ -1,4 +1,3 @@
-import 'package:fashion_mobile/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/notification_type.dart';
@@ -12,25 +11,31 @@ class NotificationService {
         NotificationType type = NotificationType.info,
       }) {
     final overlayState = Overlay.of(context);
+
     late OverlayEntry overlayEntry;
 
     overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 10,
-        right: 0,
-        child: Material(
-          color: Colors.transparent,
-          child: AnimatedToastWidget(
-            title: title,
-            message: message,
-            type: type,
-            onDismissed: () {
-              overlayEntry.remove();
-            },
+      builder: (context) {
+        return Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: AnimatedToastWidget(
+              title: title,
+              message: message,
+              type: type,
+              onDismissed: () {
+                if (overlayEntry.mounted) {
+                  overlayEntry.remove();
+                }
+              },
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
+
     overlayState.insert(overlayEntry);
   }
 }

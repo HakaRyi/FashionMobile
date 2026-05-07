@@ -1,64 +1,113 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:signalr_netcore/signalr_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
+import 'package:signalr_netcore/signalr_client.dart';
+
 import '../constants/api_constants.dart';
 import '../main.dart';
-import 'api_client.dart';
-import '../utils/global_event_bus.dart';
 import '../screens/chat_screen.dart';
-import '../services/chat_service.dart';
+import '../utils/global_event_bus.dart';
+import '../utils/notification_navigation.dart';
+import 'api_client.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
+
   factory NotificationService() => _instance;
+
   NotificationService._internal();
+
+  static const String _defaultChannelId = 'fashion_mobile_channel_sound_v2';
+  static const String _defaultChannelName = 'App notifications';
+
+  static const String _chatChannelId = 'chat_messages_channel_sound_v2';
+  static const String _chatChannelName = 'Chat messages';
+
+  static const String _androidSoundName = 'notification_sound';
+
   HubConnection? _hubConnection;
+
   static BuildContext? globalContext;
-  final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
 
   Function(Map<String, dynamic>)? onNotificationReceived;
 
   Future<void> initNotificationService() async {
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+    const AndroidInitializationSettings androidSettings =
+    AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings iosSettings =
+    DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+
+    const InitializationSettings initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
     await _localNotificationsPlugin.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (response.payload != null) {
-          final data = jsonDecode(response.payload!);
-
-          // Dùng navigatorKey ĐỂ CHẮC CHẮN LUÔN CHẠY ĐƯỢC
-          navigatorKey.currentState?.push(
-            MaterialPageRoute(
-              builder: (context) => ChatScreen(
-                groupId: data['groupId'],
-                userName: data['senderName'] ?? "Chat",
-                avatarUrl: data['senderAvatar'] ?? "",
-              ),
-            ),
-          );
-        }
-      },
+      onDidReceiveNotificationResponse: _handleLocalNotificationTap,
     );
 
     await _connectSignalR();
+  }
+
+  void _handleLocalNotificationTap(NotificationResponse response) {
+    if (response.payload == null || response.payload!.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(response.payload!);
+
+      if (decoded is! Map) {
+        return;
+      }
+
+      final payload = Map<String, dynamic>.from(decoded);
+
+      if (payload['kind'] == 'chat') {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              groupId: payload['groupId'],
+              userName: payload['senderName'] ?? 'Chat',
+              avatarUrl: payload['senderAvatar'] ?? '',
+            ),
+          ),
+        );
+        return;
+      }
+
+      markPayloadAsRead(payload);
+      NotificationNavigation.open(payload);
+    } catch (e) {
+      debugPrint('Cannot open notification payload: $e');
+    }
   }
 
   Future<void> _connectSignalR() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
-    if (token.isEmpty) return;
+    if (token.isEmpty) {
+      return;
+    }
 
-    final url = "${ApiConstants.baseSignalRUrl}/notificationHub";
+    if (_hubConnection?.state == HubConnectionState.Connected ||
+        _hubConnection?.state == HubConnectionState.Connecting) {
+      return;
+    }
+
+    final url = '${ApiConstants.baseSignalRUrl}/notificationHub';
 
     _hubConnection = HubConnectionBuilder()
         .withUrl(
@@ -73,130 +122,405 @@ class NotificationService {
         .withAutomaticReconnect()
         .build();
 
-    _hubConnection?.onclose(({error}) => debugPrint("SignalR Connection Closed"));
-    _hubConnection?.on("ReceiveNotification", _handleIncomingNotification);
-    _hubConnection?.on("ModelProcessed", _handleModelProcessed);
+    _hubConnection?.onclose(({error}) {
+      debugPrint('Notification SignalR closed: $error');
+    });
+
+    _hubConnection?.onreconnecting(({error}) {
+      debugPrint('Notification SignalR reconnecting: $error');
+    });
+
+    _hubConnection?.onreconnected(({connectionId}) {
+      debugPrint('Notification SignalR reconnected: $connectionId');
+    });
+
+    _hubConnection?.on('ReceiveNotification', _handleIncomingNotification);
+    _hubConnection?.on('ModelProcessed', _handleModelProcessed);
 
     try {
       await _hubConnection?.start();
-      debugPrint("SignalR Connected Successfully!");
+      debugPrint('Notification SignalR connected successfully.');
     } catch (e) {
-      debugPrint("SignalR Connection Error: $e");
+      debugPrint('Notification SignalR connection error: $e');
     }
   }
 
   void _handleModelProcessed(List<dynamic>? parameters) {
-    if (parameters == null || parameters.isEmpty) return;
+    if (parameters == null || parameters.isEmpty) {
+      return;
+    }
+
     try {
-      final data = parameters.first as Map<String, dynamic>;
-      final modelId = data['modelId'] as int;
-      final status = data['status'] as String;
+      final rawData = parameters.first;
+
+      if (rawData is! Map) {
+        return;
+      }
+
+      final data = Map<String, dynamic>.from(rawData);
+
+      final modelId = _readInt(data['modelId']);
+      final status = data['status']?.toString() ?? '';
+
+      if (modelId == null || status.isEmpty) {
+        return;
+      }
 
       GlobalEventBus().fireModelProcessed(modelId, status);
 
+      final title = 'Model review result';
+      final body = status == 'Active'
+          ? 'Your model has been approved successfully.'
+          : 'Your model has been rejected.';
+
+      final payload = {
+        'type': 'ModelProcessed',
+        'title': title,
+        'content': body,
+        'relatedId': modelId,
+        'status': 'Unread',
+      };
+
       _showLocalNotification(
-        'Kết quả kiểm duyệt',
-        status == 'Active' ? 'Model của bạn đã duyệt thành công!' : 'Model của bạn bị từ chối.',
+        title,
+        body,
+        payload: jsonEncode(payload),
       );
+
+      _showInAppNotificationPopup(payload);
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('Cannot handle ModelProcessed event: $e');
     }
   }
 
   void _handleIncomingNotification(List<dynamic>? parameters) {
-    if (parameters == null || parameters.isEmpty) return;
+    if (parameters == null || parameters.isEmpty) {
+      return;
+    }
 
     try {
-      final notificationData = parameters.first as Map<String, dynamic>;
+      final rawData = parameters.first;
 
-      final title = notificationData['title'] ?? 'Thông báo mới';
-      final content = notificationData['content'] ?? '';
-
-      _showLocalNotification(title, content);
-
-      if (onNotificationReceived != null) {
-        onNotificationReceived!(notificationData);
+      if (rawData is! Map) {
+        return;
       }
+
+      final notificationData = Map<String, dynamic>.from(rawData);
+      final normalizedData = _normalizeNotificationMap(notificationData);
+
+      final title = _readString(normalizedData['title']) ?? 'New notification';
+      final content = _readString(normalizedData['content']) ?? '';
+
+      _showLocalNotification(
+        title,
+        content,
+        payload: jsonEncode(normalizedData),
+      );
+
+      _showInAppNotificationPopup(normalizedData);
+
+      onNotificationReceived?.call(normalizedData);
     } catch (e) {
-      debugPrint("Lỗi xử lý SignalR: ${e.toString()}");
+      debugPrint('Cannot handle SignalR notification: $e');
     }
   }
 
-  // Future<void> _showLocalNotification(String title, String body) async {
-  //   const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-  //     'fashion_mobile_channel',
-  //     'Thông báo ứng dụng',
-  //     importance: Importance.max,
-  //     priority: Priority.high,
-  //     showWhen: true,
-  //   );
-  //
-  //   const NotificationDetails platformDetails = NotificationDetails(
-  //     android: androidDetails,
-  //     iOS: DarwinNotificationDetails(),
-  //   );
-  //
-  //   await _localNotificationsPlugin.show(
-  //     DateTime.now().millisecond,
-  //     title,
-  //     body,
-  //     platformDetails,
-  //   );
-  // }
+  Map<String, dynamic> _normalizeNotificationMap(Map<String, dynamic> data) {
+    return {
+      ...data,
+      'id': data['id'] ??
+          data['Id'] ??
+          data['notificationId'] ??
+          data['NotificationId'],
+      'title': data['title'] ?? data['Title'],
+      'content': data['content'] ?? data['Content'],
+      'type': data['type'] ?? data['Type'],
+      'status': data['status'] ?? data['Status'],
+      'createdAt': data['createdAt'] ?? data['CreatedAt'],
+      'relatedId': data['relatedId'] ?? data['RelatedId'],
+      'imageUrl': data['imageUrl'] ?? data['ImageUrl'],
+      'senderName': data['senderName'] ?? data['SenderName'],
+      'senderAvatar': data['senderAvatar'] ?? data['SenderAvatar'],
+    };
+  }
+
+  void _showInAppNotificationPopup(Map<String, dynamic> data) {
+    final context = navigatorKey.currentContext;
+
+    if (context == null) {
+      return;
+    }
+
+    final overlay = Overlay.maybeOf(context);
+
+    if (overlay == null) {
+      return;
+    }
+
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (_) {
+        return Positioned(
+          top: MediaQuery.of(context).padding.top + 12,
+          left: 16,
+          right: 16,
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              onTap: () async {
+                if (entry.mounted) {
+                  entry.remove();
+                }
+
+                await markPayloadAsRead(data);
+
+                NotificationNavigation.open(data);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color(0xFFE5E5E5),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.14),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF1877F2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.notifications_rounded,
+                        color: Colors.white,
+                        size: 23,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data['title']?.toString() ?? 'New notification',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              height: 1.25,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            data['content']?.toString() ?? '',
+                            style: const TextStyle(
+                              color: Color(0xFF333333),
+                              fontSize: 13,
+                              height: 1.35,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        if (entry.mounted) {
+                          entry.remove();
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFF666666),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(seconds: 5), () {
+      if (entry.mounted) {
+        entry.remove();
+      }
+    });
+  }
+
   Future<void> _showLocalNotification(
       String title,
       String body, {
-        String channelId = 'fashion_mobile_channel',
-        String channelName = 'Thông báo ứng dụng',
+        String channelId = _defaultChannelId,
+        String channelName = _defaultChannelName,
         String? payload,
       }) async {
-    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails =
+    AndroidNotificationDetails(
       channelId,
       channelName,
+      channelDescription: 'Notifications from WAPO app',
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
       playSound: true,
-      // Nếu là chat thì bật rung và chuông mạnh hơn
-      styleInformation: const BigTextStyleInformation(''),
+      enableVibration: true,
+      sound: const RawResourceAndroidNotificationSound(_androidSoundName),
+      styleInformation: BigTextStyleInformation(body),
     );
 
-    NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: const DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      ),
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
     );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final notificationId =
+    (title + body + DateTime.now().millisecondsSinceEpoch.toString())
+        .hashCode
+        .abs();
 
     await _localNotificationsPlugin.show(
-      (title + body).hashCode,
+      notificationId,
       title,
       body,
       platformDetails,
       payload: payload,
     );
   }
+
   Future<void> clearAllNotifications() async {
     await _localNotificationsPlugin.cancelAll();
   }
+
   Future<List<Map<String, dynamic>>> getMyNotifications() async {
     try {
-      final url = Uri.parse("${ApiConstants.baseUrl}/notifications/me");
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.getMyNotifications}',
+      );
 
       final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.cast<Map<String, dynamic>>();
+        final decoded = jsonDecode(response.body);
+
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map(
+                (item) => _normalizeNotificationMap(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+              .toList();
+        }
+
+        if (decoded is Map) {
+          final map = Map<String, dynamic>.from(decoded);
+
+          final items =
+              map['items'] ?? map['Items'] ?? map['data'] ?? map['Data'];
+
+          if (items is List) {
+            return items
+                .whereType<Map>()
+                .map(
+                  (item) => _normalizeNotificationMap(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+                .toList();
+          }
+        }
       }
+
       return [];
     } catch (e) {
-      debugPrint("Lỗi lấy danh sách thông báo: ${e.toString()}");
+      debugPrint('Cannot fetch notification history: $e');
       return [];
     }
   }
+
+  Future<bool> markAsRead(int notificationId) async {
+    try {
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.markNotificationAsRead(notificationId)}',
+      );
+
+      final response = await ApiClient.put(url);
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      debugPrint('Cannot mark notification as read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> markAllAsRead() async {
+    try {
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.markAllNotificationsAsRead}',
+      );
+
+      final response = await ApiClient.put(url);
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      debugPrint('Cannot mark all notifications as read: $e');
+      return false;
+    }
+  }
+
+  Future<void> markPayloadAsRead(Map<String, dynamic> payload) async {
+    final notificationId = _readInt(
+      payload['id'] ??
+          payload['Id'] ??
+          payload['notificationId'] ??
+          payload['NotificationId'],
+    );
+
+    if (notificationId == null) {
+      return;
+    }
+
+    await markAsRead(notificationId);
+
+    payload['status'] = 'Read';
+    payload['Status'] = 'Read';
+  }
+
   Future<void> showChatNotification({
     required int groupId,
     required int senderId,
@@ -208,32 +532,40 @@ class NotificationService {
     String? groupName,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final myId = prefs.getString('userId') ?? "";
-    if (senderId.toString() == myId) return;
+
+    final storedUserId =
+        prefs.getString('userId') ?? prefs.getInt('userId')?.toString() ?? '';
+
+    if (senderId.toString() == storedUserId) {
+      return;
+    }
 
     String displayContent = content;
-    if (content.isEmpty && photos.isNotEmpty) {
-      displayContent = "Đã gửi ${photos.length} file đính kèm";
+
+    if (content.trim().isEmpty && photos.isNotEmpty) {
+      displayContent = 'Sent ${photos.length} attachment(s)';
     }
 
     String title = senderName;
     String body = displayContent;
 
     if (isGroup) {
-      title = groupName ?? "Nhóm mới";
-      body = "$senderName: $displayContent";
+      title = groupName ?? 'Group chat';
+      body = '$senderName: $displayContent';
     }
-    String payload = jsonEncode({
-      "groupId": groupId,
-      "senderName": isGroup ? (groupName ?? "Nhóm") : senderName,
-      "senderAvatar": senderAvatar,
+
+    final payload = jsonEncode({
+      'kind': 'chat',
+      'groupId': groupId,
+      'senderName': isGroup ? (groupName ?? 'Group') : senderName,
+      'senderAvatar': senderAvatar,
     });
-    // GỌI HÀM VỚI CHANNEL RIÊNG CHO CHAT
+
     await _showLocalNotification(
       title,
       body,
-      channelId: 'chat_messages_channel',
-      channelName: 'Tin nhắn chat',
+      channelId: _chatChannelId,
+      channelName: _chatChannelName,
       payload: payload,
     );
   }
@@ -241,8 +573,8 @@ class NotificationService {
   Future<void> showManualLocalNotification({
     required String title,
     required String body,
-    String channelId = 'fashion_mobile_channel',
-    String channelName = 'Thông báo ứng dụng',
+    String channelId = _defaultChannelId,
+    String channelName = _defaultChannelName,
     String? payload,
   }) async {
     await _showLocalNotification(
@@ -256,5 +588,32 @@ class NotificationService {
 
   void disconnect() {
     _hubConnection?.stop();
+    _hubConnection = null;
+  }
+
+  int? _readInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    return int.tryParse(value.toString());
+  }
+
+  String? _readString(dynamic value, {String? fallback}) {
+    if (value == null) {
+      return fallback;
+    }
+
+    final text = value.toString();
+
+    if (text.trim().isEmpty) {
+      return fallback;
+    }
+
+    return text;
   }
 }
