@@ -704,8 +704,11 @@ class PostManager extends ChangeNotifier {
           success
               ? 'Submitted! Your post is waiting for review.'
               : 'Post upload failed.',
+          style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: success ? Colors.green : Colors.redAccent,
+
+        backgroundColor: success ? Colors.black : Colors.redAccent,
+
         duration: const Duration(seconds: 3),
       ),
     );

@@ -411,6 +411,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         opacity: onTap == null ? 0.5 : 1,
         child: Padding(
           padding: const EdgeInsets.all(8.0),
+
           child: Row(
             children: [
               Icon(icon, color: AppColors.textPink, size: 22),
