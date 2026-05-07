@@ -10,6 +10,7 @@ import '../models/item_variant_model.dart';
 import '../models/public_item_detail_model.dart';
 import '../models/public_wardrobe_item_model.dart';
 import '../models/wardrobe_item_model.dart';
+import 'auth_service.dart';
 
 class ItemService {
   Future<String?> _getToken() async {
@@ -81,11 +82,20 @@ class ItemService {
     );
 
     try {
-      final response = await http.get(
+      var response = await http.get(
         uri,
         headers: await _buildHeaders(withAuth: true),
       );
-
+      if (response.statusCode == 401) {
+        final authService = AuthService();
+        bool refreshed = await authService.refreshToken();
+        if (refreshed) {
+          response = await http.get(
+            uri,
+            headers: await _buildHeaders(withAuth: true),
+          );
+        }
+      }
       if (_isSuccessStatus(response.statusCode)) {
         final Map<String, dynamic> decodedData = jsonDecode(response.body);
 

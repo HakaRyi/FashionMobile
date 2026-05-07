@@ -55,6 +55,7 @@ class AuthService {
         return {
           'success': false,
           'message': responseData['message'] ?? 'Invalid email or password.',
+          'statusCode': response.statusCode
         };
       }
 
