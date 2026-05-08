@@ -74,11 +74,16 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
   @override
   Widget build(BuildContext context) {
     final manager = context.watch<CommentManager>();
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SafeArea(
+        top: false,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.82,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(
@@ -88,145 +93,164 @@ class _CommentSheetViewState extends State<_CommentSheetView> {
           child: Column(
             children: [
               Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(999),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Comments',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F1F1),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '${manager.comments.length}',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => manager.refresh(widget.postId),
-            color: Colors.black,
-            backgroundColor: Colors.white,
-            child: Builder(
-              builder: (_) {
-                if (manager.isInitialLoading && manager.comments.isEmpty) {
-                  return ListView(
-                    controller: _controller,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 160),
-                      Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                if (manager.comments.isEmpty) {
-                  return ListView(
-                    controller: _controller,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 120),
-                      Center(
-                        child: Icon(
-                          Icons.mode_comment_outlined,
-                          size: 50,
-                          color: Colors.black26,
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          'No comments yet',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 6),
-                      Center(
-                        child: Text(
-                          'Be the first to comment',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.black38,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _controller,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount:
-                  manager.comments.length + (manager.isLoadingMore ? 1 : 0),
-                  itemBuilder: (_, i) {
-                    if (i >= manager.comments.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Comments',
+                            style: TextStyle(
                               color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
-                      );
-                    }
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F1F1),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${manager.comments.length}',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => manager.refresh(widget.postId),
+                  color: Colors.black,
+                  backgroundColor: Colors.white,
+                  child: Builder(
+                    builder: (_) {
+                      if (manager.isInitialLoading &&
+                          manager.comments.isEmpty) {
+                        return ListView(
+                          controller: _controller,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                          children: const [
+                            SizedBox(height: 160),
+                            Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
 
-                    return CommentItem(
-                      comment: manager.comments[i],
-                    );
-                  },
-                );
-              },
-            ),
+                      if (manager.comments.isEmpty) {
+                        return ListView(
+                          controller: _controller,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                          children: const [
+                            SizedBox(height: 120),
+                            Center(
+                              child: Icon(
+                                Icons.mode_comment_outlined,
+                                size: 50,
+                                color: Colors.black26,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Center(
+                              child: Text(
+                                'No comments yet',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Center(
+                              child: Text(
+                                'Be the first to comment',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black38,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return ListView.builder(
+                        controller: _controller,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.only(bottom: 8),
+                        itemCount: manager.comments.length +
+                            (manager.isLoadingMore ? 1 : 0),
+                        itemBuilder: (_, i) {
+                          if (i >= manager.comments.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return CommentItem(
+                            comment: manager.comments[i],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const CommentInput(),
+            ],
           ),
         ),
-        const CommentInput(),
-      ],
+      ),
     );
   }
 }

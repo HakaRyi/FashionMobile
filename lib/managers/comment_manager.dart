@@ -13,7 +13,8 @@ import '../services/reaction_service.dart';
 class CommentManager extends ChangeNotifier {
   final CommentService _commentService = CommentService();
   final ReactionService _reactionService = ReactionService();
-
+  final Set<int> _updatingCommentIds = {};
+  final Set<int> _deletingCommentIds = {};
   /// external post cache
   final List<Map<String, dynamic>> posts = [];
 
@@ -41,6 +42,13 @@ class CommentManager extends ChangeNotifier {
   final Map<int, int> _loadedReplyCountMap = {};
 
   /// ========= UI HELPERS =========
+  bool isUpdatingComment(int commentId) {
+    return _updatingCommentIds.contains(commentId);
+  }
+
+  bool isDeletingComment(int commentId) {
+    return _deletingCommentIds.contains(commentId);
+  }
 
   bool isRepliesExpanded(int commentId) {
     return _expandedReplyCommentIds.contains(commentId);
@@ -543,5 +551,169 @@ class CommentManager extends ChangeNotifier {
 
     _hasMoreRepliesMap[parentCommentId] = current.replies.length < replyCount;
     notifyListeners();
+  }
+
+  /// ========= UPDATE COMMENT / REPLY =========
+
+  Future<bool> updateCommentContent({
+    required int commentId,
+    required String content,
+  }) async {
+    final trimmed = content.trim();
+
+    if (trimmed.isEmpty) {
+      return false;
+    }
+
+    if (trimmed.length > 2000) {
+      return false;
+    }
+
+    if (_updatingCommentIds.contains(commentId)) {
+      return false;
+    }
+
+    _updatingCommentIds.add(commentId);
+    notifyListeners();
+
+    try {
+      await _commentService.updateComment(
+        commentId: commentId,
+        content: trimmed,
+      );
+
+      final rootIndex = _comments.indexWhere(
+            (comment) => comment.commentId == commentId,
+      );
+
+      if (rootIndex != -1) {
+        final current = _comments[rootIndex];
+
+        _comments[rootIndex] = current.copyWith(
+          content: trimmed,
+        );
+
+        return true;
+      }
+
+      for (int i = 0; i < _comments.length; i++) {
+        final comment = _comments[i];
+
+        final replyIndex = comment.replies.indexWhere(
+              (reply) => reply.commentId == commentId,
+        );
+
+        if (replyIndex != -1) {
+          final replies = [...comment.replies];
+          final currentReply = replies[replyIndex];
+
+          replies[replyIndex] = currentReply.copyWith(
+            content: trimmed,
+          );
+
+          _comments[i] = comment.copyWith(
+            replies: replies,
+          );
+
+          return true;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint("updateCommentContent error $e");
+      return false;
+    } finally {
+      _updatingCommentIds.remove(commentId);
+      notifyListeners();
+    }
+  }
+
+  /// ========= DELETE COMMENT / REPLY =========
+
+  Future<bool> deleteCommentById(int commentId) async {
+    if (_deletingCommentIds.contains(commentId)) {
+      return false;
+    }
+
+    _deletingCommentIds.add(commentId);
+    notifyListeners();
+
+    int removedCount = 0;
+    CommentModel? removedRootComment;
+    int removedRootIndex = -1;
+
+    try {
+      await _commentService.deleteComment(commentId);
+
+      final rootIndex = _comments.indexWhere(
+            (comment) => comment.commentId == commentId,
+      );
+
+      if (rootIndex != -1) {
+        removedRootIndex = rootIndex;
+        removedRootComment = _comments[rootIndex];
+
+        removedCount = 1 + removedRootComment.replies.length;
+
+        _comments.removeAt(rootIndex);
+
+        _loadedReplyCountMap.remove(commentId);
+        _hasMoreRepliesMap.remove(commentId);
+        _expandedReplyCommentIds.remove(commentId);
+        _loadingReplyCommentIds.remove(commentId);
+        _submittingReplyCommentIds.remove(commentId);
+        _likingCommentIds.remove(commentId);
+
+        for (int i = 0; i < removedCount; i++) {
+          _decreasePostCommentCountOptimistic();
+        }
+
+        return true;
+      }
+
+      for (int i = 0; i < _comments.length; i++) {
+        final comment = _comments[i];
+
+        final replyIndex = comment.replies.indexWhere(
+              (reply) => reply.commentId == commentId,
+        );
+
+        if (replyIndex != -1) {
+          final replies = [...comment.replies];
+          replies.removeAt(replyIndex);
+
+          final newReplyCount =
+          comment.replyCount > 0 ? comment.replyCount - 1 : 0;
+
+          _comments[i] = comment.copyWith(
+            replies: replies,
+            replyCount: newReplyCount,
+            hasReplies: newReplyCount > 0,
+          );
+
+          _loadedReplyCountMap[comment.commentId] = replies.length;
+          _hasMoreRepliesMap[comment.commentId] =
+              replies.length < newReplyCount;
+
+          _decreasePostCommentCountOptimistic();
+
+          return true;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint("deleteCommentById error $e");
+
+      if (removedRootComment != null && removedRootIndex >= 0) {
+        _comments.insert(removedRootIndex, removedRootComment);
+      }
+
+      return false;
+    } finally {
+      _deletingCommentIds.remove(commentId);
+      notifyListeners();
+    }
   }
 }
