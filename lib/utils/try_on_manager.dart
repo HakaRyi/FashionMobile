@@ -37,21 +37,18 @@ class TryOnManager extends ChangeNotifier {
       );
 
       if (result == null) {
-        _showErrorNotification(
-          globalContext,
-          "Không nhận được ảnh kết quả từ hệ thống.",
-        );
-        return;
+        throw ApiException("Không nhận được ảnh kết quả từ hệ thống.");
       }
 
       resultImageBytes = result;
-      // await _historyService.saveHistory(resultImageBytes!);
+
       await fetchHistory();
+
       _showSuccessNotification(globalContext);
-    } on ApiException catch (e) {
-      _showErrorNotification(globalContext, e.message);
+    } on ApiException {
+      rethrow;
     } catch (e) {
-      _showErrorNotification(globalContext, "Lỗi xử lý quần áo: $e");
+      throw ApiException("Lỗi xử lý quần áo: $e");
     } finally {
       isProcessing = false;
       notifyListeners();
