@@ -25,10 +25,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _receiverNameController =
-  TextEditingController();
-  final TextEditingController _receiverPhoneController =
-  TextEditingController();
+  final TextEditingController _receiverNameController = TextEditingController();
+  final TextEditingController _receiverPhoneController = TextEditingController();
   final TextEditingController _shippingAddressController =
   TextEditingController();
 
@@ -36,6 +34,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final WardrobeService _wardrobeService = WardrobeService();
   final FollowService _followService = FollowService();
   final LocationService _locationService = LocationService();
+
   final NumberFormat _formatter = NumberFormat.decimalPattern('vi_VN');
 
   bool _isLoading = false;
@@ -71,6 +70,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return 'Price must be greater than 0';
     }
 
+    if (amount < 1000) {
+      return 'Price must be at least 1,000 VND';
+    }
+
+    if (amount > 100000000) {
+      return 'Price is too large';
+    }
+
     return null;
   }
 
@@ -85,11 +92,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return 'Receiver name is too short';
     }
 
+    if (text.length > 50) {
+      return 'Receiver name is too long';
+    }
+
+    if (!RegExp(r"^[a-zA-ZÀ-ỹ\s'.-]+$").hasMatch(text)) {
+      return 'Receiver name contains invalid characters';
+    }
+
     return null;
   }
 
   String? _validatePhone(String? value) {
-    final text = (value ?? '').trim();
+    final text = (value ?? '').replaceAll(RegExp(r'\s+'), '').trim();
 
     if (text.isEmpty) {
       return 'Please enter the phone number';
@@ -99,8 +114,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return 'Phone number must contain digits only';
     }
 
-    if (!RegExp(r'^(0\d{9,10})$').hasMatch(text)) {
-      return 'Invalid phone number';
+    if (!RegExp(r'^(03|05|07|08|09)\d{8}$').hasMatch(text)) {
+      return 'Invalid Vietnamese phone number';
     }
 
     return null;
@@ -113,8 +128,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return 'Please enter the shipping address';
     }
 
-    if (text.length < 5) {
+    if (text.length < 10) {
       return 'Shipping address is too short';
+    }
+
+    if (text.length > 255) {
+      return 'Shipping address is too long';
+    }
+
+    if (!RegExp(r'[a-zA-ZÀ-ỹ]').hasMatch(text)) {
+      return 'Shipping address must contain letters';
+    }
+
+    if (!RegExp(r'\d').hasMatch(text)) {
+      return 'Shipping address should include a house number or street number';
     }
 
     return null;
@@ -143,7 +170,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return;
     }
 
-    if (!_formKey.currentState!.validate()) {
+    final formState = _formKey.currentState;
+    if (formState == null || !formState.validate()) {
       return;
     }
 
@@ -160,15 +188,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return;
     }
 
-    if (_selectedItems.isEmpty) {
-      NotificationService.show(
-        context,
-        title: 'Invalid data',
-        message: 'The selected item list is empty.',
-        type: NotificationType.error,
-      );
-      return;
-    }
+    final receiverName = _receiverNameController.text.trim();
+    final receiverPhone = _receiverPhoneController.text
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
+    final shippingAddress = _shippingAddressController.text.trim();
 
     setState(() {
       _isLoading = true;
@@ -178,45 +202,49 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       final double unitPricePerItem = subTotal / _selectedItems.length;
 
       final requestBody = {
-        "buyerId": _selectedBuyer!.accountId,
-        "subTotal": subTotal,
-        "note": _selectedItems.length == 1
+        'buyerId': _selectedBuyer!.accountId,
+        'subTotal': subTotal,
+        'note': _selectedItems.length == 1
             ? _selectedItems.first.itemName
-            : "Order with ${_selectedItems.length} items",
-        "receiverName": _receiverNameController.text.trim(),
-        "receiverPhone": _receiverPhoneController.text.trim(),
-        "shippingAddress": _shippingAddressController.text.trim(),
-        "details": _selectedItems.map((item) {
+            : 'Order with ${_selectedItems.length} items',
+        'receiverName': receiverName,
+        'receiverPhone': receiverPhone,
+        'shippingAddress': shippingAddress,
+        'details': _selectedItems.map((item) {
           return {
-            "productId": item.itemId,
-            "quantity": 1,
-            "unitPrice": unitPricePerItem,
-            "imageUrl": item.imageUrl ?? "",
-            "itemName": item.itemName,
+            'productId': item.itemId,
+            'quantity': 1,
+            'unitPrice': unitPricePerItem,
+            'imageUrl': item.imageUrl ?? '',
+            'itemName': item.itemName,
           };
         }).toList(),
       };
 
-      // await _orderService.createOrder(requestBody);
+      await _orderService.createOrder(
+        _selectedBuyer!.accountId,
+        requestBody,
+      );
 
-      if (mounted) {
-        NotificationService.show(
-          context,
-          title: "Success",
-          message: "Order created successfully.",
-          type: NotificationType.success,
-        );
-        Navigator.pop(context, true);
-      }
+      if (!mounted) return;
+
+      NotificationService.show(
+        context,
+        title: 'Success',
+        message: 'Order created successfully.',
+        type: NotificationType.success,
+      );
+
+      Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) {
-        NotificationService.show(
-          context,
-          title: "Error",
-          message: "Failed to create order.",
-          type: NotificationType.error,
-        );
-      }
+      if (!mounted) return;
+
+      NotificationService.show(
+        context,
+        title: 'Error',
+        message: 'Failed to create order.',
+        type: NotificationType.error,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -286,6 +314,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     }
 
     final formatted = _formatter.format(number);
+
     _priceController.value = TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -314,7 +343,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            _buildSectionTitle("Selected Items"),
+            _buildSectionTitle('Selected Items'),
+
             if (_selectedItems.isNotEmpty)
               ..._selectedItems.asMap().entries.map((entry) {
                 final int index = entry.key;
@@ -369,7 +399,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              (item.brand != null && item.brand!.trim().isNotEmpty)
+                              item.brand != null &&
+                                  item.brand!.trim().isNotEmpty
                                   ? item.brand!.trim()
                                   : 'No brand',
                               style: const TextStyle(
@@ -411,7 +442,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     Icon(Icons.add_circle_outline, color: Colors.pinkAccent),
                     SizedBox(width: 8),
                     Text(
-                      "Add items from wardrobe",
+                      'Add items from wardrobe',
                       style: TextStyle(
                         color: Colors.pinkAccent,
                         fontWeight: FontWeight.bold,
@@ -424,7 +455,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 24),
 
-            _buildSectionTitle("Order Information"),
+            _buildSectionTitle('Order Information'),
+
             _buildTextField(
               controller: _priceController,
               label: 'Total order price (VND)',
@@ -495,7 +527,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        "Select buyer from followers",
+                        'Select buyer from followers',
                         style: TextStyle(
                           color: Colors.pinkAccent,
                           fontWeight: FontWeight.bold,
@@ -514,7 +546,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
             const SizedBox(height: 24),
 
-            _buildSectionTitle("Receiver Information"),
+            _buildSectionTitle('Receiver Information'),
+
             _buildTextField(
               controller: _receiverNameController,
               label: 'Receiver name',
@@ -537,7 +570,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               controller: _shippingAddressController,
               debounceDuration: const Duration(milliseconds: 500),
               suggestionsCallback: (pattern) async {
-                return await _locationService.searchAddress(pattern);
+                final keyword = pattern.trim();
+
+                if (keyword.length < 3) {
+                  return [];
+                }
+
+                return await _locationService.searchAddress(keyword);
               },
               itemBuilder: (context, String suggestion) {
                 return ListTile(
@@ -560,7 +599,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               },
               loadingBuilder: (context) {
                 return const Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16),
                   child: Center(
                     child: CircularProgressIndicator(
                       color: Colors.pinkAccent,
@@ -570,7 +609,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               },
               emptyBuilder: (context) {
                 return const Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16),
                   child: Text(
                     'No matching address found',
                     style: TextStyle(color: Colors.black54),

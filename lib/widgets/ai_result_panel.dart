@@ -207,7 +207,7 @@ class _AIResultPanelState extends State<AIResultPanel> {
         keyboardType: TextInputType.multiline,
         style: const TextStyle(color: Colors.black, fontSize: 14, height: 1.5),
         decoration: InputDecoration(
-          hintText: "Thêm mô tả chi tiết...",
+          hintText: "Add desctoption detail...",
           hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
           prefixIcon: const Icon(Icons.notes, color: Colors.black, size: 20),
           border: InputBorder.none,

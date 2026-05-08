@@ -1,12 +1,11 @@
-// lib/services/post_service.dart
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/api_constants.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
-import '../models/post_share_result.dart';
 import '../models/shareable_user_model.dart';
 import 'api_client.dart';
 
@@ -35,6 +34,7 @@ class PostService {
     if (decoded is List) {
       return decoded.map((e) => PostFeedModel.fromJson(e)).toList();
     }
+
     if (decoded is Map<String, dynamic>) {
       final data = decoded['data'];
 
@@ -111,9 +111,11 @@ class PostService {
 
     if (decoded is Map<String, dynamic>) {
       final data = decoded['data'];
+
       if (data is Map<String, dynamic>) {
         return PostFeedModel.fromJson(data);
       }
+
       return PostFeedModel.fromJson(decoded);
     }
 
@@ -132,10 +134,14 @@ class PostService {
     final request = http.MultipartRequest('POST', uri);
 
     request.headers.addAll(headers);
+    request.headers.remove('Content-Type');
 
     request.fields['Content'] = content.trim();
     request.fields['EventId'] = eventId.toString();
-    if (title != null) request.fields['Title'] = title.trim();
+
+    if (title != null && title.trim().isNotEmpty) {
+      request.fields['Title'] = title.trim();
+    }
 
     for (int i = 0; i < imageBytesList.length; i++) {
       request.files.add(
@@ -150,13 +156,23 @@ class PostService {
     final response = await request.send();
     final body = await response.stream.bytesToString();
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final data = jsonDecode(body);
-      return data['postId'] as int?;
-    } else {
-      final errorData = jsonDecode(body);
-      throw Exception(errorData['message'] ?? 'Lỗi tham gia sự kiện');
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Join event with post failed: $body');
     }
+
+    if (body.isEmpty) return null;
+
+    final decoded = jsonDecode(body);
+
+    if (decoded is Map<String, dynamic>) {
+      final root = decoded['data'] is Map<String, dynamic>
+          ? decoded['data'] as Map<String, dynamic>
+          : decoded;
+
+      return root['postId'] as int?;
+    }
+
+    return null;
   }
 
   Future<int?> createPost({
@@ -172,12 +188,12 @@ class PostService {
     final request = http.MultipartRequest('POST', uri);
 
     request.headers.addAll(headers);
-    request.fields['content'] = content.trim();
+    request.headers.remove('Content-Type');
 
-    if (title != null && title
-        .trim()
-        .isNotEmpty) {
-      request.fields['title'] = title.trim();
+    request.fields['Content'] = content.trim();
+
+    if (title != null && title.trim().isNotEmpty) {
+      request.fields['Title'] = title.trim();
     }
 
     for (int i = 0; i < imageBytesList.length; i++) {
@@ -199,12 +215,17 @@ class PostService {
 
     if (body.isEmpty) return null;
 
-    final data = jsonDecode(body) as Map<String, dynamic>;
-    final root = data['data'] is Map<String, dynamic>
-        ? data['data'] as Map<String, dynamic>
-        : data;
+    final decoded = jsonDecode(body);
 
-    return root['postId'] as int?;
+    if (decoded is Map<String, dynamic>) {
+      final root = decoded['data'] is Map<String, dynamic>
+          ? decoded['data'] as Map<String, dynamic>
+          : decoded;
+
+      return root['postId'] as int?;
+    }
+
+    return null;
   }
 
   Future<List<PostFeedModel>> fetchMyPosts({
@@ -224,10 +245,16 @@ class PostService {
       throw Exception('Failed to load my posts: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final root = data['data'] is Map<String, dynamic>
-        ? data['data'] as Map<String, dynamic>
-        : data;
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Unexpected my posts response');
+    }
+
+    final root = decoded['data'] is Map<String, dynamic>
+        ? decoded['data'] as Map<String, dynamic>
+        : decoded;
+
     final items = (root['items'] as List?) ?? const [];
 
     return items.map((e) => PostFeedModel.fromJson(e)).toList();
@@ -256,10 +283,16 @@ class PostService {
       throw Exception('Failed to load user posts: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final root = data['data'] is Map<String, dynamic>
-        ? data['data'] as Map<String, dynamic>
-        : data;
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Unexpected user posts response');
+    }
+
+    final root = decoded['data'] is Map<String, dynamic>
+        ? decoded['data'] as Map<String, dynamic>
+        : decoded;
+
     final items = (root['items'] as List?) ?? const [];
 
     return items.map((e) => PostFeedModel.fromJson(e)).toList();
@@ -280,7 +313,11 @@ class PostService {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final data = decoded['data'];
-    if (data is Map<String, dynamic>) return data;
+
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+
     return decoded;
   }
 
@@ -299,14 +336,19 @@ class PostService {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final data = decoded['data'];
-    if (data is Map<String, dynamic>) return data;
+
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+
     return decoded;
   }
 
-  Future<void> updatePost({
+  Future<PostFeedModel> updatePost({
     required int postId,
     String? title,
     String? content,
+    List<Uint8List>? imageBytesList,
   }) async {
     final endpoint = ApiConstants.updatePost.replaceAll(
       '{postId}',
@@ -315,15 +357,56 @@ class PostService {
 
     final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
 
-    final body = <String, dynamic>{};
-    if (title != null) body['title'] = title.trim();
-    if (content != null) body['content'] = content.trim();
+    final headers = await ApiClient.getHeaders();
+    final request = http.MultipartRequest('PUT', uri);
 
-    final response = await ApiClient.put(uri, body: body);
+    request.headers.addAll(headers);
+    request.headers.remove('Content-Type');
 
-    if (response.statusCode != 204) {
-      throw Exception('Update post failed: ${response.body}');
+    if (title != null) {
+      request.fields['Title'] = title.trim();
     }
+
+    if (content != null) {
+      request.fields['Content'] = content.trim();
+    }
+
+    if (imageBytesList != null && imageBytesList.isNotEmpty) {
+      for (int i = 0; i < imageBytesList.length; i++) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'Images',
+            imageBytesList[i],
+            filename: 'updated_post_$i.jpg',
+          ),
+        );
+      }
+    }
+
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Update post failed: $body');
+    }
+
+    if (body.isEmpty) {
+      return getPostDetail(postId);
+    }
+
+    final decoded = jsonDecode(body);
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+
+      if (data is Map<String, dynamic>) {
+        return PostFeedModel.fromJson(data);
+      }
+
+      return PostFeedModel.fromJson(decoded);
+    }
+
+    return getPostDetail(postId);
   }
 
   Future<void> deletePost(int postId) async {
@@ -333,15 +416,9 @@ class PostService {
     );
 
     final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-    final response = await http.delete(
-      uri,
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final response = await ApiClient.delete(uri);
 
-
-    if (response.statusCode != 204) {
+    if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Delete post failed: ${response.body}');
     }
   }
@@ -451,6 +528,7 @@ class PostService {
       }
 
       final items = (decoded['items'] as List?) ?? const [];
+
       return items
           .map((e) => ShareableUserModel.fromJson(e as Map<String, dynamic>))
           .toList();

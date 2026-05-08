@@ -5,6 +5,8 @@ class PostStatusValues {
   static const pendingAdmin = 'PendingAdmin';
   static const published = 'Published';
   static const rejected = 'Rejected';
+  static const String deleted = 'Deleted';
+  static const String banned = 'Banned';
 }
 
 class PostVisibilityValues {

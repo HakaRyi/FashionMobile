@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/cashflow_point_model.dart';
-import '../models/expense_by_reference_type_model.dart';
 import '../models/expense_summary_model.dart';
 import '../models/spending_limit_model.dart';
 import '../models/transaction_history_model.dart';
@@ -28,6 +27,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
   bool isLoading = true;
   bool isUpdatingSpendingLimit = false;
+  bool _isLoadingTransactionDetail = false;
 
   String selectedType = '';
   String selectedStatus = '';
@@ -36,19 +36,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   ExpenseSummaryModel? summary;
   SpendingLimitModel? spendingLimit;
   List<TransactionHistoryModel> transactions = [];
-  List<ExpenseByReferenceTypeModel> expenseByType = [];
   List<CashflowPointModel> cashflows = [];
-
-  final List<Color> _chartColors = const [
-    Color(0xFF4F46E5),
-    Color(0xFF06B6D4),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
-    Color(0xFF8B5CF6),
-    Color(0xFFEC4899),
-    Color(0xFF14B8A6),
-  ];
 
   @override
   void initState() {
@@ -143,11 +131,6 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           month: selectedMonth,
           year: selectedYear,
         ),
-        _expenseService.getExpenseByReferenceType(
-          month: selectedMonth,
-          year: selectedYear,
-          type: 'Debit',
-        ),
         _expenseService.getMyTransactions(
           page: 1,
           pageSize: 30,
@@ -175,14 +158,13 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
       setState(() {
         summary = results[0] as ExpenseSummaryModel;
-        expenseByType = results[1] as List<ExpenseByReferenceTypeModel>;
 
-        final transactionResult = results[2] as Map<String, dynamic>;
+        final transactionResult = results[1] as Map<String, dynamic>;
         transactions =
         transactionResult['items'] as List<TransactionHistoryModel>;
 
-        cashflows = results[3] as List<CashflowPointModel>;
-        spendingLimit = results[4] as SpendingLimitModel;
+        cashflows = results[2] as List<CashflowPointModel>;
+        spendingLimit = results[3] as SpendingLimitModel;
       });
     } catch (e) {
       if (!mounted) {
@@ -207,26 +189,32 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
   String _resolveDisplayType(TransactionHistoryModel item) {
     final rawType = item.type.trim().toLowerCase();
-    final rawReferenceType = item.referenceType.trim().toLowerCase();
     final amount = item.amount;
 
     const debitTypes = {
       'debit',
+      'orderpayment',
+      'tryon',
+      'airecommendation',
+      'packagepurchase',
+      'withdraw',
+      'event_entry_fee_paid',
       'system_fee_payment',
       'escrow_hold',
-      'orderpayment',
-      'withdraw',
-      'packagepurchase',
     };
 
     const creditTypes = {
       'credit',
+      'topup',
+      'orderrefund',
+      'refund',
       'prize_reward',
       'event_refund',
       'event_cancel_refund',
-      'refund',
-      'orderrefund',
-      'topup',
+      'event_reject_refund',
+      'event_revenue_locked',
+      'event_revenue_released',
+      'system_fee_revenue',
     };
 
     if (debitTypes.contains(rawType)) {
@@ -234,14 +222,6 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     }
 
     if (creditTypes.contains(rawType)) {
-      return 'Credit';
-    }
-
-    if (rawReferenceType == 'event' && amount < 0) {
-      return 'Debit';
-    }
-
-    if (rawReferenceType == 'event_reject' && amount > 0) {
       return 'Credit';
     }
 
@@ -258,27 +238,32 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
   String _resolveDetailDisplayType(dynamic detail) {
     final rawType = (detail.type ?? '').toString().trim().toLowerCase();
-    final rawReferenceType =
-    (detail.referenceType ?? '').toString().trim().toLowerCase();
     final amount = ((detail.amount ?? 0) as num).toDouble();
 
     const debitTypes = {
       'debit',
+      'orderpayment',
+      'tryon',
+      'airecommendation',
+      'packagepurchase',
+      'withdraw',
+      'event_entry_fee_paid',
       'system_fee_payment',
       'escrow_hold',
-      'orderpayment',
-      'withdraw',
-      'packagepurchase',
     };
 
     const creditTypes = {
       'credit',
+      'topup',
+      'orderrefund',
+      'refund',
       'prize_reward',
       'event_refund',
       'event_cancel_refund',
-      'refund',
-      'orderrefund',
-      'topup',
+      'event_reject_refund',
+      'event_revenue_locked',
+      'event_revenue_released',
+      'system_fee_revenue',
     };
 
     if (debitTypes.contains(rawType)) {
@@ -286,14 +271,6 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     }
 
     if (creditTypes.contains(rawType)) {
-      return 'Credit';
-    }
-
-    if (rawReferenceType == 'event' && amount < 0) {
-      return 'Debit';
-    }
-
-    if (rawReferenceType == 'event_reject' && amount > 0) {
       return 'Credit';
     }
 
@@ -326,10 +303,10 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
   IconData _typeIcon(String type) {
     if (type.toLowerCase() == 'credit') {
-      return Icons.south_west_rounded;
+      return Icons.arrow_downward_rounded;
     }
 
-    return Icons.north_east_rounded;
+    return Icons.arrow_upward_rounded;
   }
 
   Color _statusColor(String status) {
@@ -350,7 +327,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   String _mapReferenceType(String value) {
-    switch (value) {
+    switch (value.trim()) {
       case 'TopUp':
         return 'Top up';
       case 'OrderPayment':
@@ -358,21 +335,58 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       case 'OrderRefund':
         return 'Order refund';
       case 'TryOn':
-        return 'Try-on';
+        return 'AI try-on';
+      case 'AIRecommendation':
+        return 'Smart recommendation';
       case 'Event':
         return 'Event';
       case 'EventReward':
         return 'Event reward';
       case 'Event_Reject':
         return 'Event reject';
-      case 'Withdraw':
-        return 'Withdraw';
-      case 'Adjustment':
-        return 'Adjustment';
-      case 'PackagePurchase':
-        return 'Package purchase';
       default:
-        return value;
+        return value.trim().isEmpty ? 'Other' : value;
+    }
+  }
+
+  String _mapTransactionType(String value) {
+    switch (value.trim()) {
+      case 'Credit':
+        return 'Income';
+      case 'Debit':
+        return 'Expense';
+      case 'TopUp':
+        return 'Wallet top up';
+      case 'OrderPayment':
+        return 'Order payment';
+      case 'OrderRefund':
+        return 'Order refund';
+      case 'TryOn':
+        return 'AI try-on payment';
+      case 'AIRecommendation':
+        return 'Smart recommendation payment';
+      case 'Event_Entry_Fee_Paid':
+        return 'Event entry fee';
+      case 'Event_Revenue_Locked':
+        return 'Event revenue locked';
+      case 'Event_Revenue_Released':
+        return 'Event revenue released';
+      case 'System_Fee_Payment':
+        return 'Event system fee';
+      case 'System_Fee_Revenue':
+        return 'System fee revenue';
+      case 'Escrow_Hold':
+        return 'Event prize escrow';
+      case 'Prize_Reward':
+        return 'Event prize reward';
+      case 'Event_Refund':
+        return 'Event refund';
+      case 'Event_Cancel_Refund':
+        return 'Event cancellation refund';
+      case 'Event_Reject_Refund':
+        return 'Rejected event refund';
+      default:
+        return value.trim().isEmpty ? 'Transaction' : value;
     }
   }
 
@@ -937,7 +951,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _showUpdateSpendingLimitSheet,
+        onTap: isUpdatingSpendingLimit ? null : _showUpdateSpendingLimitSheet,
         borderRadius: BorderRadius.circular(14),
         child: Ink(
           padding: const EdgeInsets.symmetric(
@@ -948,16 +962,28 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             color: const Color(0xFF111827),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.edit_rounded,
-                size: 16,
-                color: Colors.white,
-              ),
-              SizedBox(width: 6),
-              Text(
+              if (isUpdatingSpendingLimit) ...[
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ] else ...[
+                const Icon(
+                  Icons.edit_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 6),
+              ],
+              const Text(
                 'Update',
                 style: TextStyle(
                   fontSize: 12.5,
@@ -995,12 +1021,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     } else if (data.isExceeded) {
       statusColor = const Color(0xFFEF4444);
       statusText = 'Limit exceeded';
-    } else if (data.isWarning) {
-      statusColor = const Color(0xFFF59E0B);
-      statusText = 'Near warning threshold';
     } else {
       statusColor = const Color(0xFF10B981);
-      statusText = 'Within safe range';
+      statusText = 'Within limit';
     }
 
     return _buildSectionCard(
@@ -1024,7 +1047,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Track your monthly spending against the selected limit.',
+            'Maximum amount you can spend this month. New spending will be blocked when the limit is exceeded.',
             style: TextStyle(
               fontSize: 13,
               color: Color(0xFF6B7280),
@@ -1039,7 +1062,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   label: 'Monthly limit',
                   value: hasLimit
                       ? formatMoney(data.monthlySpendingLimit!)
-                      : 'Unlimited',
+                      : 'Not set',
                 ),
               ),
               const SizedBox(width: 12),
@@ -1064,7 +1087,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               Expanded(
                 child: _buildLimitMetric(
                   label: 'Used',
-                  value: '${data.usedPercent.toStringAsFixed(1)}%',
+                  value:
+                  hasLimit ? '${data.usedPercent.toStringAsFixed(1)}%' : '--',
                 ),
               ),
             ],
@@ -1088,12 +1112,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                 text: statusText,
                 color: statusColor,
               ),
-              _buildNeutralPill(
-                data.isHardSpendingLimit ? 'Hard limit' : 'Warning only',
-              ),
-              _buildNeutralPill(
-                'Warning ${data.spendingWarningThresholdPercent.toStringAsFixed(0)}%',
-              ),
+              _buildNeutralPill('Hard limit enabled'),
             ],
           ),
         ],
@@ -1289,12 +1308,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               'OrderPayment',
               'OrderRefund',
               'TryOn',
+              'AIRecommendation',
               'Event',
-              'EventReward',
-              'Event_Reject',
-              'Withdraw',
-              'Adjustment',
-              'PackagePurchase',
             ],
             labelBuilder: (v) {
               if (v.isEmpty) {
@@ -1547,144 +1562,6 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     return maxValue / 4;
   }
 
-  Widget _buildExpenseByTypeSection() {
-    final double total = expenseByType.fold<double>(
-      0.0,
-          (sum, item) => sum + item.amount,
-    );
-
-    return _buildSectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            icon: Icons.donut_large_rounded,
-            title: 'Expense by category',
-            subtitle: 'Distribution by reference type for this month.',
-          ),
-          const SizedBox(height: 16),
-          if (expenseByType.isEmpty)
-            _buildEmptyState('No expense data available.')
-          else ...[
-            SizedBox(
-              height: 220,
-              child: PieChart(
-                PieChartData(
-                  centerSpaceRadius: 48,
-                  sectionsSpace: 3,
-                  pieTouchData: PieTouchData(enabled: true),
-                  sections: expenseByType.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final item = entry.value;
-                    final double percent =
-                    total == 0 ? 0.0 : (item.amount / total) * 100;
-                    final color = _chartColors[index % _chartColors.length];
-
-                    return PieChartSectionData(
-                      value: item.amount,
-                      color: color,
-                      radius: 52,
-                      title: percent >= 8
-                          ? '${percent.toStringAsFixed(0)}%'
-                          : '',
-                      titleStyle: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            ...expenseByType.asMap().entries.map((entry) {
-              final int index = entry.key;
-              final item = entry.value;
-              final double percent = total == 0 ? 0.0 : item.amount / total;
-              final Color color = _chartColors[index % _chartColors.length];
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _mapReferenceType(item.referenceType),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${(percent * 100).toStringAsFixed(0)}%',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: percent,
-                        minHeight: 8,
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            formatAdaptiveMoney(item.amount, compact: true),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          '${item.transactionCount} transactions',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: Color(0xFF6B7280),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildTransactionList() {
     return _buildSectionCard(
       child: Column(
@@ -1742,7 +1619,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _mapReferenceType(item.referenceType),
+                                  _mapTransactionType(item.type),
                                   style: const TextStyle(
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w900,
@@ -1750,23 +1627,17 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildStatusPill(
                                       text: _mapStatus(item.status),
                                       color: statusColor,
                                     ),
+                                    const SizedBox(height: 8),
                                     _buildInfoPill(
                                       icon: Icons.schedule_rounded,
                                       text: _formatVietnamTime(item.createdAt),
-                                    ),
-                                    _buildInfoPill(
-                                      icon: isCredit
-                                          ? Icons.add_rounded
-                                          : Icons.remove_rounded,
-                                      text: displayType,
                                     ),
                                   ],
                                 ),
@@ -1930,6 +1801,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   Widget _buildInfoPill({
     required IconData icon,
     required String text,
+    Color color = const Color(0xFF6B7280),
+    Color backgroundColor = Colors.white,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1937,10 +1810,10 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         vertical: 7,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: const Color(0xFFE5E7EB),
+          color: color.withOpacity(0.18),
         ),
       ),
       child: Row(
@@ -1949,7 +1822,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           Icon(
             icon,
             size: 14,
-            color: const Color(0xFF6B7280),
+            color: color,
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -1957,10 +1830,10 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: Color(0xFF374151),
-                fontWeight: FontWeight.w600,
+                color: color,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -2102,6 +1975,12 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   Future<void> _showTransactionDetail(int transactionId) async {
+    if (_isLoadingTransactionDetail) {
+      return;
+    }
+
+    _isLoadingTransactionDetail = true;
+
     try {
       final detail = await _expenseService.getTransactionDetail(transactionId);
 
@@ -2117,6 +1996,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           final displayType = _resolveDetailDisplayType(detail);
           final isCredit = displayType == 'Credit';
           final typeColor = _typeColor(displayType);
+          final detailType = (detail.type ?? '').toString();
 
           return DraggableScrollableSheet(
             expand: false,
@@ -2166,7 +2046,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                detail.displayTitle ?? 'Transaction details',
+                                detail.displayTitle ??
+                                    _mapTransactionType(detailType),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
@@ -2233,7 +2114,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                     _buildDetailGroup(
                       title: 'General information',
                       children: [
-                        _detailRow('Type', displayType),
+                        _detailRow('Type', _mapTransactionType(detailType)),
+                        _detailRow('Direction', displayType),
                         _detailRow(
                           'Reference type',
                           _mapReferenceType(detail.referenceType),
@@ -2287,6 +2169,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           backgroundColor: Colors.redAccent,
         ),
       );
+    } finally {
+      _isLoadingTransactionDetail = false;
     }
   }
 
@@ -2356,219 +2240,27 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   Future<void> _showUpdateSpendingLimitSheet() async {
-    final current = spendingLimit;
-
-    final limitController = TextEditingController(
-      text: current?.monthlySpendingLimit?.toStringAsFixed(0) ?? '',
-    );
-
-    double warningPercent = current?.spendingWarningThresholdPercent ?? 80;
-    bool isHardLimit = current?.isHardSpendingLimit ?? false;
-
-    await showModalBottomSheet(
+    final selectedLimit = await showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD1D5DB),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'Update spending limit',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFC7D2FE),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.shield_outlined,
-                              color: Color(0xFF4F46E5),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                isHardLimit
-                                    ? 'Hard limit is enabled. Spending above the limit will be blocked.'
-                                    : 'Warning mode only. The system will warn you near the threshold.',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF3730A3),
-                                  height: 1.35,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: limitController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Monthly limit',
-                          hintText: 'Example: 2000000',
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF4F46E5),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Warning threshold: ${warningPercent.toStringAsFixed(0)}%',
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Slider(
-                        value: warningPercent,
-                        min: 1,
-                        max: 100,
-                        divisions: 99,
-                        label: warningPercent.toStringAsFixed(0),
-                        activeColor: const Color(0xFF4F46E5),
-                        onChanged: (value) {
-                          setModalState(() {
-                            warningPercent = value;
-                          });
-                        },
-                      ),
-                      SwitchListTile(
-                        value: isHardLimit,
-                        activeColor: const Color(0xFF4F46E5),
-                        onChanged: (value) {
-                          setModalState(() {
-                            isHardLimit = value;
-                          });
-                        },
-                        title: const Text(
-                          'Enable hard limit',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: const Text(
-                          'If disabled, the system only shows warnings.',
-                        ),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: isUpdatingSpendingLimit
-                              ? null
-                              : () async {
-                            final raw = limitController.text.trim();
-                            double? limit;
-
-                            if (raw.isNotEmpty) {
-                              limit = double.tryParse(raw);
-
-                              if (limit == null || limit < 0) {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Monthly limit must be a valid non-negative number.',
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                                return;
-                              }
-                            }
-
-                            Navigator.pop(context);
-
-                            await _updateSpendingLimit(
-                              monthlySpendingLimit: limit,
-                              isHardSpendingLimit: isHardLimit,
-                              spendingWarningThresholdPercent:
-                              warningPercent,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF111827),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text(
-                            'Save changes',
-                            style: TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+        return _SpendingLimitSheet(
+          initialLimit: spendingLimit?.monthlySpendingLimit,
+          moneyFormat: _moneyFormat,
         );
       },
     );
 
-    limitController.dispose();
+    if (!mounted || selectedLimit == null) {
+      return;
+    }
+
+    await _updateSpendingLimit(
+      monthlySpendingLimit: selectedLimit,
+      isHardSpendingLimit: true,
+      spendingWarningThresholdPercent: 100,
+    );
   }
 
   Future<void> _updateSpendingLimit({
@@ -2642,7 +2334,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: _loadData,
+            onPressed: isLoading ? null : _loadData,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -2680,10 +2372,237 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               const SizedBox(height: 16),
               _buildCashflowChartSection(),
               const SizedBox(height: 16),
-              _buildExpenseByTypeSection(),
-              const SizedBox(height: 16),
               _buildTransactionList(),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpendingLimitSheet extends StatefulWidget {
+  final double? initialLimit;
+  final NumberFormat moneyFormat;
+
+  const _SpendingLimitSheet({
+    required this.initialLimit,
+    required this.moneyFormat,
+  });
+
+  @override
+  State<_SpendingLimitSheet> createState() => _SpendingLimitSheetState();
+}
+
+class _SpendingLimitSheetState extends State<_SpendingLimitSheet> {
+  late final TextEditingController _limitController;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final initialLimit = widget.initialLimit;
+    _limitController = TextEditingController(
+      text: initialLimit != null && initialLimit > 0
+          ? widget.moneyFormat.format(initialLimit)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _limitController.dispose();
+    super.dispose();
+  }
+
+  void _formatLimitInput(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digitsOnly.isEmpty) {
+      _limitController.value = const TextEditingValue(text: '');
+      return;
+    }
+
+    final number = num.tryParse(digitsOnly);
+    if (number == null) {
+      return;
+    }
+
+    final formatted = widget.moneyFormat.format(number);
+
+    _limitController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  void _submit() {
+    final raw = _limitController.text
+        .replaceAll('.', '')
+        .replaceAll(',', '')
+        .trim();
+
+    if (raw.isEmpty) {
+      setState(() {
+        _errorText = 'Please enter a monthly limit.';
+      });
+      return;
+    }
+
+    final limit = double.tryParse(raw);
+
+    if (limit == null || limit <= 0) {
+      setState(() {
+        _errorText = 'Monthly limit must be greater than 0.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(limit);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(28),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Update spending limit',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This hard limit blocks new wallet spending when your monthly spending reaches the limit.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF6B7280),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFC7D2FE),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.shield_outlined,
+                        color: Color(0xFF4F46E5),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Hard limit is always enabled. Warning threshold is not used.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF3730A3),
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _limitController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    if (_errorText != null) {
+                      setState(() {
+                        _errorText = null;
+                      });
+                    }
+
+                    _formatLimitInput(value);
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Monthly limit',
+                    hintText: 'Example: 2.000.000',
+                    suffixText: 'VND',
+                    errorText: _errorText,
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF4F46E5),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF111827),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save limit',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

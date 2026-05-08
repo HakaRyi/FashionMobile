@@ -266,13 +266,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       if (!mounted) {
         return;
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Item deleted successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _showToast("Item deleted successfully!");
 
       await _handleRefresh();
     } catch (e) {
@@ -288,7 +282,29 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       );
     }
   }
-
+  void _showToast(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            msg,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          backgroundColor: Colors.black,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final filters = _getDynamicFilters();

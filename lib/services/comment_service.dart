@@ -114,4 +114,44 @@ class CommentService {
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return CreateReplyResult.fromJson(data);
   }
+
+  /// ==========================
+  /// UPDATE COMMENT / REPLY
+  /// ==========================
+  Future<void> updateComment({
+    required int commentId,
+    required String content,
+  }) async {
+    final endpoint = ApiConstants.updateComment
+        .replaceFirst("{commentId}", commentId.toString());
+
+    final uri = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await ApiClient.put(
+      uri,
+      body: {
+        "content": content,
+      },
+    );
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception("Update comment failed");
+    }
+  }
+
+  /// ==========================
+  /// DELETE COMMENT / REPLY
+  /// ==========================
+  Future<void> deleteComment(int commentId) async {
+    final endpoint = ApiConstants.deleteComment
+        .replaceFirst("{commentId}", commentId.toString());
+
+    final uri = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    final response = await ApiClient.delete(uri);
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception("Delete comment failed");
+    }
+  }
 }

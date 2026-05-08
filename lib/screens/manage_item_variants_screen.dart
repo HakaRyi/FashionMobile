@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -28,28 +29,6 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
   static const Color _darkText = Color(0xFF111111);
   static const Color _mutedText = Color(0xFF6F6A64);
   static const Color _borderColor = Color(0xFFE8E1D8);
-
-  final List<String> _sizeOptions = const [
-    'Free Size',
-    'XS',
-    'S',
-    'M',
-    'L',
-    'XL',
-    'XXL',
-    'XXXL',
-    '35',
-    '36',
-    '37',
-    '38',
-    '39',
-    '40',
-    '41',
-    '42',
-    '43',
-    '44',
-    '45',
-  ];
 
   @override
   void initState() {
@@ -106,512 +85,39 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
     }
   }
 
-  String _normalizeSize(String? value) {
-    final text = value?.trim();
-
-    if (text == null || text.isEmpty) {
-      return 'M';
-    }
-
-    if (_sizeOptions.contains(text)) {
-      return text;
-    }
-
-    return 'M';
-  }
-
-  double? _parsePrice(String value) {
-    return double.tryParse(value.trim().replaceAll(',', ''));
-  }
-
-  int? _parseStock(String value) {
-    return int.tryParse(value.trim());
-  }
-
   bool _hasText(String? value) {
     return value != null && value.trim().isNotEmpty;
   }
 
-  bool _isDuplicateVariant({
-    required String sizeCode,
-    required String color,
-    int? ignoredVariantId,
-  }) {
+  Future<void> _openVariantForm({ItemVariantModel? variant}) async {
     final manager = context.read<ItemManager>();
 
-    final newSize = sizeCode.trim().toLowerCase();
-    final newColor = color.trim().toLowerCase();
+    final bool? saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return _VariantFormSheet(
+          itemId: widget.itemId,
+          variant: variant,
+          manager: manager,
+        );
+      },
+    );
 
-    return manager.variants.any((variant) {
-      if (ignoredVariantId != null &&
-          variant.itemVariantId == ignoredVariantId) {
-        return false;
-      }
-
-      final oldSize = (variant.sizeCode ?? '').trim().toLowerCase();
-      final oldColor = (variant.color ?? '').trim().toLowerCase();
-
-      return oldSize == newSize && oldColor == newColor;
-    });
-  }
-
-  Future<void> _openVariantForm({ItemVariantModel? variant}) async {
-    final bool isEdit = variant != null;
-
-    final rootContext = context;
-    final manager = rootContext.read<ItemManager>();
-
-    String selectedSize = _normalizeSize(variant?.sizeCode);
-    int selectedStatus = isEdit ? _safeStatus(variant) : 1;
-
-    if (selectedStatus == 2 || selectedStatus == 3 || selectedStatus == 4) {
-      selectedStatus = 1;
+    if (!mounted) {
+      return;
     }
 
-    final colorController = TextEditingController(
-      text: variant?.color ?? '',
-    );
-    final priceController = TextEditingController(
-      text: isEdit ? variant.price.toStringAsFixed(0) : '',
-    );
-    final stockController = TextEditingController(
-      text: isEdit ? variant.stockQuantity.toString() : '1',
-    );
-
-    final formKey = GlobalKey<FormState>();
-    bool isSubmitting = false;
-
-    try {
-      await showModalBottomSheet(
-        context: rootContext,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (sheetContext) {
-          return StatefulBuilder(
-            builder: (context, setSheetState) {
-              Future<void> submit() async {
-                if (isSubmitting) {
-                  return;
-                }
-
-                if (!formKey.currentState!.validate()) {
-                  return;
-                }
-
-                final color = colorController.text.trim();
-                final price = _parsePrice(priceController.text);
-                final stock = _parseStock(stockController.text);
-
-                if (price == null || price <= 0) {
-                  AppToast.show(
-                    rootContext,
-                    'Price must be greater than 0.',
-                    isError: true,
-                  );
-                  return;
-                }
-
-                if (stock == null || stock < 0) {
-                  AppToast.show(
-                    rootContext,
-                    'Stock quantity cannot be negative.',
-                    isError: true,
-                  );
-                  return;
-                }
-
-                if (isEdit &&
-                    variant.reservedQuantity > 0 &&
-                    stock < variant.reservedQuantity) {
-                  AppToast.show(
-                    rootContext,
-                    'Stock cannot be less than reserved quantity.',
-                    isError: true,
-                  );
-                  return;
-                }
-
-                if (_isDuplicateVariant(
-                  sizeCode: selectedSize,
-                  color: color,
-                  ignoredVariantId: variant?.itemVariantId,
-                )) {
-                  AppToast.show(
-                    rootContext,
-                    'Duplicate variant size and color.',
-                    isError: true,
-                  );
-                  return;
-                }
-
-                setSheetState(() {
-                  isSubmitting = true;
-                });
-
-                bool success;
-
-                if (isEdit) {
-                  success = await manager.updateVariant(
-                    itemVariantId: variant.itemVariantId,
-                    sizeCode: selectedSize,
-                    color: color.isEmpty ? null : color,
-                    price: price,
-                    stockQuantity: stock,
-                    status: selectedStatus,
-                  );
-                } else {
-                  success = await manager.createVariant(
-                    itemId: widget.itemId,
-                    sizeCode: selectedSize,
-                    color: color.isEmpty ? null : color,
-                    price: price,
-                    stockQuantity: stock,
-                  );
-                }
-
-                if (!mounted) {
-                  return;
-                }
-
-                if (success) {
-                  if (Navigator.canPop(sheetContext)) {
-                    Navigator.pop(sheetContext);
-                  }
-
-                  Future.microtask(() {
-                    if (!mounted) {
-                      return;
-                    }
-
-                    AppToast.show(
-                      rootContext,
-                      isEdit
-                          ? 'Variant has been updated.'
-                          : 'Variant has been created.',
-                    );
-                  });
-
-                  return;
-                }
-
-                setSheetState(() {
-                  isSubmitting = false;
-                });
-
-                AppToast.show(
-                  rootContext,
-                  manager.errorMessage ?? 'Failed to save variant.',
-                  isError: true,
-                );
-              }
-
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(30),
-                    ),
-                  ),
-                  child: Form(
-                    key: formKey,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 46,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Icon(
-                                  isEdit
-                                      ? Icons.edit_outlined
-                                      : Icons.add_box_outlined,
-                                  color: Colors.white,
-                                  size: 21,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      isEdit ? 'Edit variant' : 'Add variant',
-                                      style: const TextStyle(
-                                        color: _darkText,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 19,
-                                        letterSpacing: -0.2,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      isEdit
-                                          ? 'Update price, stock, size or status.'
-                                          : 'Create a sellable option for this item.',
-                                      style: const TextStyle(
-                                        color: _mutedText,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          DropdownButtonFormField<String>(
-                            value: selectedSize,
-                            dropdownColor: Colors.white,
-                            decoration: _inputDecoration(
-                              label: 'Size',
-                              icon: Icons.straighten_outlined,
-                            ),
-                            items: _sizeOptions.map((size) {
-                              return DropdownMenuItem<String>(
-                                value: size,
-                                child: Text(size),
-                              );
-                            }).toList(),
-                            onChanged: isSubmitting
-                                ? null
-                                : (value) {
-                              if (value == null) {
-                                return;
-                              }
-
-                              setSheetState(() {
-                                selectedSize = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please select size.';
-                              }
-
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            controller: colorController,
-                            label: 'Color',
-                            icon: Icons.palette_outlined,
-                            hint: 'Black',
-                            enabled: !isSubmitting,
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildTextField(
-                                  controller: priceController,
-                                  label: 'Price',
-                                  icon: Icons.payments_outlined,
-                                  hint: '150000',
-                                  keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                                  enabled: !isSubmitting,
-                                  validator: (value) {
-                                    final price = _parsePrice(value ?? '');
-
-                                    if (price == null) {
-                                      return 'Invalid price.';
-                                    }
-
-                                    if (price <= 0) {
-                                      return 'Price > 0.';
-                                    }
-
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildTextField(
-                                  controller: stockController,
-                                  label: 'Stock',
-                                  icon: Icons.inventory_2_outlined,
-                                  hint: '1',
-                                  keyboardType: TextInputType.number,
-                                  enabled: !isSubmitting,
-                                  validator: (value) {
-                                    final stock = _parseStock(value ?? '');
-
-                                    if (stock == null) {
-                                      return 'Invalid stock.';
-                                    }
-
-                                    if (stock < 0) {
-                                      return 'Stock >= 0.';
-                                    }
-
-                                    if (isEdit &&
-                                        variant.reservedQuantity > 0 &&
-                                        stock < variant.reservedQuantity) {
-                                      return 'Min ${variant.reservedQuantity}.';
-                                    }
-
-                                    return null;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (isEdit) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(13),
-                              decoration: BoxDecoration(
-                                color: _softBackground,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: _borderColor,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: selectedStatus == 1
-                                          ? const Color(0xFF1F9D55).withOpacity(0.12)
-                                          : Colors.black.withOpacity(0.06),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      selectedStatus == 1
-                                          ? Icons.check_circle_outline
-                                          : Icons.pause_circle_outline,
-                                      color: selectedStatus == 1
-                                          ? const Color(0xFF1F9D55)
-                                          : Colors.black45,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          selectedStatus == 1 ? 'Active' : 'Inactive',
-                                          style: const TextStyle(
-                                            color: _darkText,
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          selectedStatus == 1
-                                              ? 'This variant can be shown for sale if it has available stock.'
-                                              : 'This variant is hidden from sale.',
-                                          style: const TextStyle(
-                                            color: Colors.black45,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 11,
-                                            height: 1.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: selectedStatus == 1,
-                                    activeColor: Colors.black,
-                                    inactiveThumbColor: Colors.black45,
-                                    inactiveTrackColor: Colors.black12,
-                                    onChanged: isSubmitting
-                                        ? null
-                                        : (value) {
-                                      setSheetState(() {
-                                        selectedStatus = value ? 1 : 0;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Out of stock status is calculated automatically when available stock is 0.',
-                              style: TextStyle(
-                                color: Colors.black45,
-                                fontSize: 12,
-                                height: 1.4,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 22),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: isSubmitting ? null : submit,
-                              style: _primaryButtonStyle(),
-                              child: isSubmitting
-                                  ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                                  : Text(
-                                isEdit
-                                    ? 'SAVE CHANGES'
-                                    : 'CREATE VARIANT',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 12,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+    if (saved == true) {
+      AppToast.show(
+        context,
+        variant == null
+            ? 'Variant has been created.'
+            : 'Variant has been updated.',
       );
-    } finally {
-      colorController.dispose();
-      priceController.dispose();
-      stockController.dispose();
     }
   }
 
@@ -929,8 +435,8 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: Colors.black,
@@ -943,7 +449,7 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -965,7 +471,9 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _hasText(variant.sku) ? 'SKU: ${variant.sku}' : 'SKU: N/A',
+                        _hasText(variant.sku)
+                            ? 'SKU: ${variant.sku}'
+                            : 'SKU: N/A',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1318,20 +826,990 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
     );
   }
 
+  ButtonStyle _primaryButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: const Color(0xFFE6E1DA),
+      disabledForegroundColor: Colors.black38,
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: _cardBackground,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: _borderColor,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.045),
+          blurRadius: 18,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    );
+  }
+}
+
+class _VariantFormSheet extends StatefulWidget {
+  final int itemId;
+  final ItemVariantModel? variant;
+  final ItemManager manager;
+
+  const _VariantFormSheet({
+    required this.itemId,
+    required this.variant,
+    required this.manager,
+  });
+
+  @override
+  State<_VariantFormSheet> createState() => _VariantFormSheetState();
+}
+
+class _VariantFormSheetState extends State<_VariantFormSheet> {
+  static const Color _softBackground = Color(0xFFF4F1ED);
+  static const Color _darkText = Color(0xFF111111);
+  static const Color _mutedText = Color(0xFF6F6A64);
+  static const Color _borderColor = Color(0xFFE8E1D8);
+
+  static const double _minPrice = 1000;
+  static const double _maxPrice = 100000000;
+  static const int _maxStock = 999;
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  late final TextEditingController _colorController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _stockController;
+
+  String _selectedSize = 'Free Size';
+  int _selectedStatus = 1;
+
+  bool _isSubmitting = false;
+  bool _showSizeOptions = true;
+  bool _showColorOptions = false;
+
+  final List<String> _sizeOptions = const [
+    'Free Size',
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+    'XXXL',
+    '35',
+    '36',
+    '37',
+    '38',
+    '39',
+    '40',
+    '41',
+    '42',
+    '43',
+    '44',
+    '45',
+  ];
+
+  final List<String> _colorOptions = const [
+    'Black',
+    'White',
+    'Gray',
+    'Blue',
+    'Navy',
+    'Brown',
+    'Beige',
+    'Cream',
+    'Red',
+    'Pink',
+    'Green',
+    'Yellow',
+    'Purple',
+    'Orange',
+    'Denim',
+    'Multi-color',
+  ];
+
+  final Map<String, Color> _colorPreviewMap = const {
+    'Black': Colors.black,
+    'White': Colors.white,
+    'Gray': Colors.grey,
+    'Blue': Colors.blue,
+    'Navy': Color(0xFF0B1F4D),
+    'Brown': Color(0xFF795548),
+    'Beige': Color(0xFFD8C3A5),
+    'Cream': Color(0xFFFFF2CC),
+    'Red': Colors.red,
+    'Pink': Colors.pinkAccent,
+    'Green': Colors.green,
+    'Yellow': Colors.amber,
+    'Purple': Colors.purple,
+    'Orange': Colors.orange,
+    'Denim': Color(0xFF315B8C),
+    'Multi-color': Colors.black54,
+  };
+
+  bool get _isEdit => widget.variant != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final variant = widget.variant;
+
+    _selectedSize = _normalizeSize(variant?.sizeCode);
+    _selectedStatus = _isEdit ? variant!.status : 1;
+
+    if (_selectedStatus == 2 || _selectedStatus == 3 || _selectedStatus == 4) {
+      _selectedStatus = 1;
+    }
+
+    _colorController = TextEditingController(
+      text: variant?.color ?? '',
+    );
+
+    _priceController = TextEditingController(
+      text: _isEdit ? variant!.price.toStringAsFixed(0) : '',
+    );
+
+    _stockController = TextEditingController(
+      text: _isEdit ? variant!.stockQuantity.toString() : '1',
+    );
+  }
+
+  @override
+  void dispose() {
+    _colorController.dispose();
+    _priceController.dispose();
+    _stockController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(double value) {
+    final formatter = NumberFormat('#,##0', 'en_US');
+    return '${formatter.format(value)} VND';
+  }
+
+  String _normalizeSize(String? value) {
+    final text = value?.trim();
+
+    if (text == null || text.isEmpty) {
+      return 'Free Size';
+    }
+
+    if (_sizeOptions.contains(text)) {
+      return text;
+    }
+
+    return 'Free Size';
+  }
+
+  String _normalizeTextKey(String? value) {
+    return (value ?? '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .toLowerCase();
+  }
+
+  double? _parsePrice(String value) {
+    final normalized = value.trim().replaceAll(',', '');
+    return double.tryParse(normalized);
+  }
+
+  int? _parseStock(String value) {
+    return int.tryParse(value.trim());
+  }
+
+  bool _isDuplicateVariant({
+    required String sizeCode,
+    required String color,
+    int? ignoredVariantId,
+  }) {
+    final newSize = _normalizeTextKey(sizeCode);
+    final newColor = _normalizeTextKey(color);
+
+    return widget.manager.variants.any((variant) {
+      if (ignoredVariantId != null &&
+          variant.itemVariantId == ignoredVariantId) {
+        return false;
+      }
+
+      final oldSize = _normalizeTextKey(variant.sizeCode);
+      final oldColor = _normalizeTextKey(variant.color);
+
+      return oldSize == newSize && oldColor == newColor;
+    });
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final variant = widget.variant;
+    final color = _colorController.text.trim();
+    final price = _parsePrice(_priceController.text);
+    final stock = _parseStock(_stockController.text);
+
+    if (color.length > 30) {
+      AppToast.show(
+        context,
+        'Color must not exceed 30 characters.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (color.isNotEmpty &&
+        !RegExp(r"^[a-zA-ZÀ-ỹ0-9\s\-\/]+$").hasMatch(color)) {
+      AppToast.show(
+        context,
+        'Color contains invalid characters.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (price == null || price < _minPrice) {
+      AppToast.show(
+        context,
+        'Price must be at least ${_formatPrice(_minPrice)}.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (price > _maxPrice) {
+      AppToast.show(
+        context,
+        'Price must not exceed ${_formatPrice(_maxPrice)}.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (stock == null || stock < 0) {
+      AppToast.show(
+        context,
+        'Stock quantity cannot be negative.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (stock > _maxStock) {
+      AppToast.show(
+        context,
+        'Stock cannot exceed $_maxStock.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (_isEdit &&
+        variant!.reservedQuantity > 0 &&
+        stock < variant.reservedQuantity) {
+      AppToast.show(
+        context,
+        'Stock cannot be less than reserved quantity.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (_isDuplicateVariant(
+      sizeCode: _selectedSize,
+      color: color,
+      ignoredVariantId: variant?.itemVariantId,
+    )) {
+      AppToast.show(
+        context,
+        'Duplicate variant size and color.',
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    bool success;
+
+    if (_isEdit) {
+      success = await widget.manager.updateVariant(
+        itemVariantId: variant!.itemVariantId,
+        sizeCode: _selectedSize,
+        color: color.isEmpty ? null : color,
+        price: price,
+        stockQuantity: stock,
+        status: _selectedStatus,
+      );
+    } else {
+      success = await widget.manager.createVariant(
+        itemId: widget.itemId,
+        sizeCode: _selectedSize,
+        color: color.isEmpty ? null : color,
+        price: price,
+        stockQuantity: stock,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      Navigator.pop(context, true);
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    AppToast.show(
+      context,
+      widget.manager.errorMessage ?? 'Failed to save variant.',
+      isError: true,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_isSubmitting,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(30),
+              ),
+            ),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 46,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _buildFormHeader(),
+                    const SizedBox(height: 20),
+
+                    _buildOptionToggleHeader(
+                      title: 'Choose size',
+                      subtitle: 'Current: $_selectedSize',
+                      icon: Icons.straighten_outlined,
+                      isOpen: _showSizeOptions,
+                      onTap: () {
+                        setState(() {
+                          _showSizeOptions = !_showSizeOptions;
+                        });
+                      },
+                    ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: _buildSizeOptions(),
+                      ),
+                      crossFadeState: _showSizeOptions
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 180),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildOptionToggleHeader(
+                      title: 'Choose color',
+                      subtitle: _colorController.text.trim().isEmpty
+                          ? 'No color selected'
+                          : 'Current: ${_colorController.text.trim()}',
+                      icon: Icons.palette_outlined,
+                      isOpen: _showColorOptions,
+                      onTap: () {
+                        setState(() {
+                          _showColorOptions = !_showColorOptions;
+                        });
+                      },
+                    ),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: _buildColorOptions(),
+                      ),
+                      crossFadeState: _showColorOptions
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 180),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    _buildTextField(
+                      controller: _colorController,
+                      label: 'Custom color',
+                      icon: Icons.edit_outlined,
+                      hint: 'Example: Black/White',
+                      enabled: !_isSubmitting,
+                      maxLength: 30,
+                      onChanged: (_) {
+                        setState(() {});
+                      },
+                      validator: (value) {
+                        final color = value?.trim() ?? '';
+
+                        if (color.length > 30) {
+                          return 'Max 30 characters.';
+                        }
+
+                        if (color.isNotEmpty &&
+                            !RegExp(r"^[a-zA-ZÀ-ỹ0-9\s\-\/]+$")
+                                .hasMatch(color)) {
+                          return 'Invalid color.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    _buildFormSectionTitle(
+                      title: 'Price and stock',
+                      icon: Icons.inventory_2_outlined,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _priceController,
+                            label: 'Price',
+                            icon: Icons.payments_outlined,
+                            hint: '150000',
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(9),
+                            ],
+                            enabled: !_isSubmitting,
+                            validator: (value) {
+                              final price = _parsePrice(value ?? '');
+
+                              if (price == null) {
+                                return 'Invalid price.';
+                              }
+
+                              if (price < _minPrice) {
+                                return 'Min 1,000.';
+                              }
+
+                              if (price > _maxPrice) {
+                                return 'Too high.';
+                              }
+
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _stockController,
+                            label: 'Stock',
+                            icon: Icons.inventory_2_outlined,
+                            hint: '1',
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(3),
+                            ],
+                            enabled: !_isSubmitting,
+                            validator: (value) {
+                              final stock = _parseStock(value ?? '');
+
+                              if (stock == null) {
+                                return 'Invalid stock.';
+                              }
+
+                              if (stock < 0) {
+                                return 'Stock >= 0.';
+                              }
+
+                              if (stock > _maxStock) {
+                                return 'Max $_maxStock.';
+                              }
+
+                              if (_isEdit &&
+                                  widget.variant!.reservedQuantity > 0 &&
+                                  stock < widget.variant!.reservedQuantity) {
+                                return 'Min ${widget.variant!.reservedQuantity}.';
+                              }
+
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (_isEdit) ...[
+                      const SizedBox(height: 18),
+                      _buildStatusSwitch(),
+                    ],
+
+                    const SizedBox(height: 22),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        style: _primaryButtonStyle(),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
+                          _isEdit ? 'SAVE CHANGES' : 'CREATE VARIANT',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Icon(
+            _isEdit ? Icons.edit_outlined : Icons.add_box_outlined,
+            color: Colors.white,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isEdit ? 'Edit variant' : 'Add variant',
+                style: const TextStyle(
+                  color: _darkText,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 20,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _isEdit
+                    ? 'Update size, color, price, stock or status.'
+                    : 'Create a sellable option for this item.',
+                style: const TextStyle(
+                  color: _mutedText,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOptionToggleHeader({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isOpen,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: _isSubmitting ? null : onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: _softBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _borderColor,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _borderColor,
+                ),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.black,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: _darkText,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black45,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isOpen
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              color: Colors.black,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormSectionTitle({
+    required String title,
+    required IconData icon,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: _softBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _borderColor,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.black,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: _darkText,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSizeOptions() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _sizeOptions.map((size) {
+        final bool selected = _selectedSize == size;
+
+        return GestureDetector(
+          onTap: _isSubmitting
+              ? null
+              : () {
+            setState(() {
+              _selectedSize = size;
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: selected ? Colors.black : _softBackground,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected ? Colors.black : _borderColor,
+                width: 1.1,
+              ),
+            ),
+            child: Text(
+              size,
+              style: TextStyle(
+                color: selected ? Colors.white : _darkText,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildColorOptions() {
+    final currentColor = _normalizeTextKey(_colorController.text);
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _colorOptions.map((colorName) {
+        final bool selected = currentColor == _normalizeTextKey(colorName);
+        final previewColor = _colorPreviewMap[colorName] ?? Colors.black45;
+        final bool needsBorder = colorName == 'White' ||
+            colorName == 'Cream' ||
+            colorName == 'Beige';
+
+        return GestureDetector(
+          onTap: _isSubmitting
+              ? null
+              : () {
+            setState(() {
+              _colorController.text = colorName;
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 11,
+              vertical: 9,
+            ),
+            decoration: BoxDecoration(
+              color: selected ? Colors.black : _softBackground,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected ? Colors.black : _borderColor,
+                width: 1.1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 15,
+                  height: 15,
+                  decoration: BoxDecoration(
+                    color: previewColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: needsBorder ? Colors.black26 : Colors.transparent,
+                    ),
+                  ),
+                  child: colorName == 'Multi-color'
+                      ? const Icon(
+                    Icons.auto_awesome,
+                    size: 10,
+                    color: Colors.white,
+                  )
+                      : null,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  colorName,
+                  style: TextStyle(
+                    color: selected ? Colors.white : _darkText,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStatusSwitch() {
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: _softBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _borderColor,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _selectedStatus == 1
+                  ? const Color(0xFF1F9D55).withOpacity(0.12)
+                  : Colors.black.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              _selectedStatus == 1
+                  ? Icons.check_circle_outline
+                  : Icons.pause_circle_outline,
+              color: _selectedStatus == 1
+                  ? const Color(0xFF1F9D55)
+                  : Colors.black45,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedStatus == 1 ? 'Active' : 'Inactive',
+                  style: const TextStyle(
+                    color: _darkText,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _selectedStatus == 1
+                      ? 'This variant can be shown for sale if it has available stock.'
+                      : 'This variant is hidden from sale.',
+                  style: const TextStyle(
+                    color: Colors.black45,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _selectedStatus == 1,
+            activeColor: Colors.black,
+            inactiveThumbColor: Colors.black45,
+            inactiveTrackColor: Colors.black12,
+            onChanged: _isSubmitting
+                ? null
+                : (value) {
+              setState(() {
+                _selectedStatus = value ? 1 : 0;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     String? hint,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    ValueChanged<String>? onChanged,
     bool enabled = true,
+    int? maxLength,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       validator: validator,
+      onChanged: onChanged,
       enabled: enabled,
+      maxLength: maxLength,
       style: const TextStyle(
         color: _darkText,
         fontWeight: FontWeight.w600,
@@ -1344,7 +1822,7 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
     );
   }
 
-  static InputDecoration _inputDecoration({
+  InputDecoration _inputDecoration({
     required String label,
     required IconData icon,
     String? hint,
@@ -1352,6 +1830,7 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
+      counterText: '',
       labelStyle: const TextStyle(
         color: Colors.black45,
         fontWeight: FontWeight.w600,
@@ -1410,23 +1889,6 @@ class _ManageItemVariantsScreenState extends State<ManageItemVariantsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-    );
-  }
-
-  BoxDecoration _cardDecoration() {
-    return BoxDecoration(
-      color: _cardBackground,
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(
-        color: _borderColor,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.045),
-          blurRadius: 18,
-          offset: const Offset(0, 8),
-        ),
-      ],
     );
   }
 }
