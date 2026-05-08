@@ -96,12 +96,23 @@ class _LoginScreenState extends State<LoginScreen>
         );
       }
     } else {
-      NotificationService.show(
-        context,
-        title: "Error",
-        message: result['message'] ?? "Login failed. Please try again.",
-        type: NotificationType.error,
-      );
+      final String errorMsg = result['message'] ?? "";
+
+      if (errorMsg.toLowerCase().contains("banned")) {
+        NotificationService.show(
+          context,
+          title: "ACCOUNT BANNED",
+          message: "Your account has been restricted for violating our terms. Please contact support for more details.",
+          type: NotificationType.error,
+        );
+      }else{
+        NotificationService.show(
+          context,
+          title: "Error",
+          message: result['message'] ?? "Login failed. Please try again.",
+          type: NotificationType.error,
+        );
+      }
     }
   }
 

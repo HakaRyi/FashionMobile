@@ -1,13 +1,13 @@
 class ApiConstants {
-  // static const String baseUrl = "http://10.0.2.2:5196/api";
-  // static const String baseUrl = "http://192.168.1.15:5196/api";
+  //static const String baseUrl = "http://10.0.2.2:5196/api";
+  // static const String baseUrl = "http://192.168.1.7:5196/api";
   //static const String baseUrl = "http://192.168.102.24:5196/api";
   static const String baseUrl = "https://fashionwebbe.onrender.com/api";
 
   static const String baseAIUrl = "https://unconceded-softly-lola.ngrok-free.dev";
 
-   // static const String baseSignalRUrl = "http://10.0.2.2:5196/api";
-  // static const String baseSignalRUrl = "http://192.168.1.15:5196";
+  //static const String baseSignalRUrl = "http://10.0.2.2:5196/api";
+  // static const String baseSignalRUrl = "http://192.168.1.7:5196";
   //static const String baseSignalRUrl = "http://192.168.102.24:5196";
   static const String baseSignalRUrl = "https://fashionwebbe.onrender.com";
 
@@ -209,4 +209,14 @@ class ApiConstants {
 
     return Uri(path: getMyPurchases, queryParameters: query).toString();
   }
+
+  static const String notificationBase = "/notifications";
+
+  static const String getMyNotifications = "$notificationBase/me";
+
+  static String markNotificationAsRead(int notificationId) =>
+      "$notificationBase/$notificationId/read";
+
+  static const String markAllNotificationsAsRead =
+      "$notificationBase/read-all";
 }

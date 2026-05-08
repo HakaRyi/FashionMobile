@@ -84,7 +84,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
     _curtainController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _curtainAnimation = CurvedAnimation(parent: _curtainController, curve: Curves.easeInOutCubic);
     _magicController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
-    _progressController = AnimationController(vsync: this, duration: const Duration(seconds: 40));
+    _progressController = AnimationController(vsync: this, duration: const Duration(seconds: 50));
 
     _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
     _sweepAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(CurvedAnimation(parent: _sweepController, curve: Curves.easeInOutSine));

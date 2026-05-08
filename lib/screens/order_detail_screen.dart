@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/order_detail_model.dart';
 import '../models/order_model.dart';
@@ -29,11 +30,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String? _error;
   OrderModel? _order;
   bool _hasChanged = false;
+  int? _currentUserId;
 
   @override
   void initState() {
     super.initState();
-    _loadOrder(showFullLoading: true);
+    _initScreen();
+  }
+
+  Future<void> _initScreen() async {
+    await _loadCurrentUserId();
+    await _loadOrder(showFullLoading: true);
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final rawUserId = prefs.getString('userId') ??
+        prefs.getInt('userId')?.toString();
+
+    _currentUserId = int.tryParse(rawUserId ?? '');
   }
 
   Future<void> _loadOrder({bool showFullLoading = false}) async {
@@ -81,6 +97,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     await _loadOrder(showFullLoading: false);
   }
 
+  bool _isBuyerView(OrderModel order) {
+    if (_currentUserId == null) {
+      return widget.isPurchase;
+    }
+
+    return order.buyerId == _currentUserId;
+  }
+
+  bool _isSellerView(OrderModel order) {
+    if (_currentUserId == null) {
+      return !widget.isPurchase;
+    }
+
+    return order.sellerId == _currentUserId;
+  }
+
   String _normalizeError(Object error) {
     final text = error.toString();
 
@@ -110,13 +142,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       return 'N/A';
     }
 
-    return DateFormat('dd/MM/yyyy HH:mm').format(date.toLocal());
+    final utcDate = date.isUtc
+        ? date
+        : DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+      date.hour,
+      date.minute,
+      date.second,
+      date.millisecond,
+      date.microsecond,
+    );
+
+    final vietnamTime = utcDate.add(const Duration(hours: 7));
+
+    return DateFormat('dd/MM/yyyy HH:mm').format(vietnamTime);
   }
 
   String _displayStatus(String status) {
     switch (_normalizeStatus(status)) {
       case 'pendingpayment':
         return 'Pending Payment';
+      case 'confirmed':
+        return 'Confirmed';
       case 'processing':
         return 'Processing';
       case 'shipping':
@@ -140,6 +189,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     switch (_normalizeStatus(status)) {
       case 'pendingpayment':
         return const Color(0xFFE29400);
+      case 'confirmed':
+        return const Color(0xFF0F766E);
       case 'processing':
         return const Color(0xFF2563EB);
       case 'shipping':
@@ -179,7 +230,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         _hasChanged = true;
       });
 
-      AppToast.show(context, successMessage);
+      AppToast.showSuccess(context, successMessage);
 
       await _refreshOrder();
     } catch (e) {
@@ -187,11 +238,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_normalizeError(e)),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.showError(
+        context,
+        _normalizeError(e),
       );
     } finally {
       if (!mounted) {
@@ -452,6 +501,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _buildHeader(OrderModel order) {
     final Color color = _statusColor(order.status);
+    final isBuyerView = _isBuyerView(order);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -482,11 +532,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _buildStatusChip(order.status, color),
           const SizedBox(height: 16),
           _infoRow(
-            widget.isPurchase ? 'Seller' : 'Buyer',
-            widget.isPurchase ? order.sellerName : order.buyerName,
+            isBuyerView ? 'Seller' : 'Buyer',
+            isBuyerView ? order.sellerName : order.buyerName,
           ),
           _infoRow('Created', _formatDate(order.createdAt)),
-          if (order.updatedAt != null) _infoRow('Updated', _formatDate(order.updatedAt)),
+          if (order.updatedAt != null)
+            _infoRow('Updated', _formatDate(order.updatedAt)),
         ],
       ),
     );
@@ -666,7 +717,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _infoRow('Address', order.shippingAddress ?? 'N/A'),
           if (order.note != null && order.note!.trim().isNotEmpty)
             _infoRow('Note', order.note!),
-          if (order.cancelReason != null && order.cancelReason!.trim().isNotEmpty)
+          if (order.cancelReason != null &&
+              order.cancelReason!.trim().isNotEmpty)
             _infoRow('Cancel reason', order.cancelReason!),
         ],
       ),
@@ -798,7 +850,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final status = _normalizeStatus(order.status);
     final buttons = <Widget>[];
 
-    if (widget.isPurchase && status == 'pendingpayment') {
+    final isBuyerView = _isBuyerView(order);
+    final isSellerView = _isSellerView(order);
+
+    if (isBuyerView && status == 'pendingpayment') {
       buttons.add(
         _mainButton(
           text: 'Pay Now',
@@ -815,7 +870,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       );
     }
 
-    if (status == 'pendingpayment' || status == 'processing') {
+    final canBuyerCancel =
+        isBuyerView && (status == 'pendingpayment' || status == 'processing');
+
+    final canSellerCancel = isSellerView && status == 'processing';
+
+    if (canBuyerCancel || canSellerCancel) {
       buttons.add(
         _outlineButton(
           text: 'Cancel Order',
@@ -838,7 +898,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       );
     }
 
-    if (!widget.isPurchase && status == 'processing') {
+    if (isSellerView && status == 'processing') {
       buttons.add(
         _mainButton(
           text: 'Mark as Shipping',
@@ -858,7 +918,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       );
     }
 
-    if (widget.isPurchase && status == 'delivered') {
+    if (isBuyerView && status == 'delivered') {
       buttons.add(
         _mainButton(
           text: 'Confirm Received',
@@ -866,8 +926,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           onPressed: () {
             _confirmAction(
               title: 'Confirm received',
-              message:
-              'Have you received the item successfully?',
+              message: 'Have you received the item successfully?',
               action: () => _orderService.updateOrderStatus(
                 order.orderId,
                 'COMPLETED',
