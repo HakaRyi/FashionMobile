@@ -35,7 +35,7 @@ class EventService {
     }
   }
   Future<EventModel?> getEventById(int id) async {
-    final String? token = await _getToken(); // LẤY TOKEN
+    final String? token = await _getToken();
     final url = Uri.parse("${ApiConstants.baseUrl}/events/$id");
 
     try {
@@ -43,7 +43,7 @@ class EventService {
       final response = await http.get(
         url,
         headers: {
-          'Authorization': 'Bearer $token', // THÊM DÒNG NÀY VÀO ĐÂY
+          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );

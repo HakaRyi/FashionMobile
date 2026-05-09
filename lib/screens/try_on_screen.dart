@@ -527,23 +527,23 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
             letterSpacing: 2,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report_outlined, color: Colors.black),
-            onPressed: () {
-              if (_curtainController.status == AnimationStatus.completed ||
-                  _curtainController.status == AnimationStatus.forward) {
-                _magicController.stop();
-                _progressController.stop();
-                _curtainController.reverse();
-              } else {
-                _curtainController.forward();
-                _magicController.repeat();
-                _progressController.forward(from: 0.0);
-              }
-            },
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.bug_report_outlined, color: Colors.black),
+        //     onPressed: () {
+        //       if (_curtainController.status == AnimationStatus.completed ||
+        //           _curtainController.status == AnimationStatus.forward) {
+        //         _magicController.stop();
+        //         _progressController.stop();
+        //         _curtainController.reverse();
+        //       } else {
+        //         _curtainController.forward();
+        //         _magicController.repeat();
+        //         _progressController.forward(from: 0.0);
+        //       }
+        //     },
+        //   ),
+        // ],
       ),
       body: ListenableBuilder(
         listenable: tryOnManager,
@@ -842,22 +842,54 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                       if (resultBytes == null)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                          child: Row(
+                          child: Column( // Chuyển sang Column để chứa Row và Note
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.person,
-                                color: Colors.black,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "Model: ${_selectedModel.displayName ?? 'Default Model'}",
-                                  style: const TextStyle(
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person,
                                     color: Colors.black,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
+                                    size: 18,
                                   ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "Model: ${_selectedModel.displayName ?? 'Default Model'}",
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              // Phần Note hướng dẫn cho người dùng
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.info_outline, size: 14, color: Colors.amber[900]),
+                                    const SizedBox(width: 6),
+                                    const Expanded(
+                                      child: Text(
+                                        "Note: For the best visual results, please select a model wearing similar garment lengths (e.g., long pants for trousers, or shorts for mini-skirts).",
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 11,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
