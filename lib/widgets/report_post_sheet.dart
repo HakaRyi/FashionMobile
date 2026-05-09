@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/api_exception.dart';
 import '../managers/report_manager.dart';
 import '../models/report_type_model.dart';
+import '../utils/app_notification.dart';
+import '../utils/app_toast.dart';
 
 class ReportPostSheet extends StatefulWidget {
   final int postId;
@@ -59,7 +61,7 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
         _errorText = message;
       });
 
-      _showErrorSnackBar(message);
+      AppToast.show(context, message, isError: true);
     }
   }
 
@@ -70,6 +72,12 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
       setState(() {
         _errorText = 'Please select a report reason.';
       });
+
+      AppToast.show(
+        context,
+        'Please select a report reason.',
+        isError: true,
+      );
       return;
     }
 
@@ -88,12 +96,10 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF16A34A),
-        ),
+      AppToast.show(
+        context,
+        result.message,
+        isError: false,
       );
 
       Navigator.pop(context, result.message);
@@ -108,7 +114,7 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
         _errorText = message;
       });
 
-      _showErrorSnackBar(message);
+      AppToast.show(context, message, isError: true);
     }
   }
 
@@ -124,17 +130,6 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
     }
 
     return raw;
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.redAccent,
-      ),
-    );
   }
 
   @override

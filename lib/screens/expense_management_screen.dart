@@ -8,6 +8,7 @@ import '../models/spending_limit_model.dart';
 import '../models/transaction_history_model.dart';
 import '../models/update_spending_limit_request.dart';
 import '../services/expense_service.dart';
+import '../utils/app_toast.dart';
 
 class ExpenseManagementScreen extends StatefulWidget {
   const ExpenseManagementScreen({super.key});
@@ -171,12 +172,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load data: $e'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.showError(
+        context,
+        'Failed to load data: $e',
       );
     } finally {
       if (mounted) {
@@ -948,53 +946,148 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   Widget _buildUpdateLimitButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isUpdatingSpendingLimit ? null : _showUpdateSpendingLimitSheet,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 10,
-          ),
-          decoration: BoxDecoration(
-            color: const Color(0xFF111827),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isUpdatingSpendingLimit) ...[
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+    final hasLimit = spendingLimit?.monthlySpendingLimit != null &&
+        spendingLimit!.monthlySpendingLimit! > 0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (hasLimit) ...[
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isUpdatingSpendingLimit ? null : _confirmRemoveSpendingLimit,
+              borderRadius: BorderRadius.circular(14),
+              child: Ink(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFFECACA),
                   ),
                 ),
-                const SizedBox(width: 6),
-              ] else ...[
-                const Icon(
-                  Icons.edit_rounded,
-                  size: 16,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 6),
-              ],
-              const Text(
-                'Update',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 16,
+                      color: Color(0xFFDC2626),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Remove',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isUpdatingSpendingLimit ? null : _showUpdateSpendingLimitSheet,
+            borderRadius: BorderRadius.circular(14),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isUpdatingSpendingLimit) ...[
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ] else ...[
+                    const Icon(
+                      Icons.edit_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  const Text(
+                    'Update',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Future<void> _confirmRemoveSpendingLimit() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Remove spending limit?',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: const Text(
+            'After removing the limit, wallet spending will no longer be blocked by a monthly limit.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await _updateSpendingLimit(
+      monthlySpendingLimit: null,
+      isHardSpendingLimit: false,
+      spendingWarningThresholdPercent: 100,
+      successMessage: 'Spending limit removed successfully.',
     );
   }
 
@@ -2162,12 +2255,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load transaction details: $e'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.showError(
+        context,
+        'Failed to load transaction details: $e',
       );
     } finally {
       _isLoadingTransactionDetail = false;
@@ -2247,6 +2337,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       builder: (_) {
         return _SpendingLimitSheet(
           initialLimit: spendingLimit?.monthlySpendingLimit,
+          spentThisMonth: spendingLimit?.spentThisMonth ?? 0,
           moneyFormat: _moneyFormat,
         );
       },
@@ -2260,6 +2351,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       monthlySpendingLimit: selectedLimit,
       isHardSpendingLimit: true,
       spendingWarningThresholdPercent: 100,
+      successMessage: 'Spending limit updated successfully.',
     );
   }
 
@@ -2267,6 +2359,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     required double? monthlySpendingLimit,
     required bool isHardSpendingLimit,
     required double spendingWarningThresholdPercent,
+    String successMessage = 'Spending limit updated successfully.',
   }) async {
     try {
       setState(() {
@@ -2287,23 +2380,18 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Spending limit updated successfully.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppToast.showSuccess(
+        context,
+        successMessage,
       );
     } catch (e) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update spending limit: $e'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.showError(
+        context,
+        'Failed to update spending limit: $e',
       );
     } finally {
       if (mounted) {
@@ -2383,10 +2471,12 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
 class _SpendingLimitSheet extends StatefulWidget {
   final double? initialLimit;
+  final double spentThisMonth;
   final NumberFormat moneyFormat;
 
   const _SpendingLimitSheet({
     required this.initialLimit,
+    required this.spentThisMonth,
     required this.moneyFormat,
   });
 
@@ -2452,9 +2542,38 @@ class _SpendingLimitSheetState extends State<_SpendingLimitSheet> {
 
     final limit = double.tryParse(raw);
 
-    if (limit == null || limit <= 0) {
+    if (limit == null) {
+      setState(() {
+        _errorText = 'Monthly limit is invalid.';
+      });
+      return;
+    }
+
+    if (limit <= 0) {
       setState(() {
         _errorText = 'Monthly limit must be greater than 0.';
+      });
+      return;
+    }
+
+    if (limit < 10000) {
+      setState(() {
+        _errorText = 'Monthly limit must be at least 10.000 VND.';
+      });
+      return;
+    }
+
+    if (limit > 1000000000) {
+      setState(() {
+        _errorText = 'Monthly limit cannot exceed 1.000.000.000 VND.';
+      });
+      return;
+    }
+
+    if (limit < widget.spentThisMonth) {
+      setState(() {
+        _errorText =
+        'Monthly limit cannot be lower than your current spending this month.';
       });
       return;
     }
@@ -2546,6 +2665,12 @@ class _SpendingLimitSheetState extends State<_SpendingLimitSheet> {
                 TextField(
                   controller: _limitController,
                   keyboardType: TextInputType.number,
+                  cursorColor: const Color(0xFF111827),
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                   onChanged: (value) {
                     if (_errorText != null) {
                       setState(() {
@@ -2562,6 +2687,22 @@ class _SpendingLimitSheetState extends State<_SpendingLimitSheet> {
                     errorText: _errorText,
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
+                    labelStyle: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    suffixStyle: const TextStyle(
+                      color: Color(0xFF374151),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    errorStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: const BorderSide(

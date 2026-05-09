@@ -2,25 +2,29 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:typed_data';
+import 'dart:async';
+
 import 'package:fashion_mobile/screens/deposit_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:gal/gal.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+
 import '../constants/app_colors.dart';
 import '../constants/api_constants.dart';
-import 'dart:typed_data';
 import '../constants/notification_type.dart';
 import '../utils/app_notification.dart';
+import '../utils/app_toast.dart';
 import '../utils/global_event_bus.dart';
 import '../utils/model_manager.dart';
 import '../utils/try_on_manager.dart';
 import './create_post_screens.dart';
-import 'package:gal/gal.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../widgets/save_outfit_dialog.dart';
-import 'package:path_provider/path_provider.dart';
 import '../models/try_on_source_item.dart';
 import '../models/try_on_model_source.dart';
 import '../widgets/try_on/wardrobe_bottom_sheet.dart';
@@ -29,7 +33,6 @@ import '../widgets/try_on/cloth_selection_row.dart';
 import '../widgets/try_on/try_on_history_list.dart';
 import '../widgets/try_on/try_on_image_preview.dart';
 import '../services/wallet_service.dart';
-import 'dart:async';
 
 class TryOnScreen extends StatefulWidget {
   final TryOnSourceItem? sourceItem;
@@ -81,15 +84,46 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _curtainController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _curtainAnimation = CurvedAnimation(parent: _curtainController, curve: Curves.easeInOutCubic);
-    _magicController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
-    _progressController = AnimationController(vsync: this, duration: const Duration(seconds: 40));
 
-    _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
-    _sweepAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(CurvedAnimation(parent: _sweepController, curve: Curves.easeInOutSine));
+    _curtainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _curtainAnimation = CurvedAnimation(
+      parent: _curtainController,
+      curve: Curves.easeInOutCubic,
+    );
+
+    _magicController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 40),
+    );
+
+    _sweepController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _sweepAnimation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _sweepController,
+        curve: Curves.easeInOutSine,
+      ),
+    );
+
     Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) _sweepController.forward(from: 0.0);
+      if (mounted) {
+        _sweepController.forward(from: 0.0);
+      }
     });
 
     modelManager.fetchMyModels();
@@ -103,7 +137,9 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
     if (widget.sourceItem != null) {
       _selectedNetworkClothUrl = widget.sourceItem!.imageUrl;
       _selectedClothName = widget.sourceItem!.itemName;
-      _selectedCategoryId = _mapCategoryToInt(widget.sourceItem!.category ?? '');
+      _selectedCategoryId = _mapCategoryToInt(
+        widget.sourceItem!.category ?? '',
+      );
     }
 
     if (tryOnManager.isProcessing) {
@@ -126,6 +162,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
 
   void _onTryOnStateChanged() {
     final isProcessing = tryOnManager.isProcessing;
+
     if (isProcessing && !_wasProcessing) {
       _curtainController.forward();
       _magicController.repeat();
@@ -135,23 +172,70 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       _progressController.stop();
       _curtainController.reverse();
     }
+
     _wasProcessing = isProcessing;
   }
 
   int _mapCategoryToInt(String category) {
     final lowerCat = category.toLowerCase();
-    if (lowerCat.contains('lower') || lowerCat.contains('pants') || lowerCat.contains('shorts') || lowerCat.contains('skirt') || lowerCat.contains('lower_body')) {
+
+    if (lowerCat.contains('lower') ||
+        lowerCat.contains('pants') ||
+        lowerCat.contains('shorts') ||
+        lowerCat.contains('skirt') ||
+        lowerCat.contains('lower_body')) {
       return 1;
     }
-    if (lowerCat.contains('full') || lowerCat.contains('dress') || lowerCat.contains('full_body')) {
+
+    if (lowerCat.contains('full') ||
+        lowerCat.contains('dress') ||
+        lowerCat.contains('full_body')) {
       return 2;
     }
+
     return 0;
+  }
+
+  String _mapTryOnBackendError(Object error) {
+    final message = error.toString().toLowerCase();
+
+    if (message.contains('spending limit') ||
+        message.contains('monthly limit') ||
+        message.contains('limit exceeded')) {
+      return 'You have reached your monthly spending limit.';
+    }
+
+    if (message.contains('insufficient') ||
+        message.contains('not enough') ||
+        message.contains('balance')) {
+      return 'Your wallet balance is not enough. Please top up and try again.';
+    }
+
+    if (message.contains('unauthorized') || message.contains('401')) {
+      return 'Your session has expired. Please log in again.';
+    }
+
+    if (message.contains('forbidden') || message.contains('403')) {
+      return 'You do not have permission to use this feature.';
+    }
+
+    if (message.contains('timeout')) {
+      return 'Try-on request timed out. Please try again.';
+    }
+
+    if (message.contains('network') ||
+        message.contains('socket') ||
+        message.contains('connection')) {
+      return 'Network error. Please check your connection and try again.';
+    }
+
+    return 'Try-on failed. Please try again later.';
   }
 
   Future<void> _fetchWalletBalance() async {
     try {
       final balance = await _walletService.getMyWalletBalance();
+
       if (mounted) {
         setState(() {
           _currentBalance = balance;
@@ -159,7 +243,9 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingBalance = false);
+      if (mounted) {
+        setState(() => _isLoadingBalance = false);
+      }
     }
   }
 
@@ -179,6 +265,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         if (mounted) {
           setState(() {
             _myOutfits = data['data'] ?? [];
@@ -186,10 +273,14 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
           });
         }
       } else {
-        if (mounted) setState(() => _isLoadingOutfits = false);
+        if (mounted) {
+          setState(() => _isLoadingOutfits = false);
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingOutfits = false);
+      if (mounted) {
+        setState(() => _isLoadingOutfits = false);
+      }
     }
   }
 
@@ -209,6 +300,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         if (mounted) {
           setState(() {
             _myWardrobeItems = data['data'] ?? [];
@@ -216,10 +308,14 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
           });
         }
       } else {
-        if (mounted) setState(() => _isLoadingWardrobe = false);
+        if (mounted) {
+          setState(() => _isLoadingWardrobe = false);
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingWardrobe = false);
+      if (mounted) {
+        setState(() => _isLoadingWardrobe = false);
+      }
     }
   }
 
@@ -244,7 +340,10 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
   Future<File?> _downloadNetworkImageToTempFile(String imageUrl) async {
     try {
       final response = await http.get(Uri.parse(imageUrl));
-      if (response.statusCode != 200) return null;
+
+      if (response.statusCode != 200) {
+        return null;
+      }
 
       final tempDir = await getTemporaryDirectory();
       final file = File(
@@ -259,7 +358,9 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
   }
 
   Future<void> _handleStartTryOn() async {
-    if (tryOnManager.isProcessing) return;
+    if (tryOnManager.isProcessing) {
+      return;
+    }
 
     String? clothPath;
 
@@ -269,12 +370,17 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
         _selectedNetworkClothUrl!.trim().isNotEmpty) {
       setState(() => _isPreparingNetworkCloth = true);
 
-      final downloadedFile = await _downloadNetworkImageToTempFile(_selectedNetworkClothUrl!);
+      final downloadedFile = await _downloadNetworkImageToTempFile(
+        _selectedNetworkClothUrl!,
+      );
+
+      if (!mounted) {
+        return;
+      }
 
       setState(() => _isPreparingNetworkCloth = false);
 
       if (downloadedFile == null) {
-        if (!mounted) return;
         NotificationService.show(
           context,
           title: "Error",
@@ -297,23 +403,35 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       return;
     }
 
-    if (mounted) {
-      NotificationService.show(
+    try {
+      await tryOnManager.startTryOn(
         context,
-        title: "Success",
-        message: "Processing in the background. You can browse other items!",
-        type: NotificationType.success,
+        modelAssetPath: _selectedModel.isAsset ? _selectedModel.assetPath : null,
+        modelImageUrl: _selectedModel.isNetwork ? _selectedModel.imageUrl : null,
+        clothFilePath: clothPath,
+        category: _selectedCategoryId,
+      );
+
+      if (mounted) {
+        NotificationService.show(
+          context,
+          title: "Success",
+          message: "Processing in the background. You can browse other items!",
+          type: NotificationType.success,
+        );
+      }
+
+      await _fetchWalletBalance();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.showError(
+        context,
+        _mapTryOnBackendError(e),
       );
     }
-
-    await tryOnManager.startTryOn(
-      context,
-      modelAssetPath: _selectedModel.isAsset ? _selectedModel.assetPath : null,
-      modelImageUrl: _selectedModel.isNetwork ? _selectedModel.imageUrl : null,
-      clothFilePath: clothPath,
-      category: _selectedCategoryId,
-    );
-    await _fetchWalletBalance();
   }
 
   void _showFullWardrobeBottomSheet() {
@@ -353,9 +471,13 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
           isLoadingOutfits: _isLoadingOutfits,
           onSelectModel: (model) {
             setState(() => _selectedModel = model);
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text("Selected ${_selectedModel.displayName}", style: const TextStyle(color: Colors.white)),
+                content: Text(
+                  "Selected ${_selectedModel.displayName}",
+                  style: const TextStyle(color: Colors.white),
+                ),
                 backgroundColor: Colors.black,
               ),
             );
@@ -367,6 +489,7 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
 
   void _clearTryOnResult() {
     tryOnManager.resetResult();
+
     setState(() {
       selectedClothFile = null;
       _selectedNetworkClothUrl = null;
@@ -377,12 +500,13 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final bool hasSelectedCloth =
-        selectedClothFile != null ||
-            (_selectedNetworkClothUrl != null && _selectedNetworkClothUrl!.trim().isNotEmpty);
+    final bool hasSelectedCloth = selectedClothFile != null ||
+        (_selectedNetworkClothUrl != null &&
+            _selectedNetworkClothUrl!.trim().isNotEmpty);
 
     bool isNotEnoughBalance = !_isLoadingBalance && _currentBalance < _tryOnCost;
-    bool canProceed = hasSelectedCloth && !isNotEnoughBalance && !_isPreparingNetworkCloth;
+    bool canProceed =
+        hasSelectedCloth && !isNotEnoughBalance && !_isPreparingNetworkCloth;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -407,7 +531,8 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
           IconButton(
             icon: const Icon(Icons.bug_report_outlined, color: Colors.black),
             onPressed: () {
-              if (_curtainController.status == AnimationStatus.completed || _curtainController.status == AnimationStatus.forward) {
+              if (_curtainController.status == AnimationStatus.completed ||
+                  _curtainController.status == AnimationStatus.forward) {
                 _magicController.stop();
                 _progressController.stop();
                 _curtainController.reverse();
@@ -460,8 +585,14 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                 animation: _curtainAnimation,
                                 builder: (context, child) {
                                   final val = _curtainAnimation.value;
-                                  if (val == 0.0) return const SizedBox.shrink();
-                                  final width = MediaQuery.of(context).size.width / 2;
+
+                                  if (val == 0.0) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  final width =
+                                      MediaQuery.of(context).size.width / 2;
+
                                   return Stack(
                                     children: [
                                       Positioned(
@@ -471,18 +602,29 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                         width: width * val,
                                         child: ClipRect(
                                           child: BackdropFilter(
-                                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                            filter: ImageFilter.blur(
+                                              sigmaX: 12,
+                                              sigmaY: 12,
+                                            ),
                                             child: Container(
                                               decoration: BoxDecoration(
                                                 gradient: LinearGradient(
-                                                  colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.6)],
+                                                  colors: [
+                                                    Colors.black.withOpacity(0.9),
+                                                    Colors.black.withOpacity(0.6),
+                                                  ],
                                                 ),
                                                 border: Border(
-                                                  right: BorderSide(color: Colors.white.withOpacity(0.15), width: 1),
+                                                  right: BorderSide(
+                                                    color: Colors.white
+                                                        .withOpacity(0.15),
+                                                    width: 1,
+                                                  ),
                                                 ),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withOpacity(0.4),
+                                                    color: Colors.black
+                                                        .withOpacity(0.4),
                                                     blurRadius: 20,
                                                     offset: const Offset(10, 0),
                                                   ),
@@ -499,18 +641,29 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                         width: width * val,
                                         child: ClipRect(
                                           child: BackdropFilter(
-                                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                            filter: ImageFilter.blur(
+                                              sigmaX: 12,
+                                              sigmaY: 12,
+                                            ),
                                             child: Container(
                                               decoration: BoxDecoration(
                                                 gradient: LinearGradient(
-                                                  colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.9)],
+                                                  colors: [
+                                                    Colors.black.withOpacity(0.6),
+                                                    Colors.black.withOpacity(0.9),
+                                                  ],
                                                 ),
                                                 border: Border(
-                                                  left: BorderSide(color: Colors.white.withOpacity(0.15), width: 1),
+                                                  left: BorderSide(
+                                                    color: Colors.white
+                                                        .withOpacity(0.15),
+                                                    width: 1,
+                                                  ),
                                                 ),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withOpacity(0.4),
+                                                    color: Colors.black
+                                                        .withOpacity(0.4),
                                                     blurRadius: 20,
                                                     offset: const Offset(-10, 0),
                                                   ),
@@ -526,7 +679,9 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                             animation: _magicController,
                                             builder: (context, child) {
                                               return CustomPaint(
-                                                painter: StageMagicPainter(_magicController.value),
+                                                painter: StageMagicPainter(
+                                                  _magicController.value,
+                                                ),
                                               );
                                             },
                                           ),
@@ -544,13 +699,17 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                                 children: [
                                                   ClipRect(
                                                     child: BackdropFilter(
-                                                      filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                                                      filter: ImageFilter.blur(
+                                                        sigmaX: 2,
+                                                        sigmaY: 2,
+                                                      ),
                                                       child: const Text(
                                                         "AI IS FITTING YOUR OUTFIT...",
                                                         style: TextStyle(
                                                           color: Colors.white,
                                                           fontSize: 12,
-                                                          fontWeight: FontWeight.w900,
+                                                          fontWeight:
+                                                          FontWeight.w900,
                                                           letterSpacing: 2,
                                                         ),
                                                       ),
@@ -558,11 +717,18 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                                   ),
                                                   const SizedBox(height: 16),
                                                   ClipRRect(
-                                                    borderRadius: BorderRadius.circular(10),
+                                                    borderRadius:
+                                                    BorderRadius.circular(10),
                                                     child: LinearProgressIndicator(
-                                                      value: _progressController.value,
-                                                      backgroundColor: Colors.white.withOpacity(0.2),
-                                                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                                      value:
+                                                      _progressController.value,
+                                                      backgroundColor: Colors.white
+                                                          .withOpacity(0.2),
+                                                      valueColor:
+                                                      const AlwaysStoppedAnimation<
+                                                          Color>(
+                                                        Colors.white,
+                                                      ),
                                                       minHeight: 4,
                                                     ),
                                                   ),
@@ -586,7 +752,9 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                                             animation: _sweepAnimation,
                                             builder: (context, child) {
                                               return CustomPaint(
-                                                painter: MirrorSweepPainter(_sweepAnimation.value),
+                                                painter: MirrorSweepPainter(
+                                                  _sweepAnimation.value,
+                                                ),
                                               );
                                             },
                                           ),
@@ -599,61 +767,88 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                           ),
                         ],
                       ),
-
                       if (resultBytes != null && !isProcessing)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _actionButton(Icons.delete_outline, "DELETE", Colors.black, _clearTryOnResult),
-                              _actionButton(Icons.file_download_outlined, "DOWNLOAD", Colors.black, () async {
-                                await _saveImageToGallery(resultBytes);
-                                _clearTryOnResult();
-                              }),
-                              _actionButton(Icons.save_alt_outlined, "SAVE", Colors.black, () async {
-                                final result = await showGeneralDialog<bool>(
-                                  context: context,
-                                  barrierDismissible: true,
-                                  barrierLabel: "Save",
-                                  pageBuilder: (ctx, a1, a2) => Container(),
-                                  transitionBuilder: (ctx, a1, a2, child) {
-                                    return Transform.scale(
-                                      scale: a1.value,
-                                      child: SaveOutfitDialog(imageBytes: resultBytes),
-                                    );
-                                  },
-                                  transitionDuration: const Duration(milliseconds: 300),
-                                );
-
-                                if (result == true && context.mounted) {
-                                  NotificationService.show(
-                                    context,
-                                    title: "Success",
-                                    message: "Saved to wardrobe successfully",
-                                    type: NotificationType.success,
-                                  );
+                              _actionButton(
+                                Icons.delete_outline,
+                                "DELETE",
+                                Colors.black,
+                                _clearTryOnResult,
+                              ),
+                              _actionButton(
+                                Icons.file_download_outlined,
+                                "DOWNLOAD",
+                                Colors.black,
+                                    () async {
+                                  await _saveImageToGallery(resultBytes);
                                   _clearTryOnResult();
-                                }
-                              }),
-                              _actionButton(Icons.share_outlined, "SHARE", Colors.black, () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CreatePostScreen(imageBytes: resultBytes),
-                                  ),
-                                ).then((_) => _clearTryOnResult());
-                              }),
+                                },
+                              ),
+                              _actionButton(
+                                Icons.save_alt_outlined,
+                                "SAVE",
+                                Colors.black,
+                                    () async {
+                                  final result = await showGeneralDialog<bool>(
+                                    context: context,
+                                    barrierDismissible: true,
+                                    barrierLabel: "Save",
+                                    pageBuilder: (ctx, a1, a2) => Container(),
+                                    transitionBuilder: (ctx, a1, a2, child) {
+                                      return Transform.scale(
+                                        scale: a1.value,
+                                        child: SaveOutfitDialog(
+                                          imageBytes: resultBytes,
+                                        ),
+                                      );
+                                    },
+                                    transitionDuration:
+                                    const Duration(milliseconds: 300),
+                                  );
+
+                                  if (result == true && context.mounted) {
+                                    NotificationService.show(
+                                      context,
+                                      title: "Success",
+                                      message: "Saved to wardrobe successfully",
+                                      type: NotificationType.success,
+                                    );
+                                    _clearTryOnResult();
+                                  }
+                                },
+                              ),
+                              _actionButton(
+                                Icons.share_outlined,
+                                "SHARE",
+                                Colors.black,
+                                    () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => CreatePostScreen(
+                                        imageBytes: resultBytes,
+                                      ),
+                                    ),
+                                  ).then((_) => _clearTryOnResult());
+                                },
+                              ),
                             ],
                           ),
                         ),
-
                       if (resultBytes == null)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                           child: Row(
                             children: [
-                              const Icon(Icons.person, color: Colors.black, size: 18),
+                              const Icon(
+                                Icons.person,
+                                color: Colors.black,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -668,16 +863,19 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                             ],
                           ),
                         ),
-
                       if (resultBytes == null) ...[
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
                             "SELECT ITEM",
-                            style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
                           ),
                         ),
-
                         ClothSelectionRow(
                           wardrobeItems: _myWardrobeItems,
                           isLoading: _isLoadingWardrobe,
@@ -692,15 +890,18 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                             });
                           },
                         ),
-
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
                             "TRY-ON HISTORY",
-                            style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
                           ),
                         ),
-
                         const TryOnHistoryList(),
                         const SizedBox(height: 20),
                       ],
@@ -708,13 +909,16 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                   ),
                 ),
               ),
-
               if (resultBytes == null)
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border(top: BorderSide(color: Colors.black.withOpacity(0.1))),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.black.withOpacity(0.1),
+                      ),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -734,7 +938,9 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _isLoadingBalance ? "..." : "${_currentBalance.toInt()} VND",
+                              _isLoadingBalance
+                                  ? "..."
+                                  : "${_currentBalance.toInt()} VND",
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 14,
@@ -778,11 +984,15 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
                           onPressed: isNotEnoughBalance
                               ? () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => DepositScreen()))
-                                .then((_) => _fetchWalletBalance());
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DepositScreen(),
+                              ),
+                            ).then((_) => _fetchWalletBalance());
                           }
-                              : (canProceed && !isProcessing ? _handleStartTryOn : null),
+                              : (canProceed && !isProcessing
+                              ? _handleStartTryOn
+                              : null),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -815,7 +1025,12 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _actionButton(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _actionButton(
+      IconData icon,
+      String label,
+      Color color,
+      VoidCallback onTap,
+      ) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -825,9 +1040,14 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
             decoration: BoxDecoration(
               color: color.withOpacity(0.05),
               shape: BoxShape.circle,
-              border: Border.all(color: color.withOpacity(0.1)),
+              border: Border.all(
+                color: color.withOpacity(0.1),
+              ),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(
+              icon,
+              color: color,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -852,8 +1072,15 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text("Storage permission required.", style: TextStyle(color: Colors.white)),
-              action: SnackBarAction(label: "Settings", onPressed: openAppSettings, textColor: Colors.white),
+              content: const Text(
+                "Storage permission required.",
+                style: TextStyle(color: Colors.white),
+              ),
+              action: SnackBarAction(
+                label: "Settings",
+                onPressed: openAppSettings,
+                textColor: Colors.white,
+              ),
               backgroundColor: Colors.black,
             ),
           );
@@ -869,7 +1096,10 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Image saved to gallery successfully!", style: TextStyle(color: Colors.white)),
+            content: Text(
+              "Image saved to gallery successfully!",
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.black,
           ),
         );
@@ -878,7 +1108,10 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Error saving image: ${e.type.message}", style: const TextStyle(color: Colors.white)),
+            content: Text(
+              "Error saving image: ${e.type.message}",
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.black,
           ),
         );
@@ -886,7 +1119,13 @@ class _TryOnScreenState extends State<TryOnScreen> with TickerProviderStateMixin
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Unknown error: $e", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.black),
+          SnackBar(
+            content: Text(
+              "Unknown error: $e",
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.black,
+          ),
         );
       }
     }
@@ -929,9 +1168,18 @@ class StageMagicPainter extends CustomPainter {
           pureWhite.withOpacity(0.0),
         ],
         stops: const [0.0, 0.6, 1.0],
-      ).createShader(Rect.fromCircle(center: Offset(wandX, wandY), radius: gradientRadius));
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(wandX, wandY),
+          radius: gradientRadius,
+        ),
+      );
 
-    canvas.drawCircle(Offset(wandX, wandY), gradientRadius, shaderPaint);
+    canvas.drawCircle(
+      Offset(wandX, wandY),
+      gradientRadius,
+      shaderPaint,
+    );
 
     final Paint starPaint = Paint()
       ..style = PaintingStyle.fill
@@ -948,9 +1196,19 @@ class StageMagicPainter extends CustomPainter {
           Colors.red,
         ],
         transform: GradientRotation(animationValue * 2 * math.pi),
-      ).createShader(Rect.fromCircle(center: Offset(wandX, wandY), radius: 15));
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(wandX, wandY),
+          radius: 15,
+        ),
+      );
 
-    drawDiamond(canvas, Offset(wandX, wandY), 15, starPaint);
+    drawDiamond(
+      canvas,
+      Offset(wandX, wandY),
+      15,
+      starPaint,
+    );
 
     final Paint dustPaint = Paint()..style = PaintingStyle.fill;
 
@@ -966,12 +1224,20 @@ class StageMagicPainter extends CustomPainter {
 
       double diamondSize = random.nextDouble() * 5 + 2.0;
 
-      final opacity = (1.0 - yProgress) * (0.5 + 0.5 * math.sin((animationValue * 10 + i) * math.pi));
+      final opacity = (1.0 - yProgress) *
+          (0.5 + 0.5 * math.sin((animationValue * 10 + i) * math.pi));
 
       Color dustColor = random.nextDouble() < 0.2 ? paleYellowWhite : pureWhite;
-      dustPaint.color = dustColor.withOpacity(opacity.clamp(0.0, 1.0));
+      dustPaint.color = dustColor.withOpacity(
+        opacity.clamp(0.0, 1.0),
+      );
 
-      drawDiamond(canvas, Offset(dropX, dropY), diamondSize, dustPaint);
+      drawDiamond(
+        canvas,
+        Offset(dropX, dropY),
+        diamondSize,
+        dustPaint,
+      );
     }
   }
 
@@ -1000,12 +1266,30 @@ class MirrorSweepPainter extends CustomPainter {
           Colors.white.withOpacity(0.0),
         ],
         stops: const [0.0, 0.45, 0.5, 0.55, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      ).createShader(
+        Rect.fromLTWH(
+          0,
+          0,
+          size.width,
+          size.height,
+        ),
+      )
+      ..maskFilter = const MaskFilter.blur(
+        BlurStyle.normal,
+        25,
+      );
 
     canvas.save();
     canvas.translate(size.width * sweepProgress, 0);
-    canvas.drawRect(Rect.fromLTWH(-size.width, 0, size.width * 2, size.height), paint);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        -size.width,
+        0,
+        size.width * 2,
+        size.height,
+      ),
+      paint,
+    );
     canvas.restore();
   }
 
