@@ -1,6 +1,7 @@
 // lib/screens/event_detail.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui';
 import '../../models/event_model.dart';
 import '../../models/post_feed_model.dart';
@@ -36,7 +37,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   bool _isLoadingBalance = true;
 
   final NumberFormat _currencyFormatter = NumberFormat('#,##0', 'vi_VN');
-
+  String? _currentUserId;
+  bool _isUserExpert = false;
   @override
   void initState() {
     super.initState();
@@ -59,6 +61,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
   }
 
   Future<void> _loadAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
     // Chạy song song cả 3 API: Event, Posts và Balance
     final results = await Future.wait([
       EventService().getEventById(widget.eventId),
@@ -68,9 +72,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
 
     if (mounted) {
       setState(() {
+        _currentUserId = userId;
         _event = results[0] as EventModel?;
         _eventPosts = results[1] as List<PostFeedModel>;
         _currentBalance = results[2] as double;
+        if (_event != null && _currentUserId != null) {
+          // So sánh String userId với int expertId
+          _isUserExpert = _event!.experts.any(
+                  (expert) => expert.expertId.toString() == _currentUserId
+          );
+        }
         _isLoading = false;
         _isLoadingPosts = false;
         _isLoadingBalance = false;
@@ -531,15 +542,27 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
     final bool isPastDeadline = _event!.submissionDeadline != null &&
         DateTime.now().isAfter(_event!.submissionDeadline!);
 
-    // Kiểm tra số dư nếu sự kiện có phí
+    // Kiểm tra số dư nếu sự kiện có phí (chỉ check khi không phải là Expert)
     bool hasEnoughBalance = true;
     if (_event!.entryFee > 0) {
       hasEnoughBalance = _currentBalance >= _event!.entryFee;
     }
 
+    // Xác định nhãn nút bấm
     String btnText = "JOIN NOW";
     if (_event!.entryFee > 0 && !joined && !isPastDeadline) {
       btnText = "JOIN - ${_currencyFormatter.format(_event!.entryFee)}đ";
+    }
+
+    // Xác định nội dung trạng thái (Status bên trái)
+    String statusText = "ACTIVE";
+    Color statusColor = Colors.black;
+    if (_isUserExpert) {
+      statusText = "JUDGE";
+      statusColor = Colors.blueGrey; // Màu sắc riêng cho Expert
+    } else if (isPastDeadline) {
+      statusText = "EXPIRED";
+      statusColor = Colors.black45;
     }
 
     return Positioned(
@@ -557,8 +580,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- THANH HIỂN THỊ SỐ DƯ (NẰM TRÊN CÙNG BOTTOM BAR) ---
-                if (_event!.entryFee > 0 && !isPastDeadline && !joined && !_isLoadingBalance)
+                // --- THANH HIỂN THỊ SỐ DƯ (Chỉ hiện cho User thường, sự kiện có phí, chưa join và chưa hết hạn) ---
+                if (!_isUserExpert && _event!.entryFee > 0 && !isPastDeadline && !joined && !_isLoadingBalance)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -590,7 +613,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                             ),
                           ],
                         ),
-                        // Hiện cảnh báo thiếu tiền ở góc phải của thanh này
                         if (!hasEnoughBalance)
                           Row(
                             children: const [
@@ -617,9 +639,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                           const Text("STATUS", style: TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                           const SizedBox(height: 4),
                           Text(
-                            isPastDeadline ? "EXPIRED" : "ACTIVE",
+                            statusText,
                             style: TextStyle(
-                                color: isPastDeadline ? Colors.black45 : Colors.black,
+                                color: statusColor,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.5
@@ -631,10 +653,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> with TickerProvid
                     SizedBox(
                       height: 52,
                       width: 180,
-                      child: (joined || isPastDeadline)
+                      child: _isUserExpert
+                          ? _buildDisabledState("EXPERT MODE") // Expert không được tham gia
+                          : (joined || isPastDeadline)
                           ? _buildDisabledState(isPastDeadline ? "EXPIRED" : "JOINED")
                           : (!hasEnoughBalance && !_isLoadingBalance)
-                          ? _buildDisabledState("INSUFFICIENT FUNDS") // Disable button nếu không đủ tiền
+                          ? _buildDisabledState("INSUFFICIENT FUNDS")
                           : _buildActiveState(btnText),
                     ),
                   ],

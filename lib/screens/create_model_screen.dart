@@ -15,6 +15,115 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
+  @override
+  void initState() {
+    super.initState();
+    // Gọi modal ngay sau khi frame đầu tiên được dựng xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showGuidelinesModal();
+    });
+  }
+
+  void _showGuidelinesModal() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "Guidelines",
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink(); // Không dùng mặc định của pageBuilder
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        // Hiệu ứng chạy từ trái (-1.0) sang phải (0.0)
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(-1, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  )
+                ],
+              ),
+              child: Material( // Cần Material để Text và Icon hiển thị đúng trong Dialog
+                color: Colors.transparent,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.lightbulb, color: Colors.amber[700], size: 24),
+                            const SizedBox(width: 8),
+                            const Text(
+                              "TIPS FOR BETTER AI",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: Colors.black,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "For the best AI performance, please use clear, full-body photos taken in well-lit areas. Avoid side profiles or complex poses.",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          "I UNDERSTAND",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Các hàm xử lý ảnh và upload giữ nguyên như cũ
   Future<void> _pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (pickedFile != null) {
@@ -24,10 +133,8 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
 
   Future<void> _handleUpload() async {
     if (_selectedImage == null) return;
-
     final bytes = await _selectedImage!.readAsBytes();
     final success = await modelManager.uploadModel(bytes);
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -51,7 +158,7 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Thêm Model Mới", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
+        title: const Text("Add new model", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
       ),
       body: ListenableBuilder(
         listenable: modelManager,
@@ -79,7 +186,7 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
                         children: [
                           Icon(Icons.add_photo_alternate_outlined, color: Colors.white54, size: 60),
                           SizedBox(height: 16),
-                          Text("Nhấn để chọn ảnh từ thư viện", style: TextStyle(color: Colors.black54)),
+                          Text("Choose image from gallery", style: TextStyle(color: Colors.black54)),
                         ],
                       )
                           : null,
@@ -100,7 +207,7 @@ class _CreateModelScreenState extends State<CreateModelScreen> {
                     width: 20,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                   )
-                      : const Text("THÊM MODEL", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      : const Text("ADD MODEL", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
                 const SizedBox(height: 32),
               ],
