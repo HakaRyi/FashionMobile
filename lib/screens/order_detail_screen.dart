@@ -180,6 +180,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return 'Refunding';
       case 'refunded':
         return 'Refunded';
+      case 'returnapproved':
+        return 'Return Approved';
+      case 'returnpickedup':
+        return 'Return Picked Up';
+      case 'returnshipping':
+        return 'Return Shipping';
+      case 'returndelivered':
+        return 'Return Delivered';
+      case 'returncompleted':
+        return 'Return Completed';
       default:
         return status;
     }
@@ -204,6 +214,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       case 'refunding':
         return const Color(0xFFD97706);
       case 'refunded':
+        return const Color(0xFF0891B2);
+      case 'returnapproved':
+        return const Color(0xFF8416A3);
+      case 'returnpickedup':
+        return const Color(0xFFD97706);
+      case 'returnshipping':
+        return const Color(0xFF0284C7);
+      case 'returndelivered':
+        return const Color(0xFF7C3AED);
+      case 'returncompleted':
         return const Color(0xFF0891B2);
       default:
         return Colors.black54;
@@ -912,6 +932,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 'SHIPPING',
               ),
               successMessage: 'Order marked as shipping.',
+            );
+          },
+        ),
+      );
+    }
+
+    if (isSellerView && status == 'returndelivered') {
+      buttons.add(
+        _mainButton(
+          text: 'Confirm Returned Items',
+          icon: Icons.call_received_outlined,
+          onPressed: () {
+            _confirmAction(
+              title: 'Confirm returned items',
+              message:
+              'Confirm that you have received the returned item? This will refund the buyer.',
+              action: () => _orderService.confirmReturnReceived(order.orderId),
+              successMessage: 'Return confirmed. Buyer refunded.',
             );
           },
         ),
