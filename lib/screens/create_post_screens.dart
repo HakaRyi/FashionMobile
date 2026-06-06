@@ -1,4 +1,5 @@
 // lib/screens/create_post_screens.dart
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -45,6 +46,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   final List<Uint8List> _selectedImages = [];
   final List<String> _existingImageUrls = [];
+  final List<String> _hashtags = [];
+  final TextEditingController _hashtagController = TextEditingController();
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _overlayEntry;
+  List<String> _suggestions = [];
+  bool _showSuggestions = false;
+  Timer? _debounce;
 
   String _username = 'Loading...';
   String _avatarUrl = '';
@@ -71,6 +79,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _hashtagController.dispose();
     super.dispose();
   }
 
@@ -126,6 +135,295 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         }
       }
     }
+
+    final tagValues = post['hashtags'] ?? post['Hashtags'];
+
+    if (tagValues is List) {
+      _hashtags.clear();
+
+      for (final item in tagValues) {
+        if (item is String) {
+          _hashtags.add(cleanHashtag(item));
+        } else if (item is Map<String, dynamic>) {
+          final name = item['name'] ?? item['Name'] ?? item['keyword'] ?? item['Keyword'];
+
+          if (name is String) {
+            _hashtags.add(cleanHashtag(name));
+          }
+        }
+      }
+    }
+  }
+
+  String cleanHashtag(String tag) {
+    return tag
+        .trim()
+        .replaceAll(RegExp(r'[\[\]"’]'), '')
+        .replaceFirst(RegExp(r'^#+'), '');
+  }
+
+  String normalizeHashtag(String tag) {
+    return cleanHashtag(tag).toLowerCase();
+  }
+
+  final List<String> _trendingHashtags = [
+    'travel',
+    'food',
+    'fitness',
+    'coding',
+    'music',
+    'fashion',
+    'photography',
+    'gaming',
+    'tech',
+    'startup',
+  ];
+
+  List<String> _getSuggestions(String query) {
+    final q = normalizeHashtag(query);
+
+    if (q.isEmpty) return [];
+
+    return _trendingHashtags
+        .where((tag) => tag.contains(q))
+        .take(8)
+        .toList();
+  }
+
+  void _onHashtagChanged(String value) {
+    _debounce?.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      final text = value.trim();
+
+      await postManager.fetchHashtagSuggestions(query: text, limit: 8);
+
+      if (!mounted) return;
+
+      if (postManager.hashtagSuggestions.isNotEmpty) {
+        setState(() {
+          _showSuggestions = true;
+        });
+        _showOverlay();
+      } else {
+        _hideSuggestions();
+      }
+    });
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
+
+    final overlay = Overlay.of(context);
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) {
+        return AnimatedBuilder(
+          animation: postManager,
+          builder: (context, _) {
+            final suggestions = postManager.hashtagSuggestions;
+
+            if (suggestions.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Positioned(
+              width: MediaQuery.of(context).size.width - 32,
+              child: CompositedTransformFollower(
+                link: _layerLink,
+                showWhenUnlinked: false,
+                offset: const Offset(0, 45),
+                child: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: suggestions.length,
+                      itemBuilder: (context, index) {
+                        final item = suggestions[index];
+
+                        return InkWell(
+                          onTap: () {
+                            _selectTag(item.name);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      '#',
+                                      style: TextStyle(
+                                        color: item.isTrending ? Colors.redAccent : Colors.blue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      item.name,
+                                      style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (item.isTrending)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'HOT',
+                                      style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                                else if (item.usageCount > 0)
+                                  Text(
+                                    '${item.usageCount} posts',
+                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    overlay.insert(_overlayEntry!);
+  }
+
+  void _hideSuggestions() {
+    setState(() {
+      _showSuggestions = false;
+    });
+    postManager.clearHashtagSuggestions();
+    _removeOverlay();
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _selectTag(String tag) {
+    final normalized = normalizeHashtag(tag);
+
+    if (_hashtags.any((e) => normalizeHashtag(e) == normalized)) {
+      _hideSuggestions();
+      return;
+    }
+
+    setState(() {
+      _hashtags.add(normalized);
+      _hashtagController.clear();
+    });
+
+    _hideSuggestions();
+  }
+
+
+  Widget _buildHashtagInput() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _hashtags.map((tag) {
+              return Chip(
+                backgroundColor: Colors.blue.withOpacity(0.08),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                label: Text('#$tag'),
+                onDeleted: () {
+                  setState(() {
+                    _hashtags.remove(tag);
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 10),
+          CompositedTransformTarget(
+            link: _layerLink,
+            child: TextField(
+              controller: _hashtagController,
+              onTap: () {
+                if (_hashtagController.text.trim().isEmpty) {
+                  _onHashtagChanged('');
+                }
+              },
+              onChanged: (value) {
+                if (value.startsWith('#')) {
+                  final clean = value.replaceFirst(RegExp(r'^#+'), '');
+                  _hashtagController.value = TextEditingValue(
+                    text: clean,
+                    selection: TextSelection.collapsed(offset: clean.length),
+                  );
+                  _onHashtagChanged(clean);
+                } else {
+                  _onHashtagChanged(value);
+                }
+              },
+              onSubmitted: (value) {
+                final tag = normalizeHashtag(value);
+                if (tag.isEmpty) return;
+                if (_hashtags.any((e) => normalizeHashtag(e) == tag)) return;
+
+                setState(() {
+                  _hashtags.add(tag);
+                  _hashtagController.clear();
+                });
+                _hideSuggestions();
+              },
+              decoration: InputDecoration(
+                hintText: 'add hashtag',
+                prefixText: '# ',
+                prefixStyle: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                filled: true,
+                fillColor: Colors.grey.withOpacity(0.08),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _readStringValue(Map<String, dynamic> data, List<String> keys) {
@@ -373,6 +671,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       content,
       title: title.isEmpty ? null : title,
       eventId: widget.eventId,
+      hashtags: _hashtags,
     );
 
     if (!mounted) {
@@ -402,6 +701,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       title: title,
       content: content,
       imageBytesList: _selectedImages.isNotEmpty ? _selectedImages : null,
+      hashtags: _hashtags,
     );
 
     if (!mounted) {
@@ -529,6 +829,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ),
                   ),
                   _buildInputArea(),
+                  _buildHashtagInput(),
                   _buildTextCounterArea(),
                   if (_isEditMode) _buildEditImageHint(),
                   _buildImageGrid(),

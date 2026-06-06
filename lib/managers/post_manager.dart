@@ -5,10 +5,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../constants/post_status_values.dart';
+import '../models/hashtag_suggestion_model.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/post_reaction_result.dart';
 import '../models/shareable_user_model.dart';
+import '../models/trending_hashtag_model.dart';
 import '../services/post_service.dart';
 import '../services/reaction_service.dart';
 import '../utils/app_toast.dart';
@@ -483,6 +485,7 @@ class PostManager extends ChangeNotifier {
       String content, {
         String? title,
         int? eventId,
+        List<String>? hashtags,
       }) async {
     if (isUploading) {
       return;
@@ -512,6 +515,7 @@ class PostManager extends ChangeNotifier {
           imageBytesList: imageBytesList,
           content: content,
           title: title,
+          hashtags: hashtags,
         );
       }
 
@@ -549,6 +553,7 @@ class PostManager extends ChangeNotifier {
     String? title,
     String? content,
     List<Uint8List>? imageBytesList,
+    List<String>? hashtags,
   }) async {
     if (_updatingPosts.contains(postId)) {
       return;
@@ -564,6 +569,7 @@ class PostManager extends ChangeNotifier {
         title: title,
         content: content,
         imageBytesList: imageBytesList,
+        hashtags: hashtags,
       );
 
       _updatePostEverywhere(updatedPost);
@@ -861,6 +867,162 @@ class PostManager extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  List<PostFeedModel> getPostsByHashtag(String tag) {
+    return _posts
+        .where((p) => p.hashtags.contains(tag))
+        .toList();
+  }
+
+  final Map<String, List<PostFeedModel>> _hashtagCache = {};
+  void cacheHashtag(String tag, List<PostFeedModel> posts) {
+    _hashtagCache[tag] = posts;
+  }
+
+  List<PostFeedModel>? getCachedHashtag(String tag) {
+    return _hashtagCache[tag];
+  }
+
+  List<HashtagSuggestionModel> _hashtagSuggestions = [];
+  List<HashtagSuggestionModel> get hashtagSuggestions => List.unmodifiable(_hashtagSuggestions);
+  bool isLoadingHashtags = false;
+
+  Future<void> fetchHashtagSuggestions({String? query, int limit = 8}) async {
+    isLoadingHashtags = true;
+    notifyListeners();
+
+    try {
+      final suggestions = await _postService.fetchHashtagSuggestions(
+        query: query,
+        limit: limit,
+      );
+      _hashtagSuggestions = suggestions;
+    } catch (e) {
+      debugPrint('Fetch hashtag suggestions error: $e');
+      _hashtagSuggestions = [];
+    } finally {
+      isLoadingHashtags = false;
+      notifyListeners();
+    }
+  }
+
+  void clearHashtagSuggestions() {
+    _hashtagSuggestions = [];
+    notifyListeners();
+  }
+
+  final List<PostFeedModel> _hashtagPosts = [];
+  List<PostFeedModel> get hashtagPosts => List.unmodifiable(_hashtagPosts);
+
+  bool isLoadingHashtagPosts = false;
+  bool isLoadingMoreHashtagPosts = false;
+  bool hasMoreHashtagPosts = true;
+  DateTime? _hashtagPostsCursor;
+
+  final List<TrendingHashtagModel> _trendingHashtagsList = [];
+  bool isLoadingTrendingHashtags = false;
+
+  List<TrendingHashtagModel> get trendingHashtagsList {
+    try {
+      return List<TrendingHashtagModel>.from(_trendingHashtagsList);
+    } catch (e) {
+      debugPrint("PostManager: Error casting trendingHashtagsList getter: $e");
+      return _trendingHashtagsList.map((item) {
+        if (item is TrendingHashtagModel) return item;
+        try {
+          final json = (item as dynamic).toJson();
+          return TrendingHashtagModel.fromJson(json);
+        } catch (_) {
+          return TrendingHashtagModel(keyword: 'Unknown');
+        }
+      }).toList();
+    }
+  }
+
+  Future<void> loadTrendingHashtags({int limit = 10}) async {
+    if (isLoadingTrendingHashtags) return;
+    isLoadingTrendingHashtags = true;
+    notifyListeners();
+
+    try {
+      final result = await _postService.fetchTrendingHashtags(limit: limit);
+
+      _trendingHashtagsList.clear();
+
+      if (result is List) {
+        for (var item in result) {
+          if (item is TrendingHashtagModel) {
+            _trendingHashtagsList.add(item);
+          } else {
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('PostManager: Load trending hashtags error: $e');
+    } finally {
+      isLoadingTrendingHashtags = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchPostsByHashtag({
+    required String tagName,
+    bool refresh = true,
+    int pageSize = 10,
+  }) async {
+    if (isLoadingHashtagPosts || isLoadingMoreHashtagPosts) return;
+
+    if (refresh) {
+      isLoadingHashtagPosts = true;
+      _hashtagPostsCursor = null;
+      hasMoreHashtagPosts = true;
+    } else {
+      if (!hasMoreHashtagPosts) return;
+      isLoadingMoreHashtagPosts = true;
+    }
+    notifyListeners();
+
+    try {
+      final List<PostFeedModel> result = await _postService.fetchPostsByHashtag(
+        tagName: tagName,
+        cursor: _hashtagPostsCursor,
+        pageSize: pageSize,
+      );
+
+      if (refresh) {
+        _hashtagPosts.clear();
+        _hashtagPosts.addAll(result);
+      } else {
+        for (final item in result) {
+          if (!_hashtagPosts.any((p) => p.postId == item.postId)) {
+            _hashtagPosts.add(item);
+          }
+        }
+      }
+
+      if (result.length < pageSize) {
+        hasMoreHashtagPosts = false;
+      } else if (result.isNotEmpty) {
+        _hashtagPostsCursor = result.last.createdAt;
+      }
+    } catch (e) {
+      debugPrint('PostManager: Fetch posts by hashtag error: $e');
+      rethrow;
+    } finally {
+      isLoadingHashtagPosts = false;
+      isLoadingMoreHashtagPosts = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMorePostsByHashtag({required String tagName, int pageSize = 10}) async {
+    if (isLoadingHashtagPosts || isLoadingMoreHashtagPosts || !hasMoreHashtagPosts) return;
+    await fetchPostsByHashtag(
+      tagName: tagName,
+      refresh: false,
+      pageSize: pageSize,
+    );
   }
 
   @override
