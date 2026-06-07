@@ -15,6 +15,7 @@ class TransactionDetailModel {
   final String? sourceName;
   final String? sourceCode;
   final String? displayTitle;
+  final String? orderCode;
 
   TransactionDetailModel({
     required this.transactionId,
@@ -33,6 +34,7 @@ class TransactionDetailModel {
     required this.sourceName,
     required this.sourceCode,
     required this.displayTitle,
+    this.orderCode,
   });
 
   factory TransactionDetailModel.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,7 @@ class TransactionDetailModel {
       sourceName: json['sourceName'],
       sourceCode: json['sourceCode'],
       displayTitle: json['displayTitle'],
+      orderCode: json['orderCode'],
     );
   }
 }

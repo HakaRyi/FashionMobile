@@ -223,4 +223,5 @@ class ApiConstants {
   static const String trendingHashtags = "/post/hashtags/trending";
   static const String getPostsByHashtag = "/post/hashtags/{tagName}/posts";
   static const String hashtagSuggestions = "/post/hashtags/suggestions";
+  static String confirmReturnReceived(int orderId) => "$orderBase/$orderId/return/confirm";
 }

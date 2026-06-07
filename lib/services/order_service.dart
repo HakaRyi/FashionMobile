@@ -332,7 +332,7 @@ class OrderService {
 
   Future<OrderModel> confirmReturnReceived(int orderId) async {
     final url = Uri.parse(
-      '${ApiConstants.baseUrl}/api/orders/$orderId/return/confirm'
+      ApiConstants.baseUrl + ApiConstants.confirmReturnReceived(orderId),
     );
 
     final response = await ApiClient.put(url);
