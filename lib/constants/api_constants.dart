@@ -224,4 +224,20 @@ class ApiConstants {
   static const String getPostsByHashtag = "/post/hashtags/{tagName}/posts";
   static const String hashtagSuggestions = "/post/hashtags/suggestions";
   static String confirmReturnReceived(int orderId) => "$orderBase/$orderId/return/confirm";
+
+  static const String myWardrobeIntelEndpoint = "/items/my-wardrobe-intel";
+
+  static String getMyWardrobeIntelUrl({DateTime? startDate, DateTime? endDate}) {
+    final query = <String, String>{};
+
+    if (startDate != null) {
+      query['startDate'] = startDate.toIso8601String();
+    }
+
+    if (endDate != null) {
+      query['endDate'] = endDate.toIso8601String();
+    }
+
+    return Uri(path: myWardrobeIntelEndpoint, queryParameters: query.isEmpty ? null : query).toString();
+  }
 }

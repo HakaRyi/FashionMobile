@@ -402,6 +402,7 @@ class _PostItemState extends State<PostItem> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: GestureDetector(
@@ -413,6 +414,7 @@ class _PostItemState extends State<PostItem> {
                   ? _openUserPublicWardrobe
                   : null,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
                     radius: 20,
@@ -497,20 +499,32 @@ class _PostItemState extends State<PostItem> {
               ),
             ),
           ),
-          if (widget.isMyPost && status != null) ...[
-            _buildStatusBanner(status),
-            const SizedBox(width: 8),
-          ],
-          if (!hideMenu)
-            IconButton(
-              splashRadius: 20,
-              icon: const Icon(
-                Icons.more_horiz,
-                color: Colors.black45,
-                size: 23,
-              ),
-              onPressed: () => _showPostOptions(context, status),
-            ),
+
+          const SizedBox(width: 8),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.isMyPost && status != null) ...[
+                _buildStatusBanner(status),
+                const SizedBox(height: 2),
+              ],
+
+              if (!hideMenu)
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  splashRadius: 20,
+                  icon: const Icon(
+                    Icons.more_horiz,
+                    color: Colors.black45,
+                    size: 23,
+                  ),
+                  onPressed: () => _showPostOptions(context, status),
+                ),
+            ],
+          ),
         ],
       ),
     );

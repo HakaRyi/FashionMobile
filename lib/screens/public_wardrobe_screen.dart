@@ -39,6 +39,9 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
   Map<String, dynamic>? _profile;
   List<PublicWardrobeItemModel> _items = [];
 
+  // Biến mới hứng dữ liệu Intel thống kê tủ đồ
+  Map<String, dynamic>? _wardrobeIntel;
+
   String _selectedFilter = 'All';
 
   late AnimationController _fabricController;
@@ -92,10 +95,21 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
         _error = null;
       });
 
+      // Gọi song song các API cơ bản công khai
       final profile = await _wardrobeService.getPublicProfile(widget.accountId);
       final items = await _wardrobeService.getPublicWardrobeItems(
         widget.accountId,
       );
+
+      // Nếu là chính chủ xem tủ đồ, tải thêm API Thống kê/Log tủ đồ đầy đủ
+      Map<String, dynamic>? intelData;
+      if (widget.isOwnerView) {
+        try {
+          intelData = await _itemService.getMyWardrobeIntel();
+        } catch (intelErr) {
+          debugPrint("Không lấy được log thống kê nâng cao: $intelErr");
+        }
+      }
 
       if (!mounted) {
         return;
@@ -104,6 +118,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
       setState(() {
         _profile = profile;
         _items = items;
+        _wardrobeIntel = intelData;
       });
     } catch (e) {
       if (!mounted) {
@@ -299,12 +314,12 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
                     Navigator.push(
                       context,
                       SlideRoute(
-                        page: AISuggestionScreen(selectedItem:
-                        {
-                          'itemId': item.itemId,
-                          'itemName': item.itemName,
-                          'primaryImageUrl': item.thumbnailUrl, // Truyền đúng tên key mà bên AI đang hứng
-                        },
+                        page: AISuggestionScreen(
+                          selectedItem: {
+                            'itemId': item.itemId,
+                            'itemName': item.itemName,
+                            'primaryImageUrl': item.thumbnailUrl,
+                          },
                         ),
                       ),
                     );
@@ -442,11 +457,14 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
                   SliverToBoxAdapter(
                     child: _buildProfileSummary(),
                   ),
-                  if (widget.isOwnerView)
+                  if (widget.isOwnerView && _wardrobeIntel != null)
+                    SliverToBoxAdapter(
+                      child: _buildOwnerIntelDashboard(),
+                    ),
+                  if (widget.isOwnerView && _wardrobeIntel == null)
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding:
-                        const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                         child: _buildOwnerNotice(),
                       ),
                     ),
@@ -474,11 +492,9 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
                     )
                   else
                     SliverPadding(
-                      padding:
-                      const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                       sliver: SliverGrid(
-                        gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
@@ -646,7 +662,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
 
   Widget _buildProfileSummary() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 12,
@@ -658,7 +674,7 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
             Expanded(
               child: _buildStatItem(
                 '$_totalPublicItems',
-                'ITEMS',
+                'PUBLIC ITEMS',
               ),
             ),
             _verticalDivider(),
@@ -677,6 +693,141 @@ class _PublicWardrobeScreenState extends State<PublicWardrobeScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOwnerIntelDashboard() {
+    final totalItems = _wardrobeIntel?['totalItems'] ?? 0;
+    final itemsForSale = _wardrobeIntel?['itemsForSale'] ?? 0;
+    final itemsForDisplay = _wardrobeIntel?['itemsForDisplayOnly'] ?? 0;
+    final totalStock = _wardrobeIntel?['totalStockQuantity'] ?? 0;
+
+    final Map<String, dynamic> rawStatus = _wardrobeIntel?['statusCounters'] ?? {};
+    final statusData = rawStatus.map((key, value) => MapEntry(key, (value as num).toInt()));
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, color: Colors.black, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                "WARDROBE INSIGHTS (OWNER ONLY)",
+                style: TextStyle(
+                  color: Colors.black.withOpacity(0.8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: _cardDecoration(),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildIntelMiniCard("TOTAL ITEMS", "$totalItems", Icons.inventory_2),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildIntelMiniCard("FOR SALE", "$itemsForSale", Icons.sell),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildIntelMiniCard("DISPLAY ONLY", "$itemsForDisplay", Icons.collections),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildIntelMiniCard("TOTAL STOCK", "$totalStock", Icons.warehouse),
+                    ),
+                  ],
+                ),
+
+                if (statusData.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(color: Color(0xFFEDEDED), height: 1),
+                  ),
+                  Text(
+                    "ITEMS BY STATUS",
+                    style: TextStyle(
+                      color: Colors.black.withOpacity(0.4),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Component Custom Biểu đồ cột
+                  Container(
+                    height: 140,
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: CustomPaint(
+                      painter: MinimalBarChartPainter(statusData: statusData),
+                    ),
+                  ),
+                ]
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIntelMiniCard(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withOpacity(0.02)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.black38),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.black45,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
       ),
     );
   }
@@ -1045,5 +1196,95 @@ class FabricPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant FabricPainter oldDelegate) {
     return oldDelegate.animationValue != animationValue;
+  }
+}
+
+class MinimalBarChartPainter extends CustomPainter {
+  final Map<String, int> statusData;
+
+  MinimalBarChartPainter({required this.statusData});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (statusData.isEmpty) return;
+
+    final keys = statusData.keys.toList();
+    final values = statusData.values.toList();
+
+    final maxVal = values.reduce((a, b) => a > b ? a : b);
+    final double maxBarHeight = size.height - 30;
+
+    final int itemCount = statusData.length;
+    final double spacing = 16.0;
+    final double totalSpacing = spacing * (itemCount - 1);
+    final double barWidth = (size.width - totalSpacing) / itemCount;
+
+    final Paint barPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.fill;
+
+    final Paint backgroundLinePaint = Paint()
+      ..color = const Color(0xFFEDEDED)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    canvas.drawLine(Offset(0, maxBarHeight), Offset(size.width, maxBarHeight), backgroundLinePaint);
+
+    for (int i = 0; i < itemCount; i++) {
+      final double left = i * (barWidth + spacing);
+      final double currentVal = values[i].toDouble();
+
+      final double barHeight = maxVal > 0 ? (currentVal / maxVal) * maxBarHeight : 0.0;
+      final double top = maxBarHeight - barHeight;
+
+      if (barHeight > 0) {
+        final RRect rrect = RRect.fromRectAndCorners(
+          Rect.fromLTWH(left, top, barWidth, barHeight),
+          topLeft: const Radius.circular(5),
+          topRight: const Radius.circular(5),
+        );
+        canvas.drawRRect(rrect, barPaint);
+      }
+
+      final textPainterVal = TextPainter(
+        text: TextSpan(
+          text: values[i].toString(),
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(minWidth: 0, maxWidth: barWidth);
+
+      textPainterVal.paint(
+        canvas,
+        Offset(left + (barWidth - textPainterVal.width) / 2, math.max(0.0, top - 14)),
+      );
+
+      final textPainterLabel = TextPainter(
+        text: TextSpan(
+          text: keys[i].toUpperCase(),
+          style: TextStyle(
+            color: Colors.black.withOpacity(0.5),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(minWidth: 0, maxWidth: barWidth + spacing);
+
+      textPainterLabel.paint(
+        canvas,
+        Offset(left + (barWidth - textPainterLabel.width) / 2, maxBarHeight + 6),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant MinimalBarChartPainter oldDelegate) {
+    return oldDelegate.statusData != statusData;
   }
 }
