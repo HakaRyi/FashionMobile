@@ -4,9 +4,11 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../constants/api_constants.dart';
+import '../models/hashtag_suggestion_model.dart';
 import '../models/paged_posts_response.dart';
 import '../models/post_feed_model.dart';
 import '../models/shareable_user_model.dart';
+import '../models/trending_hashtag_model.dart';
 import 'api_client.dart';
 
 class PostService {
@@ -179,6 +181,7 @@ class PostService {
     required List<Uint8List> imageBytesList,
     required String content,
     String? title,
+    List<String>? hashtags,
   }) async {
     final uri = Uri.parse(
       '${ApiConstants.baseUrl}${ApiConstants.createPost}',
@@ -191,6 +194,15 @@ class PostService {
     request.headers.remove('Content-Type');
 
     request.fields['Content'] = content.trim();
+
+    if (hashtags != null && hashtags.isNotEmpty) {
+      for (int i = 0; i < hashtags.length; i++) {
+        final cleanTag = hashtags[i].replaceAll('#', '').trim();
+        if (cleanTag.isNotEmpty) {
+          request.fields['Hashtags[$i]'] = cleanTag;
+        }
+      }
+    }
 
     if (title != null && title.trim().isNotEmpty) {
       request.fields['Title'] = title.trim();
@@ -349,6 +361,7 @@ class PostService {
     String? title,
     String? content,
     List<Uint8List>? imageBytesList,
+    List<String>? hashtags,
   }) async {
     final endpoint = ApiConstants.updatePost.replaceAll(
       '{postId}',
@@ -369,6 +382,15 @@ class PostService {
 
     if (content != null) {
       request.fields['Content'] = content.trim();
+    }
+
+    if (hashtags != null && hashtags.isNotEmpty) {
+      for (int i = 0; i < hashtags.length; i++) {
+        final cleanTag = hashtags[i].replaceAll('#', '').trim();
+        if (cleanTag.isNotEmpty) {
+          request.fields['Hashtags[$i]'] = cleanTag;
+        }
+      }
     }
 
     if (imageBytesList != null && imageBytesList.isNotEmpty) {
@@ -557,5 +579,123 @@ class PostService {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Share post to chat failed: ${response.body}');
     }
+  }
+
+  Future<List<HashtagSuggestionModel>> fetchHashtagSuggestions({
+    String? query,
+    int limit = 8,
+  }) async {
+    final Map<String, String> queryParams = {
+      'limit': limit.toString(),
+    };
+
+    if (query != null && query.trim().isNotEmpty) {
+      queryParams['query'] = query.trim();
+    }
+
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.hashtagSuggestions}',
+    ).replace(queryParameters: queryParams);
+
+    final response = await ApiClient.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load hashtag suggestions: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is List) {
+      return decoded.map((e) => HashtagSuggestionModel.fromJson(e)).toList();
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is List) {
+        return data.map((e) => HashtagSuggestionModel.fromJson(e)).toList();
+      }
+      final items = (decoded['items'] as List?) ?? (decoded['data']?['items'] as List?) ?? const [];
+      return items.map((e) => HashtagSuggestionModel.fromJson(e)).toList();
+    }
+
+    throw Exception('Unexpected hashtag suggestions response');
+  }
+
+  Future<List<TrendingHashtagModel>> fetchTrendingHashtags({
+    int limit = 10,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.trendingHashtags}',
+    ).replace(queryParameters: {
+      'limit': limit.toString(),
+    });
+
+    final response = await ApiClient.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load trending hashtags: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is List) {
+      return decoded.map((e) => TrendingHashtagModel.fromJson(e)).toList();
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is List) {
+        return data.map((e) => TrendingHashtagModel.fromJson(e)).toList();
+      }
+      final items = (decoded['items'] as List?) ?? (decoded['data']?['items'] as List?) ?? const [];
+      return items.map((e) => TrendingHashtagModel.fromJson(e)).toList();
+    }
+
+    throw Exception('Unexpected trending hashtags response');
+  }
+
+  // 2. Lấy luồng bài viết được gắn tag tương ứng (Hỗ trợ phân trang bằng cursor tương tự fetchFeed)
+  Future<List<PostFeedModel>> fetchPostsByHashtag({
+    required String tagName,
+    DateTime? cursor,
+    int pageSize = 10,
+  }) async {
+    final endpoint = ApiConstants.getPostsByHashtag.replaceAll(
+      '{tagName}',
+      Uri.encodeComponent(tagName.replaceAll('#', '').trim()),
+    );
+
+    final query = {
+      'pageSize': pageSize.toString(),
+      if (cursor != null) 'cursor': cursor.toIso8601String(),
+    };
+
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint').replace(queryParameters: query);
+    final response = await ApiClient.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load posts by hashtag: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is List) {
+      return decoded.map((e) => PostFeedModel.fromJson(e)).toList();
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is List) {
+        return data.map((e) => PostFeedModel.fromJson(e)).toList();
+      }
+      if (data is Map<String, dynamic>) {
+        final items = (data['items'] as List?) ?? const [];
+        return items.map((e) => PostFeedModel.fromJson(e)).toList();
+      }
+      final items = (decoded['items'] as List?) ?? const [];
+      return items.map((e) => PostFeedModel.fromJson(e)).toList();
+    }
+
+    throw Exception('Unexpected posts by hashtag response');
   }
 }

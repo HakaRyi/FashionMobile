@@ -180,6 +180,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return 'Refunding';
       case 'refunded':
         return 'Refunded';
+      case 'returnapproved':
+        return 'Return Approved';
+      case 'returnpickedup':
+        return 'Return Picked Up';
+      case 'returnshipping':
+        return 'Return Shipping';
+      case 'returndelivered':
+        return 'Return Delivered';
+      case 'returncompleted':
+        return 'Return Completed';
       default:
         return status;
     }
@@ -204,6 +214,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       case 'refunding':
         return const Color(0xFFD97706);
       case 'refunded':
+        return const Color(0xFF0891B2);
+      case 'returnapproved':
+        return const Color(0xFF8416A3);
+      case 'returnpickedup':
+        return const Color(0xFFD97706);
+      case 'returnshipping':
+        return const Color(0xFF0284C7);
+      case 'returndelivered':
+        return const Color(0xFF7C3AED);
+      case 'returncompleted':
         return const Color(0xFF0891B2);
       default:
         return Colors.black54;
@@ -748,6 +768,101 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildTimelineSection(OrderModel order) {
+    final status = _normalizeStatus(order.status);
+    final List<Map<String, dynamic>> timelineSteps = [];
+
+    // Created
+    timelineSteps.add({
+      'title': 'Created',
+      'time': _formatDate(order.createdAt),
+      'active': order.createdAt != null,
+    });
+
+    // Paid
+    final paidAt = order.paidAtFromHistory;
+    if (paidAt != null || status != 'pendingpayment') {
+      timelineSteps.add({
+        'title': 'Paid',
+        'time': _formatDate(paidAt),
+        'active': paidAt != null,
+      });
+    }
+
+    // Cancelled branch
+    final cancelledAt = order.cancelledAtFromHistory;
+    if (status == 'cancelled' || cancelledAt != null) {
+      timelineSteps.add({
+        'title': 'Cancelled',
+        'time': _formatDate(cancelledAt ?? order.updatedAt),
+        'active': true,
+      });
+    } else {
+      // Shipping
+      final shippingAt = order.shippingAtFromHistory;
+      final isPassedShipping = !['pendingpayment', 'processing'].contains(status);
+      timelineSteps.add({
+        'title': 'Shipping',
+        'time': _formatDate(shippingAt),
+        'active': isPassedShipping,
+      });
+
+      // Delivered
+      final deliveredAt = order.deliveredAtFromHistory;
+      final isPassedDelivered =
+      !['pendingpayment', 'processing', 'shipping'].contains(status);
+      timelineSteps.add({
+        'title': 'Delivered',
+        'time': _formatDate(deliveredAt),
+        'active': isPassedDelivered,
+      });
+
+      if (order.isAnyRefundState) {
+        timelineSteps.add({
+          'title': 'Refund Requested',
+          'time': _formatDate(order.refundingAtFromHistory),
+          'active': true,
+        });
+
+        timelineSteps.add({
+          'title': 'Return Approved',
+          'time': _formatDate(order.getStatusTime('RETURN_APPROVED')),
+          'active': !['refunding'].contains(status),
+        });
+
+        timelineSteps.add({
+          'title': 'Return Picked Up',
+          'time': _formatDate(order.getStatusTime('RETURN_PICKED_UP')),
+          'active': !['refunding', 'returnapproved'].contains(status),
+        });
+
+        timelineSteps.add({
+          'title': 'Return Shipping',
+          'time': _formatDate(order.getStatusTime('RETURN_SHIPPING')),
+          'active': !['refunding', 'returnapproved', 'returnpickedup'].contains(status),
+        });
+
+        timelineSteps.add({
+          'title': 'Return Delivered',
+          'time': _formatDate(order.getStatusTime('RETURN_DELIVERED')),
+          'active': !['refunding', 'returnapproved', 'returnpickedup', 'returnshipping'].contains(status),
+        });
+
+        timelineSteps.add({
+          'title': 'Refunded',
+          'time': _formatDate(order.getStatusTime('REFUNDED')),
+          'active': ['refunded', 'returncompleted'].contains(status),
+        });
+      } else {
+        // Completed
+        final completedAt = order.completedAtFromHistory;
+        timelineSteps.add({
+          'title': 'Completed',
+          'time': _formatDate(completedAt),
+          'active': completedAt != null,
+        });
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: _cardDecoration(),
@@ -756,32 +871,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         children: [
           _sectionTitle('TIMELINE', Icons.timeline_rounded),
           const SizedBox(height: 16),
-          _timelineRow(
-            title: 'Created',
-            time: _formatDate(order.createdAt),
-            active: order.createdAt != null,
-          ),
-          _timelineRow(
-            title: 'Paid',
-            time: _formatDate(order.paidAt),
-            active: order.paidAt != null,
-          ),
-          _timelineRow(
-            title: 'Delivered',
-            time: _formatDate(order.deliveredAt),
-            active: order.deliveredAt != null,
-          ),
-          _timelineRow(
-            title: 'Completed',
-            time: _formatDate(order.completedAt),
-            active: order.completedAt != null,
-          ),
-          _timelineRow(
-            title: 'Cancelled',
-            time: _formatDate(order.cancelledAt),
-            active: order.cancelledAt != null,
-            isLast: true,
-          ),
+          ...List.generate(timelineSteps.length, (index) {
+            final step = timelineSteps[index];
+            return _timelineRow(
+              title: step['title'] as String,
+              time: (step['time'] as String?) ?? '--:--',
+              active: step['active'] as bool? ?? false,
+              isLast: index == timelineSteps.length - 1,
+            );
+          }),
         ],
       ),
     );
@@ -912,6 +1010,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 'SHIPPING',
               ),
               successMessage: 'Order marked as shipping.',
+            );
+          },
+        ),
+      );
+    }
+
+    if (isSellerView && status == 'returndelivered') {
+      buttons.add(
+        _mainButton(
+          text: 'Confirm Returned Items',
+          icon: Icons.call_received_outlined,
+          onPressed: () {
+            _confirmAction(
+              title: 'Confirm returned items',
+              message:
+              'Confirm that you have received the returned item? This will refund the buyer.',
+              action: () => _orderService.confirmReturnReceived(order.orderId),
+              successMessage: 'Return confirmed. Buyer refunded.',
             );
           },
         ),

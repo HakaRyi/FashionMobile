@@ -12,6 +12,7 @@ class TransactionHistoryModel {
   final String? description;
   final DateTime createdAt;
   final String status;
+  final String? orderCode;
 
   TransactionHistoryModel({
     required this.transactionId,
@@ -27,6 +28,7 @@ class TransactionHistoryModel {
     required this.description,
     required this.createdAt,
     required this.status,
+    this.orderCode,
   });
 
   factory TransactionHistoryModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class TransactionHistoryModel {
       description: json['description'],
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       status: json['status'] ?? '',
+      orderCode: json['orderCode'],
     );
   }
 }

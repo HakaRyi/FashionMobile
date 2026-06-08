@@ -120,4 +120,10 @@ class OrderManager {
   Future<List<dynamic>> getMyRefunds() async {
     return await _service.getMyRefunds();
   }
+
+  Future<OrderModel> confirmReturnReceived(int orderId) async {
+    final order = await _service.confirmReturnReceived(orderId);
+    await refreshSales();
+    return order;
+  }
 }

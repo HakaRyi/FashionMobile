@@ -10,11 +10,13 @@ import '../constants/post_status_values.dart';
 import '../managers/post_manager.dart';
 import '../models/post_feed_model.dart';
 import '../screens/create_post_screens.dart';
+import '../screens/hashtag_feed_screen.dart';
 import '../screens/navbar_screens/profile_screen.dart';
 import '../screens/other_profile_screen.dart';
 import '../screens/public_wardrobe_screen.dart';
 import '../utils/app_toast.dart';
 import 'comments/comment_sheet.dart';
+import 'hashtag_chip.dart';
 import 'share_post_users_sheet.dart';
 import 'report_post_sheet.dart';
 
@@ -288,6 +290,35 @@ class _PostItemState extends State<PostItem> {
                 _buildCaption(
                   title: title,
                   content: content,
+                ),
+              if (post.hashtags.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 0, 12),
+                  child: SizedBox(
+                    height: 34,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: post.hashtags.length,
+                      itemBuilder: (context, index) {
+                        final tag = post.hashtags[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: HashtagChip(
+                            tag: tag,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => HashtagFeedScreen(tag: tag),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               if (images.isNotEmpty)
                 _buildImageSlider(

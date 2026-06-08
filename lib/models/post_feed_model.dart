@@ -1,4 +1,3 @@
-// lib/models/post_feed_model.dart
 class PostFeedModel {
   final int postId;
   final int accountId;
@@ -7,6 +6,7 @@ class PostFeedModel {
   final String? title;
   final String? content;
   final List<String> images;
+  final List<String> hashtags;
   final int likeCount;
   final int commentCount;
   final int shareCount;
@@ -30,6 +30,7 @@ class PostFeedModel {
     this.title,
     this.content,
     required this.images,
+    this.hashtags = const [],
     required this.likeCount,
     required this.commentCount,
     required this.shareCount,
@@ -53,12 +54,20 @@ class PostFeedModel {
       title: json['title'],
       content: json['content'],
       images: List<String>.from(json['images'] ?? const []),
+      hashtags: (json['hashtags'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
+
       likeCount: json['likeCount'] ?? 0,
       commentCount: json['commentCount'] ?? 0,
       shareCount: json['shareCount'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       isSaved: json['isSaved'] ?? false,
-      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(
+        json['createdAt']?.toString() ?? '',
+      ) ??
+          DateTime.now(),
       status: json['status'],
       visibility: json['visibility'],
       isEvent: json['isEvent'] ?? false,
@@ -77,6 +86,7 @@ class PostFeedModel {
       'title': title,
       'content': content,
       'images': images,
+      'hashtags': hashtags,
       'likeCount': likeCount,
       'commentCount': commentCount,
       'shareCount': shareCount,
@@ -100,6 +110,7 @@ class PostFeedModel {
     String? title,
     String? content,
     List<String>? images,
+    List<String>? hashtags,
     int? likeCount,
     int? commentCount,
     int? shareCount,
@@ -121,6 +132,7 @@ class PostFeedModel {
       title: title ?? this.title,
       content: content ?? this.content,
       images: images ?? this.images,
+      hashtags: hashtags ?? this.hashtags,
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
       shareCount: shareCount ?? this.shareCount,

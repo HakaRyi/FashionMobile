@@ -6,6 +6,7 @@ import '../utils/notification_manager.dart';
 import '../widgets/create_post_header.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/post_item.dart';
+import 'trending_hashtags_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final int? focusPostId;
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
         await _focusSharedPost(widget.focusPostId!);
       }
     } catch (e) {
-      debugPrint('Lỗi load feed: $e');
+      debugPrint('Error loading feed: $e'); // Đã đổi sang tiếng Anh
     } finally {
       await Future.delayed(const Duration(milliseconds: 150));
       if (mounted) {
@@ -159,12 +160,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text(
-                            'Wapo Feed',
+                        children: [
+                          const Text(
+                            "What's New",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -172,10 +173,21 @@ class _HomeScreenState extends State<HomeScreen> {
                               letterSpacing: 0.2,
                             ),
                           ),
-                          Icon(
-                            Icons.tune_rounded,
-                            size: 22,
-                            color: AppColors.textPrimary,
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const TrendingHashtagsScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.trending_up_rounded,
+                              size: 24,
+                              color: AppColors.textPrimary,
+                            ),
+                            splashRadius: 20,
                           ),
                         ],
                       ),
@@ -199,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             SizedBox(height: 16),
                             Text(
-                              'Chưa có outfit nào được chia sẻ.',
+                              'No outfits shared yet.', // Đã đổi sang tiếng Anh
                               style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 15),
@@ -267,8 +279,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildUploadProgressCard() {
     final isFinishedUpload = postManager.uploadProgress >= 1.0;
+
+    // Đã chuyển logic kiểm tra chuỗi tiếng Việt sang tiếng Anh
     final isUpdating =
-    postManager.statusMessage.toLowerCase().contains('cập nhật');
+    postManager.statusMessage.toLowerCase().contains('update');
 
     final progressColor = isFinishedUpload
         ? Colors.green

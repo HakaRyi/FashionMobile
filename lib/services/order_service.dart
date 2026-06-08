@@ -329,4 +329,22 @@ class OrderService {
       'Load refund failed.',
     );
   }
+
+  Future<OrderModel> confirmReturnReceived(int orderId) async {
+    final url = Uri.parse(
+      ApiConstants.baseUrl + ApiConstants.confirmReturnReceived(orderId),
+    );
+
+    final response = await ApiClient.put(url);
+
+    if (response.statusCode == 200) {
+      return OrderModel.fromJson(_decodeJson(response.body));
+    }
+
+    throw _buildApiException(
+      response.statusCode,
+      response.body,
+      'Confirm refund failed.',
+    );
+  }
 }
