@@ -130,29 +130,32 @@ class OrderModel {
 
   // ─── Status booleans ─────────────────────────────────────────────────────────
 
-  bool get isPendingPayment  => status.toLowerCase() == 'pendingpayment';
-  bool get isProcessing      => status.toLowerCase() == 'processing';
-  bool get isShipping        => status.toLowerCase() == 'shipping';
-  bool get isDelivered       => status.toLowerCase() == 'delivered';
-  bool get isCompleted       => status.toLowerCase() == 'completed';
-  bool get isDone            => status.toLowerCase() == 'done';
-  bool get isCancelled       => status.toLowerCase() == 'cancelled';
-  bool get isRefunding       => status.toLowerCase() == 'refunding';
-  bool get isRefunded        => status.toLowerCase() == 'refunded';
-  bool get isReturnApproved  => status.toLowerCase() == 'returnapproved';
-  bool get isReturnPickedUp  => status.toLowerCase() == 'returnpickedup';
-  bool get isReturnShipping  => status.toLowerCase() == 'returnshipping';
-  bool get isReturnDelivered => status.toLowerCase() == 'returndelivered';
-  bool get isReturnCompleted => status.toLowerCase() == 'returncompleted';
+  String get _normalizedStatus =>
+      status.toLowerCase().replaceAll('_', '').replaceAll('-', '');
+
+  bool get isPendingPayment  => _normalizedStatus == 'pendingpayment';
+  bool get isProcessing      => _normalizedStatus == 'processing';
+  bool get isShipping        => _normalizedStatus == 'shipping';
+  bool get isDelivered       => _normalizedStatus == 'delivered';
+  bool get isCompleted       => _normalizedStatus == 'completed';
+  bool get isDone            => _normalizedStatus == 'done';
+  bool get isCancelled       => _normalizedStatus == 'cancelled';
+  bool get isRefunding       => _normalizedStatus == 'refunding';
+  bool get isRefunded        => _normalizedStatus == 'refunded';
+  bool get isReturnApproved  => _normalizedStatus == 'returnapproved';
+  bool get isReturnPickedUp  => _normalizedStatus == 'returnpickedup';
+  bool get isReturnShipping  => _normalizedStatus == 'returnshipping';
+  bool get isReturnDelivered => _normalizedStatus == 'returndelivered';
+  bool get isReturnCompleted => _normalizedStatus == 'returncompleted';
 
   bool get isAnyRefundState {
-    final s = status.toLowerCase();
-    return s == 'refunding'       ||
-        s == 'refunded'        ||
-        s == 'returnapproved'  ||
-        s == 'returnpickedup'  ||
-        s == 'returnshipping'  ||
-        s == 'returndelivered' ||
+    final s = _normalizedStatus;
+    return s == 'refunding'      ||
+        s == 'refunded'       ||
+        s == 'returnapproved' ||
+        s == 'returnpickedup' ||
+        s == 'returnshipping' ||
+        s == 'returndelivered'||
         s == 'returncompleted';
   }
 }

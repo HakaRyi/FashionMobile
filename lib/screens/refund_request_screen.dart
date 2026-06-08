@@ -209,8 +209,8 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
       return;
     }
 
-    if (_proofImage1 == null) {
-      AppToast.show(context, 'Please select at least one proof image.');
+    if (_proofImage1 == null || _proofImage2 == null) {
+      AppToast.show(context, 'Please select both proof images (2/2 required).');
       return;
     }
 
@@ -582,10 +582,10 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
           const SizedBox(height: 14),
           _buildProofPicker(
             title: 'Proof image 2',
-            subtitle: 'Optional. Add another image if needed.',
+            subtitle: 'Required. Add a second image showing closer details or package label.',
             image: _proofImage2,
             slot: 2,
-            requiredImage: false,
+            requiredImage: true,
           ),
           const SizedBox(height: 28),
           SizedBox(

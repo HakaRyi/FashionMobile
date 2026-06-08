@@ -561,6 +561,7 @@ class ItemService {
       throw _buildExceptionFromResponse(response);
     }
   }
+
   Future<void> addItemsToCollection(int collectionId, List<int> itemIds) async {
     final url = Uri.parse("${ApiConstants.baseUrl}/collections/$collectionId/items");
 
@@ -572,6 +573,47 @@ class ItemService {
 
     if (response.statusCode != 200) {
       throw _buildExceptionFromResponse(response);
+    }
+  }
+
+  Future<Map<String, dynamic>?> getMyWardrobeIntel({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final endpoint = ApiConstants.getMyWardrobeIntelUrl(
+      startDate: startDate,
+      endDate: endDate,
+    );
+    final url = Uri.parse("${ApiConstants.baseUrl}$endpoint");
+
+    try {
+      var response = await http.get(
+        url,
+        headers: await _buildHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 401) {
+        final authService = AuthService();
+        bool refreshed = await authService.refreshToken();
+        if (refreshed) {
+          response = await http.get(
+            url,
+            headers: await _buildHeaders(withAuth: true),
+          );
+        }
+      }
+
+      if (_isSuccessStatus(response.statusCode)) {
+        final decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+        if (decodedData['data'] != null && decodedData['data'] is Map<String, dynamic>) {
+          return decodedData['data'] as Map<String, dynamic>;
+        }
+      }
+
+      throw _buildExceptionFromResponse(response);
+    } catch (e) {
+      debugPrint("Error tại getMyWardrobeIntel: $e");
+      rethrow;
     }
   }
 }
