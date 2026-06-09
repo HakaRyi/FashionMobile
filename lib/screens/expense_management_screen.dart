@@ -7,14 +7,10 @@ import '../models/cashflow_point_model.dart';
 import '../models/expense_summary_model.dart';
 import '../models/spending_limit_model.dart';
 import '../models/transaction_history_model.dart';
-import '../models/update_spending_limit_request.dart';
 import '../services/expense_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/expense_formatters.dart';
-import '../sheets/spending_limit_sheet.dart';
 import '../widgets/expense/expense_hero_card.dart';
-import '../widgets/expense/expense_summary_grid.dart';
-import '../widgets/expense/expense_spending_limit_card.dart';
 import '../widgets/expense/expense_cashflow_chart.dart';
 import '../widgets/expense/expense_transaction_list.dart';
 import '../widgets/expense/expense_common_widgets.dart';
@@ -51,6 +47,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   void initState() {
     super.initState();
     _resetDateRangeToDefault(shouldLoadData: false);
+    _loadData();
   }
 
   @override
@@ -83,7 +80,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
       final results = await Future.wait([
         _expenseService.getExpenseSummary(
-            month: fromDate.month, year: fromDate.year),
+            fromDate: fromDate, toDate: toDate),
         _expenseService.getMyTransactions(
           page: 1,
           pageSize: 30,
@@ -354,6 +351,22 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 // ─── Filter section ───────────────────────────────────────────────────────────
 
   Widget _buildFilterSection() {
+    String formatDate(DateTime date) =>
+        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+    final now = DateTime.now();
+    final isDefaultRange = selectedDateRange != null &&
+        selectedDateRange!.start.year == now.year &&
+        selectedDateRange!.start.month == now.month &&
+        selectedDateRange!.start.day == 1 &&
+        selectedDateRange!.end.year == now.year &&
+        selectedDateRange!.end.month == now.month &&
+        selectedDateRange!.end.day == now.day;
+
+    final dateLabel = selectedDateRange == null
+        ? 'Select date range'
+        : '${formatDate(selectedDateRange!.start)}  ➔  ${formatDate(selectedDateRange!.end)}';
+
     return ExpenseSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,6 +377,67 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             subtitle: 'Search and narrow down your wallet activities.',
           ),
           const SizedBox(height: 14),
+
+          // ── Date range ──────────────────────────────────────────
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () async {
+              final DateTimeRange? picked = await showDateRangePicker(
+                context: context,
+                initialDateRange: selectedDateRange,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2030),
+                builder: (context, child) => Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Color(0xFF111827),
+                      onPrimary: Colors.white,
+                      onSurface: Color(0xFF111827),
+                    ),
+                  ),
+                  child: child!,
+                ),
+              );
+              if (picked != null && picked != selectedDateRange) {
+                setState(() => selectedDateRange = picked);
+                _loadData();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_month_rounded,
+                      color: Color(0xFF111827), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(dateLabel,
+                        style: const TextStyle(
+                            color: Color(0xFF111827),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  if (!isDefaultRange && selectedDateRange != null)
+                    GestureDetector(
+                      onTap: () => _resetDateRangeToDefault(shouldLoadData: true),
+                      child: const Icon(Icons.close_rounded,
+                          color: Color(0xFFEF4444), size: 20),
+                    )
+                  else
+                    const Icon(Icons.arrow_forward_ios_rounded,
+                        color: Color(0xFF6B7280), size: 13),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Keyword search ───────────────────────────────────────
           TextField(
             controller: _keywordController,
             decoration: InputDecoration(
@@ -389,30 +463,28 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(
-                      color: Color(0xFF6366F1), width: 1.2)),
+                  borderSide:
+                  const BorderSide(color: Color(0xFF6366F1), width: 1.2)),
             ),
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _loadData(),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdown(
-                  value: selectedType,
-                  hint: 'Type',
-                  items: const ['', 'Credit', 'Debit'],
-                  labelBuilder: (v) {
-                    if (v.isEmpty) return 'All';
-                    return v == 'Credit' ? 'Income' : 'Expense';
-                  },
-                  onChanged: (v) => setState(() => selectedType = v ?? ''),
-                ),
-              ),
-            ],
+          const SizedBox(height: 10),
+
+          // ── Type dropdown ────────────────────────────────────────
+          _buildDropdown(
+            value: selectedType,
+            hint: 'Type',
+            items: const ['', 'Credit', 'Debit'],
+            labelBuilder: (v) {
+              if (v.isEmpty) return 'All types';
+              return v == 'Credit' ? 'Income' : 'Expense';
+            },
+            onChanged: (v) => setState(() => selectedType = v ?? ''),
           ),
           const SizedBox(height: 10),
+
+          // ── Reference type dropdown ──────────────────────────────
           _buildDropdown(
             value: selectedReferenceType,
             hint: 'Reference type',
@@ -428,6 +500,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             },
           ),
           const SizedBox(height: 10),
+
+          // ── Reset ────────────────────────────────────────────────
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
@@ -661,15 +735,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                 ),
               ),
               ExpenseHeroCard(
-                selectedMonth: displayMonth,
-                selectedYear: displayYear,
+                selectedDateRange: selectedDateRange,
                 summary: summary,
               ),
-              const SizedBox(height: 16),
-              _buildDateRangePicker(),
-              const SizedBox(height: 16),
-              ExpenseSummaryGrid(summary: summary),
-              const SizedBox(height: 16),
               const SizedBox(height: 16),
               _buildFilterSection(),
               const SizedBox(height: 16),

@@ -946,18 +946,10 @@ class PostManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _postService.fetchTrendingHashtags(limit: limit);
+      final List<TrendingHashtagModel> result = await _postService.fetchTrendingHashtags(limit: limit);
 
       _trendingHashtagsList.clear();
-
-      if (result is List) {
-        for (var item in result) {
-          if (item is TrendingHashtagModel) {
-            _trendingHashtagsList.add(item);
-          } else {
-          }
-        }
-      }
+      _trendingHashtagsList.addAll(result);
     } catch (e) {
       debugPrint('PostManager: Load trending hashtags error: $e');
     } finally {

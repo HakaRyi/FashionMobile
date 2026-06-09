@@ -1,7 +1,7 @@
 class TrendingHashtagModel {
   final int? hashtagId;
   final String? keyword;
-  final int? score;
+  final double? score;
   final int? totalPosts;
   final int? totalEngagement;
   final DateTime? calculatedAt;
@@ -19,7 +19,7 @@ class TrendingHashtagModel {
     return TrendingHashtagModel(
       hashtagId: json['hashtagId'] as int?,
       keyword: json['keyword'] as String?,
-      score: json['score'] as int?,
+      score: json['score'] != null ? (json['score'] as num).toDouble() : null,
       totalPosts: json['totalPosts'] as int?,
       totalEngagement: json['totalEngagement'] as int?,
       calculatedAt: json['calculatedAt'] != null

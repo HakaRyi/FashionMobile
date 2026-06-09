@@ -85,13 +85,17 @@ class ExpenseService {
     return TransactionDetailModel.fromJson(jsonData);
   }
 
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
   Future<ExpenseSummaryModel> getExpenseSummary({
-    required int month,
-    required int year,
+    required DateTime fromDate,
+    required DateTime toDate,
   }) async {
     final uri = _buildUri('/expenses/me/expense-summary', {
-      'month': month,
-      'year': year,
+      'fromDate': _formatDate(fromDate),
+      'toDate': _formatDate(toDate),
     });
 
     final response = await ApiClient.get(uri);
@@ -105,13 +109,13 @@ class ExpenseService {
   }
 
   Future<List<ExpenseByReferenceTypeModel>> getExpenseByReferenceType({
-    required int month,
-    required int year,
+    required DateTime fromDate,
+    required DateTime toDate,
     String type = 'Debit',
   }) async {
     final uri = _buildUri('/expenses/me/expense-by-reference-type', {
-      'month': month,
-      'year': year,
+      'fromDate': _formatDate(fromDate),
+      'toDate': _formatDate(toDate),
       'type': type,
     });
 
@@ -134,8 +138,8 @@ class ExpenseService {
     String groupBy = 'day',
   }) async {
     final uri = _buildUri('/expenses/me/cashflow', {
-      'fromDate': fromDate.toIso8601String(),
-      'toDate': toDate.toIso8601String(),
+      'fromDate': _formatDate(fromDate),
+      'toDate': _formatDate(toDate),
       'groupBy': groupBy,
     });
 
@@ -151,6 +155,54 @@ class ExpenseService {
         .map((e) => CashflowPointModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  // Future<List<ExpenseByReferenceTypeModel>> getExpenseByReferenceType({
+  //   required int month,
+  //   required int year,
+  //   String type = 'Debit',
+  // }) async {
+  //   final uri = _buildUri('/expenses/me/expense-by-reference-type', {
+  //     'month': month,
+  //     'year': year,
+  //     'type': type,
+  //   });
+  //
+  //   final response = await ApiClient.get(uri);
+  //
+  //   if (response.statusCode != 200) {
+  //     throw Exception('Không thể tải thống kê theo loại. Mã lỗi: ${response.statusCode}');
+  //   }
+  //
+  //   final jsonData = jsonDecode(response.body) as List<dynamic>;
+  //
+  //   return jsonData
+  //       .map((e) => ExpenseByReferenceTypeModel.fromJson(e as Map<String, dynamic>))
+  //       .toList();
+  // }
+  //
+  // Future<List<CashflowPointModel>> getCashflow({
+  //   required DateTime fromDate,
+  //   required DateTime toDate,
+  //   String groupBy = 'day',
+  // }) async {
+  //   final uri = _buildUri('/expenses/me/cashflow', {
+  //     'fromDate': fromDate.toIso8601String(),
+  //     'toDate': toDate.toIso8601String(),
+  //     'groupBy': groupBy,
+  //   });
+  //
+  //   final response = await ApiClient.get(uri);
+  //
+  //   if (response.statusCode != 200) {
+  //     throw Exception('Không thể tải cashflow. Mã lỗi: ${response.statusCode}');
+  //   }
+  //
+  //   final jsonData = jsonDecode(response.body) as List<dynamic>;
+  //
+  //   return jsonData
+  //       .map((e) => CashflowPointModel.fromJson(e as Map<String, dynamic>))
+  //       .toList();
+  // }
 
   Future<SpendingLimitModel> getMySpendingLimit({
     required int month,
