@@ -139,17 +139,22 @@ class _TrendingHashtagsScreenState extends State<TrendingHashtagsScreen> {
                     ),
                   ),
                   title: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        '#${item.keyword ?? ''}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A1A),
+                      Flexible(
+                        child: Text(
+                          '#${item.keyword ?? ''}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A1A),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      if (rank <= 3)
+                      if (rank <= 3) ...[
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -165,6 +170,7 @@ class _TrendingHashtagsScreenState extends State<TrendingHashtagsScreen> {
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                   subtitle: Padding(
